@@ -41,10 +41,10 @@ const LAYOUT = {
 
 /* ——— 兵营品类 ——— */
 const TYPES = {
-  bow:    { id: 'bow',    name: '弓营', icon: '🏹', color: '#ff735c',  atk: 10, hp: 30, speed: 1.05, range: 'far',   desc: '远程输出，克制枪兵' },
-  sword:  { id: 'sword',  name: '刀营', icon: '🗡️', color: '#58b7ff',  atk: 12, hp: 36, speed: 0.82, range: 'melee', desc: '高速近战，克制盾兵' },
-  spear:  { id: 'spear',  name: '枪营', icon: '🔱', color: '#63df72',  atk: 11, hp: 46, speed: 1.12, range: 'melee', desc: '稳健前排，克制刀兵' },
-  shield: { id: 'shield', name: '盾营', icon: '🛡️', color: '#f0cd67',  atk: 8,  hp: 60, speed: 1.50, range: 'melee', desc: '高血量抗线，克制弓兵' },
+  bow:    { id: 'bow',    name: '弓营', icon: '🏹', color: '#ff735c',  atk: 10, hp: 30, speed: 1.05, role: 'back',  range: 'far',   desc: '远程后排，克制枪兵' },
+  sword:  { id: 'sword',  name: '刀营', icon: '🗡️', color: '#58b7ff',  atk: 12, hp: 36, speed: 0.82, role: 'rush',  range: 'melee', desc: '突进近战，克制盾兵' },
+  spear:  { id: 'spear',  name: '枪营', icon: '🔱', color: '#63df72',  atk: 11, hp: 46, speed: 1.12, role: 'front', range: 'melee', desc: '稳健前排，克制刀兵' },
+  shield: { id: 'shield', name: '盾营', icon: '🛡️', color: '#f0cd67',  atk: 8,  hp: 60, speed: 1.50, role: 'tank',  range: 'melee', desc: '高血量抗线，克制弓兵' },
 };
 const TYPE_IDS = Object.keys(TYPES);
 
@@ -58,6 +58,7 @@ const MAX_LEVEL = 7;
 
 /* ——— 城墙 ——— */
 const BASE_WALL_HP = 72;
+const SIEGE_SLOTS_PER_LANE = 3;
 
 /* ——— 时序 ——— */
 const BALL_SPAWN_INTERVAL = 4.4;
@@ -68,7 +69,7 @@ const MAX_SOLDIERS = 22;
 const SP_MAX = 18;
 const SP_PASSIVE = 3.6;
 
-/* ——— 经济 ——— */
+/* ——— 经济/科技 ——— */
 function upgradeCost(lv) {
   return 10 + lv * 8;
 }
@@ -77,8 +78,22 @@ function stageReward(k) {
 }
 const UPGRADE_MAX = 20;
 const WALL_UPGRADE_MAX = 10;
+const SP_UPGRADE_MAX = 10;
 const UPGRADE_PER_LV = 0.05;
 const WALL_PER_LV = 5;
+
+const TECH_MILESTONES = {
+  bow_atk:   { title: '鹰眼校准',    at: 5,  desc: '弓兵更适合压制枪兵线。' },
+  bow_hp:    { title: '轻甲训练',    at: 5,  desc: '弓兵不再被流弹轻易带走。' },
+  sword_atk: { title: '破盾斩',      at: 5,  desc: '刀兵突破盾线更稳定。' },
+  sword_hp:  { title: '冲阵步法',    at: 5,  desc: '刀兵突进时容错提高。' },
+  spear_atk: { title: '枪阵推进',    at: 5,  desc: '枪兵对刀兵优势更明显。' },
+  spear_hp:  { title: '拒马阵',      at: 5,  desc: '枪兵更能守住中线。' },
+  shield_atk:{ title: '盾击',        at: 5,  desc: '盾兵不只是抗，也能清弓兵。' },
+  shield_hp: { title: '铁壁',        at: 5,  desc: '盾兵成为可靠前排。' },
+  wall:      { title: '城防加固',    at: 5,  desc: '降低被偷家失败概率。' },
+  sp:        { title: '号角训练',    at: 5,  desc: '开局士气和士气上限提升。' },
+};
 
 /* ——— 关卡 ——— */
 function generateLevel(k) {
