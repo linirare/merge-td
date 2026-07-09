@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>水果突击 · Fruit Assault</title>
-<link rel="stylesheet" href="css/style.css?v=20260709l">
+<link rel="stylesheet" href="css/style.css?v=20260709m">
 </head>
 <body>
 <div id="rotate-hint">
@@ -25,7 +25,7 @@
       <span class="logo-mark">🍉</span>
       <div>
         <h1>水果突击</h1>
-        <p class="sub">5选卡组 · 水果球合成 · 推倒腐坏果堡</p>
+        <p class="sub">5选卡组 · 兵团合流 · 中线对推</p>
         <p class="sub" style="font-size:10px;color:#2c8d3f;">BUILD <span id="buildBadge">loading</span></p>
       </div>
     </div>
@@ -44,8 +44,8 @@
 
     <div class="feature-chips">
       <span>5个上阵</span>
-      <span>12水果球</span>
-      <span>合成引擎</span>
+      <span>兵团合流</span>
+      <span>克制对推</span>
     </div>
 
     <div id="menuDeck" class="feature-chips" style="font-size:22px;gap:8px;"></div>
@@ -99,7 +99,7 @@
     <h2>📖 果园战术</h2>
     <div class="help-section">
       <h3>🎯 目标</h3>
-      <p>局外从12个水果球里选5个上阵；局内只会随机刷这5种。通过合成养核心、控随机、推倒敌方果堡。</p>
+      <p>局外从12个水果球里选5个上阵；局内水果营周期派遣兵团，兵团在路线中线对推并最终拆掉敌方果堡。</p>
     </div>
     <div class="help-section">
       <h3>🖐️ 操作</h3>
@@ -107,38 +107,39 @@
       <p><b>奇异果万能</b>可当任意同星材料；<b>百香果复制</b>拖到同星目标上会复制成目标水果。</p>
     </div>
     <div class="help-section">
-      <h3>🍓 卡组思路</h3>
-      <p>默认卡组已改成：西瓜+葡萄+橙子+蜜桃+奇异果，开局就能看到治疗、攻城和万能合成。</p>
+      <h3>🍓 兵团模式</h3>
+      <p>普通水果营不再高频吐小兵。同路同类会自动合流成 x2/x3 兵团；星级主要提升兵团质量和机制，不再主要拼出兵速度。</p>
     </div>
     <div class="help-section">
       <h3>🏰 机制</h3>
-      <p>第1～3关为教学节奏：少兵量、慢刷兵、强容错，先观察接战、治疗、克制和攻城。</p>
+      <p>第1～3关为教学节奏；后续也会保持同屏兵团上限，重点观察前排、后排、治疗、突击和攻城之间的克制。</p>
     </div>
     <button id="btnHelpClose" class="btn-secondary">知道了</button>
   </div>
 </div>
 
-<script src="js/config.js?v=20260709l"></script>
-<script src="js/version_guard.js?v=20260709l"></script>
-<script src="js/state.js?v=20260709l"></script>
-<script src="js/board.js?v=20260709l"></script>
-<script src="js/combat.js?v=20260709l"></script>
-<script src="js/ai.js?v=20260709l"></script>
-<script src="js/render.js?v=20260709l"></script>
-<script src="js/skin.js?v=20260709l"></script>
-<script src="js/battle_skin.js?v=20260709l"></script>
-<script src="js/hud_skin.js?v=20260709l"></script>
-<script src="js/fruit_skin.js?v=20260709l"></script>
-<script src="js/balance_sim.js?v=20260709l"></script>
-<script src="js/input.js?v=20260709l"></script>
-<script src="js/audio.js?v=20260709l"></script>
-<script src="js/ui.js?v=20260709l"></script>
-<script src="js/main.js?v=20260709l"></script>
-<script src="js/tutorial_balance.js?v=20260709l"></script>
-<script src="js/fruit_deck_runtime.js?v=20260709l"></script>
-<script src="js/gameplay_assist.js?v=20260709l"></script>
-<script src="js/fruit_mechanics.js?v=20260709l"></script>
-<script src="js/juice.js?v=20260709l"></script>
-<script src="js/deck_ui.js?v=20260709l"></script>
+<script src="js/config.js?v=20260709m"></script>
+<script src="js/version_guard.js?v=20260709m"></script>
+<script src="js/state.js?v=20260709m"></script>
+<script src="js/board.js?v=20260709m"></script>
+<script src="js/combat.js?v=20260709m"></script>
+<script src="js/ai.js?v=20260709m"></script>
+<script src="js/render.js?v=20260709m"></script>
+<script src="js/skin.js?v=20260709m"></script>
+<script src="js/battle_skin.js?v=20260709m"></script>
+<script src="js/hud_skin.js?v=20260709m"></script>
+<script src="js/fruit_skin.js?v=20260709m"></script>
+<script src="js/balance_sim.js?v=20260709m"></script>
+<script src="js/input.js?v=20260709m"></script>
+<script src="js/audio.js?v=20260709m"></script>
+<script src="js/ui.js?v=20260709m"></script>
+<script src="js/main.js?v=20260709m"></script>
+<script src="js/tutorial_balance.js?v=20260709m"></script>
+<script src="js/squad_mode.js?v=20260709m"></script>
+<script src="js/fruit_deck_runtime.js?v=20260709m"></script>
+<script src="js/gameplay_assist.js?v=20260709m"></script>
+<script src="js/fruit_mechanics.js?v=20260709m"></script>
+<script src="js/juice.js?v=20260709m"></script>
+<script src="js/deck_ui.js?v=20260709m"></script>
 </body>
 </html>
