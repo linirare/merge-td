@@ -1,20 +1,20 @@
 /* ============================================================
-   合成塔防 · PvE —— 配置常量
+   合成攻城 · Merge Siege —— 配置常量
    ============================================================ */
 
 const W = 480, H = 854;
 
 /* ——— 主题色 ——— */
 const THEME = {
-  bg:        '#1a1410',
-  panelBg:   '#241c10',
+  bg:        '#17110c',
+  panelBg:   '#2b1f13',
   gold:      '#ffe45a',
-  goldGlow:  'rgba(255,228,90,0.3)',
+  goldGlow:  'rgba(255,228,90,0.26)',
   accent:    '#ff6b4a',
-  safe:      '#6fd44e',
-  info:      '#4ab0ff',
-  text:      '#e8dcc0',
-  textDim:   '#8a7a5a',
+  safe:      '#63df72',
+  info:      '#5bb9ff',
+  text:      '#ead8b8',
+  textDim:   '#9d8a66',
   textBright:'#fff8e0',
 };
 
@@ -29,66 +29,72 @@ const BOARD_X = (W - BOARD_W) / 2;
 /* ——— Y 坐标布局 ——— */
 const LAYOUT = {
   enemyInfoY:  6,
-  enemyBoardY: 22,
-  enemyWallY:  22 + BOARD_H + 10,
-  wallH: 20,
-  fieldY:      22 + BOARD_H + 10 + 20 + 8,
-  fieldH: 220,
-  playerWallY: 22 + BOARD_H + 10 + 20 + 8 + 220 + 8,
-  playerBoardY: 22 + BOARD_H + 10 + 20 + 8 + 220 + 8 + 20 + 10,
-  bottomY:     22 + BOARD_H + 10 + 20 + 8 + 220 + 8 + 20 + 10 + BOARD_H + 4,
+  enemyBoardY: 24,
+  enemyWallY:  24 + BOARD_H + 10,
+  wallH: 22,
+  fieldY:      24 + BOARD_H + 10 + 22 + 8,
+  fieldH: 222,
+  playerWallY: 24 + BOARD_H + 10 + 22 + 8 + 222 + 8,
+  playerBoardY:24 + BOARD_H + 10 + 22 + 8 + 222 + 8 + 22 + 10,
+  bottomY:     24 + BOARD_H + 10 + 22 + 8 + 222 + 8 + 22 + 10 + BOARD_H + 4,
 };
 
-/* ——— 品类 ——— */
+/* ——— 兵营品类 ——— */
 const TYPES = {
-  bow:    { id: 'bow',    name: '弓', icon: '🏹', color: '#ff6b4a',  atk: 10, hp: 28, speed: 1.0,  range: 'far',   desc: '远程优先攻击' },
-  sword:  { id: 'sword',  name: '刀', icon: '🗡️', color: '#4ab0ff',  atk: 13, hp: 32, speed: 0.7,  range: 'melee', desc: '高攻速快' },
-  spear:  { id: 'spear',  name: '枪', icon: '🔱', color: '#6fd44e',  atk: 11, hp: 42, speed: 1.2,  range: 'melee', desc: '血厚防高' },
-  shield: { id: 'shield', name: '盾', icon: '🛡️', color: '#e8c96a',  atk: 7,  hp: 52, speed: 1.6,  range: 'melee', desc: '极肉抗线' },
+  bow:    { id: 'bow',    name: '弓营', icon: '🏹', color: '#ff735c',  atk: 11, hp: 28, speed: 1.0,  range: 'far',   desc: '远程输出，克制枪兵' },
+  sword:  { id: 'sword',  name: '刀营', icon: '🗡️', color: '#58b7ff',  atk: 13, hp: 34, speed: 0.72, range: 'melee', desc: '高速近战，克制盾兵' },
+  spear:  { id: 'spear',  name: '枪营', icon: '🔱', color: '#63df72',  atk: 11, hp: 44, speed: 1.15, range: 'melee', desc: '稳健前排，克制刀兵' },
+  shield: { id: 'shield', name: '盾营', icon: '🛡️', color: '#f0cd67',  atk: 8,  hp: 56, speed: 1.55, range: 'melee', desc: '高血量抗线，克制弓兵' },
 };
 const TYPE_IDS = Object.keys(TYPES);
 
 /* 克制表：弓→枪→刀→盾→弓 */
 const COUNTER = { bow: 'spear', spear: 'sword', sword: 'shield', shield: 'bow' };
-const COUNTER_DMG = 1.6; // 克制额外伤害（1.5→1.6）
+const COUNTER_DMG = 1.65;
 
 /* ——— 等级系数 ——— */
-const LEVEL_MUL = [0, 1.0, 1.6, 2.4, 3.5, 5.0, 7.0, 10.0]; // Lv.7=10x (原21x)
+const LEVEL_MUL = [0, 1.0, 1.62, 2.45, 3.55, 5.05, 7.1, 10.0];
 const MAX_LEVEL = 7;
 
 /* ——— 城墙 ——— */
-const BASE_WALL_HP = 60; // 原20
+const BASE_WALL_HP = 64;
 
 /* ——— 时序 ——— */
-const BALL_SPAWN_INTERVAL = 5;    // 每5秒产1个球
-const SOLDIER_SPAWN_INTERVAL = 5; // 每5秒产1个兵
-const SPAWN_COOLDOWNS = [0, 6.0, 5.2, 4.5, 3.8, 3.2, 2.7, 2.2]; // Lv1=6s → Lv7=2.2s
-const OVERFLOW_MAX = 10;          // 溢出队列上限
-const MAX_SOLDIERS = 18;          // 每方战场兵上限
-const SP_MAX = 15;                // SP上限
-const SP_PASSIVE = 5;             // SP<3时每5秒自动+1
+const BALL_SPAWN_INTERVAL = 4.6;
+const SOLDIER_SPAWN_INTERVAL = 5;
+const SPAWN_COOLDOWNS = [0, 5.4, 4.7, 4.1, 3.45, 2.95, 2.5, 2.15];
+const OVERFLOW_MAX = 10;
+const MAX_SOLDIERS = 20;
+const SP_MAX = 16;
+const SP_PASSIVE = 4.4;
 
 /* ——— 经济 ——— */
 function upgradeCost(lv) {
-  return 8 + lv * 7; // Lv1=15, Lv10=78, Lv20=148
+  return 8 + lv * 7;
 }
 function stageReward(k) {
-  return k * 6 + 12; // Lv1=18, Lv10=72, Lv20=132
+  return k * 7 + 14;
 }
 const UPGRADE_MAX = 20;
 const WALL_UPGRADE_MAX = 10;
-const UPGRADE_PER_LV = 0.05; // 每级+5%
-const WALL_PER_LV = 3; // 城墙每级+3HP
+const UPGRADE_PER_LV = 0.05;
+const WALL_PER_LV = 4;
 
 /* ——— 关卡 ——— */
 function generateLevel(k) {
-  const enemyLv = 1 + (k - 1) * 0.25;
+  const boss = k > 0 && k % 5 === 0;
+  const enemyLv = 1 + (k - 1) * 0.23 + (boss ? 0.25 : 0);
+  const wallBase = boss ? 94 : 58;
+  const wallGrow = boss ? 1.18 : 1.13;
   return {
     id: k,
+    isBoss: boss,
     enemyInitLevel: enemyLv,
-    enemyWallHp: Math.round(60 * Math.pow(1.15, k - 1)),
-    enemySpawnInterval: Math.max(3.5, 5 - k * 0.1),
-    reward: stageReward(k),
-    desc: `第 ${k} 关 · 敌球 Lv${enemyLv.toFixed(1)} · 城${Math.round(60 * Math.pow(1.15, k - 1))}HP`,
+    enemyWallHp: Math.round(wallBase * Math.pow(wallGrow, k - 1)),
+    enemySpawnInterval: Math.max(3.25, 4.8 - k * 0.08),
+    reward: stageReward(k) + (boss ? 18 : 0),
+    desc: boss
+      ? `第 ${k} 关 · 城门Boss · 破门奖励+18`
+      : `第 ${k} 关 · 敌营 Lv${enemyLv.toFixed(1)} · 推倒城墙`,
   };
 }
