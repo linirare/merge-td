@@ -1,21 +1,21 @@
 /* ============================================================
-   合成攻城 · Merge Siege —— 配置常量
+   水果突击 · Fruit Assault —— 配置常量
    ============================================================ */
 
 const W = 480, H = 854;
 
-/* ——— 主题色 ——— */
+/* ——— 清新水果主题色 ——— */
 const THEME = {
-  bg:        '#17110c',
-  panelBg:   '#2b1f13',
-  gold:      '#ffe45a',
-  goldGlow:  'rgba(255,228,90,0.26)',
-  accent:    '#ff6b4a',
-  safe:      '#63df72',
-  info:      '#5bb9ff',
-  text:      '#ead8b8',
-  textDim:   '#9d8a66',
-  textBright:'#fff8e0',
+  bg:        '#f4ffd9',
+  panelBg:   '#fff7d6',
+  gold:      '#ffc93c',
+  goldGlow:  'rgba(255,201,60,0.32)',
+  accent:    '#ff5d6c',
+  safe:      '#53c96a',
+  info:      '#4db6ff',
+  text:      '#4f6a31',
+  textDim:   '#7fa05a',
+  textBright:'#23471f',
 };
 
 /* ——— 棋盘 ——— */
@@ -39,16 +39,16 @@ const LAYOUT = {
   bottomY:     24 + BOARD_H + 10 + 22 + 8 + 222 + 8 + 22 + 10 + BOARD_H + 4,
 };
 
-/* ——— 兵营品类 ——— */
+/* ——— 水果兵营品类 ——— */
 const TYPES = {
-  bow:    { id: 'bow',    name: '弓营', icon: '🏹', color: '#ff735c',  atk: 10, hp: 30, speed: 1.05, role: 'back',  range: 'far',   desc: '远程后排，克制枪兵' },
-  sword:  { id: 'sword',  name: '刀营', icon: '🗡️', color: '#58b7ff',  atk: 12, hp: 36, speed: 0.82, role: 'rush',  range: 'melee', desc: '突进近战，克制盾兵' },
-  spear:  { id: 'spear',  name: '枪营', icon: '🔱', color: '#63df72',  atk: 11, hp: 46, speed: 1.12, role: 'front', range: 'melee', desc: '稳健前排，克制刀兵' },
-  shield: { id: 'shield', name: '盾营', icon: '🛡️', color: '#f0cd67',  atk: 8,  hp: 60, speed: 1.50, role: 'tank',  range: 'melee', desc: '高血量抗线，克制弓兵' },
+  bow:    { id: 'bow',    name: '葡萄弓营', icon: '🍇', color: '#9b5cff',  atk: 10, hp: 30, speed: 1.05, role: 'back',  range: 'far',   desc: '葡萄籽远程后排，克制菠萝枪兵' },
+  sword:  { id: 'sword',  name: '香蕉突击营', icon: '🍌', color: '#ffd447',  atk: 12, hp: 36, speed: 0.82, role: 'rush',  range: 'melee', desc: '香蕉忍者突进，克制西瓜盾兵' },
+  spear:  { id: 'spear',  name: '菠萝枪营', icon: '🍍', color: '#ffb337',  atk: 11, hp: 46, speed: 1.12, role: 'front', range: 'melee', desc: '菠萝长枪稳推，克制香蕉突击' },
+  shield: { id: 'shield', name: '西瓜盾营', icon: '🍉', color: '#34c96b',  atk: 8,  hp: 60, speed: 1.50, role: 'tank',  range: 'melee', desc: '西瓜重盾抗线，克制葡萄弓手' },
 };
 const TYPE_IDS = Object.keys(TYPES);
 
-/* 克制表：弓→枪→刀→盾→弓 */
+/* 克制表：葡萄→菠萝→香蕉→西瓜→葡萄 */
 const COUNTER = { bow: 'spear', spear: 'sword', sword: 'shield', shield: 'bow' };
 const COUNTER_DMG = 1.55;
 
@@ -56,7 +56,7 @@ const COUNTER_DMG = 1.55;
 const LEVEL_MUL = [0, 1.0, 1.58, 2.34, 3.32, 4.62, 6.3, 8.5];
 const MAX_LEVEL = 7;
 
-/* ——— 城墙 ——— */
+/* ——— 果堡 ——— */
 const BASE_WALL_HP = 72;
 const SIEGE_SLOTS_PER_LANE = 3;
 
@@ -83,16 +83,16 @@ const UPGRADE_PER_LV = 0.05;
 const WALL_PER_LV = 5;
 
 const TECH_MILESTONES = {
-  bow_atk:   { title: '鹰眼校准',    at: 5,  desc: '弓兵更适合压制枪兵线。' },
-  bow_hp:    { title: '轻甲训练',    at: 5,  desc: '弓兵不再被流弹轻易带走。' },
-  sword_atk: { title: '破盾斩',      at: 5,  desc: '刀兵突破盾线更稳定。' },
-  sword_hp:  { title: '冲阵步法',    at: 5,  desc: '刀兵突进时容错提高。' },
-  spear_atk: { title: '枪阵推进',    at: 5,  desc: '枪兵对刀兵优势更明显。' },
-  spear_hp:  { title: '拒马阵',      at: 5,  desc: '枪兵更能守住中线。' },
-  shield_atk:{ title: '盾击',        at: 5,  desc: '盾兵不只是抗，也能清弓兵。' },
-  shield_hp: { title: '铁壁',        at: 5,  desc: '盾兵成为可靠前排。' },
-  wall:      { title: '城防加固',    at: 5,  desc: '降低被偷家失败概率。' },
-  sp:        { title: '号角训练',    at: 5,  desc: '开局士气和士气上限提升。' },
+  bow_atk:   { title: '葡萄籽连射',  at: 5,  desc: '葡萄弓手压制菠萝线更明显。' },
+  bow_hp:    { title: '果皮护甲',    at: 5,  desc: '葡萄弓手不再被流弹轻易带走。' },
+  sword_atk: { title: '香蕉旋斩',    at: 5,  desc: '香蕉突击突破西瓜盾线更爽。' },
+  sword_hp:  { title: '滑步闪避',    at: 5,  desc: '香蕉突击容错提高。' },
+  spear_atk: { title: '菠萝尖刺阵',  at: 5,  desc: '菠萝枪兵克制香蕉突击更稳定。' },
+  spear_hp:  { title: '厚果甲',      at: 5,  desc: '菠萝枪兵更能守住中线。' },
+  shield_atk:{ title: '西瓜盾撞',    at: 5,  desc: '西瓜盾兵能更快清掉葡萄弓手。' },
+  shield_hp: { title: '超厚瓜皮',    at: 5,  desc: '西瓜盾兵成为可靠前排。' },
+  wall:      { title: '果堡加固',    at: 5,  desc: '降低被偷家失败概率。' },
+  sp:        { title: '果汁号角',    at: 5,  desc: '开局果汁能量和上限提升。' },
 };
 
 /* ——— 关卡 ——— */
@@ -109,7 +109,7 @@ function generateLevel(k) {
     enemySpawnInterval: Math.max(4.25, 6.2 - k * 0.13),
     reward: stageReward(k) + (boss ? 24 : 0),
     desc: boss
-      ? `第 ${k} 关 · 城门Boss · 破门奖励+24`
-      : `第 ${k} 关 · 敌营 Lv${enemyLv.toFixed(1)} · 推倒城墙`,
+      ? `第 ${k} 关 · 腐坏果堡Boss · 破堡奖励+24`
+      : `第 ${k} 关 · 腐坏水果 Lv${enemyLv.toFixed(1)} · 推倒果堡`,
   };
 }
