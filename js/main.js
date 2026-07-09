@@ -45,7 +45,7 @@ function spawnSoldierFromBall(ball, r, c, side, forced = false) {
 
   if (side === 'player') {
     state.rings.push({ x: center.x, y: center.y, r: forced ? 8 : 5, life: 0.25, maxLife: 0.25, color: forced ? THEME.gold : TYPES[ball.type].color });
-    if (forced || ball.level >= 3) addFx(center.x, center.y - 22, forced ? '立即出兵' : `Lv.${ball.level} 出兵`, forced ? THEME.gold : '#fff2be', 11);
+    if (forced || ball.level >= 3) addFx(center.x, center.y - 22, forced ? '急派兵' : `Lv.${ball.level} 派兵`, forced ? THEME.gold : '#fff2be', 11);
   }
   return soldier;
 }
@@ -79,33 +79,21 @@ function update(dt) {
     addFx(42, LAYOUT.fieldY + LAYOUT.fieldH - 46, '+1果汁', THEME.gold, 11);
   }
 
-  // 玩家自动补充水果营
-  state.ballTimer += dt;
-  if (state.ballTimer >= BALL_SPAWN_INTERVAL) {
-    state.ballTimer -= BALL_SPAWN_INTERVAL;
-    const added = autoSpawnBall(state.playerSlots);
-    if (added) {
-      const center = slotCenter(added[0], added[1], false);
-      state.rings.push({ x: center.x, y: center.y, r: 6, life: 0.25, maxLife: 0.25, color: 'rgba(255,228,90,0.65)' });
-    } else {
-      pushOverflow(state.overflowQueue, randomType(), 1);
-    }
-    drainOverflow(state.playerSlots, state.overflowQueue);
-  }
+  // 玩家不再自动补球：空格由玩家点击消耗果汁主动召唤。
 
-  // 敌方自动补充水果营：使用关卡配置里的敌方补兵节奏
+  // 敌方自动补充水果营：PVE 压力仍由关卡节奏控制。
   state.enemyBallTimer += dt;
   const enemyBallInterval = state.levelConfig?.enemySpawnInterval || BALL_SPAWN_INTERVAL;
   if (state.enemyBallTimer >= enemyBallInterval) {
     state.enemyBallTimer -= enemyBallInterval;
-    const added = autoSpawnBall(state.enemySlots);
+    const added = autoSpawnBall(state.enemySlots, 1, true);
     if (!added) state.enemyOverflow++;
     if (state.enemyOverflow > 0) {
       const empties = emptySlots(state.enemySlots);
       let placed = 0;
       while (state.enemyOverflow > 0 && placed < empties.length) {
         const [r, c] = empties[placed];
-        state.enemySlots[r][c] = createBall(randomType(), 1);
+        state.enemySlots[r][c] = createBall(randomEnemyType(), 1);
         state.enemyOverflow--;
         placed++;
       }
@@ -114,7 +102,7 @@ function update(dt) {
 
   updateAI(dt);
 
-  // 每个水果营独立出兵
+  // 每个水果营按 CD 自动派兵。自动派兵免费；果汁只用于召唤和急派兵。
   const slotsArr = [
     { slots: state.playerSlots, side: 'player' },
     { slots: state.enemySlots, side: 'enemy' },
@@ -129,9 +117,7 @@ function update(dt) {
         const ball = grp.slots[r][c];
         if (!ball) continue;
         ball.spawnTimer -= dt;
-        const canSpawn = grp.side === 'enemy' || state.sp > 0;
-        if (ball.spawnTimer <= 0 && canSpawn) {
-          if (grp.side === 'player') state.sp -= 1;
+        if (ball.spawnTimer <= 0) {
           const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
           ball.spawnTimer += cd;
           spawnSoldierFromBall(ball, r, c, grp.side);
@@ -233,7 +219,7 @@ function onGameOver(win) {
     const elapsed = Math.floor(state.time);
     detail.innerHTML = `
       腐坏水果突破了我方果堡。<br>
-      建议先升级水果营攻击/韧性，或双击高等级水果营消耗果汁能量补一波兵。<br>
+      建议点击空格消耗果汁召唤水果营，或双击高等级水果营消耗果汁急派兵救线。<br>
       ⚔ 击破 ${state.kills} · 合成 ${state.merges} 次 · ${elapsed}秒
       ${reportHtml()}
     `;
