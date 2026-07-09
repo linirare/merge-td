@@ -1,5 +1,5 @@
 /* ============================================================
-   合成攻城 · Merge Siege —— 主入口
+   水果突击 · Fruit Assault —— 主入口
    ============================================================ */
 
 const canvas = document.getElementById('game');
@@ -76,10 +76,10 @@ function update(dt) {
   if (state._spTimer >= SP_PASSIVE && state.sp < getSpRecoverCap(meta)) {
     state._spTimer -= SP_PASSIVE;
     state.sp = Math.min(state.sp + 1, getSpMax(meta));
-    addFx(36, LAYOUT.fieldY + LAYOUT.fieldH - 46, '+1士气', THEME.gold, 11);
+    addFx(42, LAYOUT.fieldY + LAYOUT.fieldH - 46, '+1果汁', THEME.gold, 11);
   }
 
-  // 玩家自动补充兵营
+  // 玩家自动补充水果营
   state.ballTimer += dt;
   if (state.ballTimer >= BALL_SPAWN_INTERVAL) {
     state.ballTimer -= BALL_SPAWN_INTERVAL;
@@ -93,7 +93,7 @@ function update(dt) {
     drainOverflow(state.playerSlots, state.overflowQueue);
   }
 
-  // 敌方自动补充兵营：使用关卡配置里的敌方补兵节奏
+  // 敌方自动补充水果营：使用关卡配置里的敌方补兵节奏
   state.enemyBallTimer += dt;
   const enemyBallInterval = state.levelConfig?.enemySpawnInterval || BALL_SPAWN_INTERVAL;
   if (state.enemyBallTimer >= enemyBallInterval) {
@@ -114,7 +114,7 @@ function update(dt) {
 
   updateAI(dt);
 
-  // 每个兵营独立产兵
+  // 每个水果营独立出兵
   const slotsArr = [
     { slots: state.playerSlots, side: 'player' },
     { slots: state.enemySlots, side: 'enemy' },
@@ -190,7 +190,7 @@ let last = 0;
 function reportHtml() {
   const report = state.lastBattleReport;
   if (!report || !report.tips || report.tips.length === 0) return '';
-  return `<br><span style="color:#ffe45a">战斗复盘</span><br>${report.tips.slice(0, 4).map(t => `· ${t}`).join('<br>')}`;
+  return `<br><span style="color:#ffc93c">战斗复盘</span><br>${report.tips.slice(0, 4).map(t => `· ${t}`).join('<br>')}`;
 }
 
 function onGameOver(win) {
@@ -215,26 +215,26 @@ function onGameOver(win) {
     meta.gold += totalReward;
     meta.totalWins++;
 
-    title.textContent = state.levelConfig.isBoss ? '🏆 Boss城门攻破！' : '🎉 攻城胜利！';
+    title.textContent = state.levelConfig.isBoss ? '🏆 腐坏果堡攻破！' : '🎉 水果突击胜利！';
     const starsStr = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
     const bestType = state.maxSoldierType ? (TYPES[state.maxSoldierType]?.name || '') : '';
     detail.innerHTML = `
       ${starsStr}<br>
-      第 ${state.currentLevel} 关 · ${elapsed}秒 · 城墙剩余${Math.round(wallRatio * 100)}%<br>
-      💰 +${totalReward}（基础${state.levelConfig.reward}${bonus > 0 ? ' + 星级'+bonus : ''}）<br>
-      ⚔ 击杀 ${state.kills} · 合成 ${state.merges} 次${bestType ? ' · 王牌: ' + bestType + ' ' + state.maxSoldierAtk + '攻' : ''}
+      第 ${state.currentLevel} 关 · ${elapsed}秒 · 果堡剩余${Math.round(wallRatio * 100)}%<br>
+      🍋 +${totalReward}（基础${state.levelConfig.reward}${bonus > 0 ? ' + 星级'+bonus : ''}）<br>
+      ⚔ 击破 ${state.kills} · 合成 ${state.merges} 次${bestType ? ' · 王牌: ' + bestType + ' ' + state.maxSoldierAtk + '攻' : ''}
       ${reportHtml()}
     `;
     playSfx('win');
     if (state.currentLevel >= meta.highestLevel) meta.highestLevel = state.currentLevel + 1;
     nextBtn.classList.remove('hide');
   } else {
-    title.textContent = '💀 城墙失守';
+    title.textContent = '💀 果堡失守';
     const elapsed = Math.floor(state.time);
     detail.innerHTML = `
-      敌军突破了我方城墙。<br>
-      建议先升级兵营攻击/血量，或双击高等级兵营补一波兵。<br>
-      ⚔ 击杀 ${state.kills} · 合成 ${state.merges} 次 · ${elapsed}秒
+      腐坏水果突破了我方果堡。<br>
+      建议先升级水果营攻击/韧性，或双击高等级水果营消耗果汁能量补一波兵。<br>
+      ⚔ 击破 ${state.kills} · 合成 ${state.merges} 次 · ${elapsed}秒
       ${reportHtml()}
     `;
     playSfx('lose');
