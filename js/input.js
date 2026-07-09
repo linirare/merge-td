@@ -2,6 +2,9 @@
    水果突击 · Fruit Assault —— 输入处理
    ============================================================ */
 
+const SUMMON_COST = 1;
+const URGENT_DISPATCH_COST = 2;
+
 function toGame(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
@@ -12,7 +15,26 @@ function eventPoint(ev) {
   return toGame(p.clientX, p.clientY);
 }
 
-/* ——— 双击强制出兵 ——— */
+function summonFruitAt(r, c) {
+  if (state.playerSlots[r][c]) return false;
+  const center = slotCenter(r, c, false);
+  if (state.sp < SUMMON_COST) {
+    addFx(center.x, center.y - 22, '果汁不足', THEME.accent, 13);
+    return false;
+  }
+  state.sp -= SUMMON_COST;
+  state.summonCount = (state.summonCount || 0) + 1;
+  const type = randomType(activeDeck());
+  state.playerSlots[r][c] = createBall(type, 1);
+  state.playerSlots[r][c].spawnTimer = Math.max(state.playerSlots[r][c].spawnTimer, 2.2);
+  const t = TYPES[type];
+  state.rings.push({ x: center.x, y: center.y, r: 9, life: 0.36, maxLife: 0.36, color: t.color || THEME.gold });
+  addFx(center.x, center.y - 24, `果汁 -${SUMMON_COST} · 召唤${t.icon}`, THEME.gold, 13);
+  playSfx('merge');
+  return true;
+}
+
+/* ——— 双击急派兵 ——— */
 let lastTap = { time: 0, r: -1, c: -1 };
 
 function onDown(ev) {
@@ -49,23 +71,28 @@ function onDown(ev) {
   if (!s) { lastTap.time = 0; return; }
   const [r, c] = s;
   const ball = state.playerSlots[r][c];
-  if (!ball) { lastTap.time = 0; return; }
+
+  // 空格点击：消耗果汁主动召唤。拖拽规则全部免费，点击行动才花果汁。
+  if (!ball) {
+    lastTap.time = 0;
+    summonFruitAt(r, c);
+    return;
+  }
 
   const now = performance.now();
   if (lastTap.r === r && lastTap.c === c && (now - lastTap.time) < 350) {
     const alive = state.playerSoldiers.filter(s => s.alive).length;
     const center = slotCenter(r, c, false);
-    if (state.sp <= 0) {
-      addFx(center.x, center.y - 24, '果汁不足', THEME.accent, 13);
+    if (state.sp < URGENT_DISPATCH_COST) {
+      addFx(center.x, center.y - 24, '果汁不足，无法急派', THEME.accent, 13);
     } else if (alive >= MAX_SOLDIERS) {
       addFx(center.x, center.y - 24, '兵数已满', THEME.accent, 13);
     } else {
-      state.sp -= 1;
+      state.sp -= URGENT_DISPATCH_COST;
       const soldier = spawnSoldierFromBall(ball, r, c, 'player', true);
-      const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
-      ball.spawnTimer = cd;
-      state.rings.push({ x: center.x, y: center.y, r: 7, life: 0.34, maxLife: 0.34, color: THEME.gold });
-      addFx(center.x, center.y - 24, soldier ? '果汁 -1 · 立即出兵!' : '兵数已满', soldier ? THEME.gold : THEME.accent, 13);
+      ball.spawnTimer = Math.max(ball.spawnTimer || 0, 1.2);
+      state.rings.push({ x: center.x, y: center.y, r: 8, life: 0.34, maxLife: 0.34, color: THEME.gold });
+      addFx(center.x, center.y - 24, soldier ? `果汁 -${URGENT_DISPATCH_COST} · 急派兵!` : '无法派兵', soldier ? THEME.gold : THEME.accent, 13);
     }
     lastTap.time = 0;
     return;
@@ -89,6 +116,8 @@ function onDown(ev) {
 function snapActionFor(targetBall, dragUnit) {
   if (!targetBall) return 'move';
   if (targetBall.type === dragUnit.type && targetBall.level === dragUnit.level && targetBall.level < MAX_LEVEL) return 'merge';
+  if (dragUnit.type === 'kiwi_wildcard' && targetBall.level === dragUnit.level && targetBall.level < MAX_LEVEL) return 'merge';
+  if (dragUnit.type === 'passion_copy' && targetBall.level === dragUnit.level) return 'copy';
   return 'swap';
 }
 
@@ -162,11 +191,12 @@ function onUp(ev) {
     const result = tryMerge(state.playerSlots, d.fromR, d.fromC, toR, toC);
     if (result && result.merged) {
       state.merges++;
+      if (result.wildcard) state.specialMerges++;
       playSfx('merge');
       const ct = TYPES[result.type];
       const center = slotCenter(toR, toC, false);
       addFx(center.x, center.y - 24, `${ct.icon} ${ct.name} Lv.${result.newLevel}`, THEME.gold, 14);
-      if (result.newLevel >= 3) addFx(center.x, center.y + 26, '产兵速度提升', '#fff2be', 11);
+      if (result.newLevel >= 3) addFx(center.x, center.y + 26, '下一波兵阶提升', '#fff2be', 11);
       state.rings.push({ x: center.x, y: center.y, r: 10, life: 0.55, maxLife: 0.55, color: THEME.gold });
       for (let i = 0; i < 10; i++) {
         const angle = (Math.PI * 2 / 10) * i;
@@ -178,7 +208,13 @@ function onUp(ev) {
         });
       }
       state.shake = Math.min(0.35 + result.newLevel * 0.13, 1.7);
-      drainOverflow(state.playerSlots, state.overflowQueue);
+    } else if (result && result.copied) {
+      state.specialMerges++;
+      playSfx('merge');
+      const ct = TYPES[result.type];
+      const center = slotCenter(d.fromR, d.fromC, false);
+      addFx(center.x, center.y - 24, `复制成 ${ct.icon}${ct.name}`, THEME.info, 13);
+      state.rings.push({ x: center.x, y: center.y, r: 8, life: 0.36, maxLife: 0.36, color: THEME.info });
     } else if (result && result.swap) {
       const center = slotCenter(toR, toC, false);
       state.rings.push({ x: center.x, y: center.y, r: 6, life: 0.22, maxLife: 0.22, color: THEME.info });
