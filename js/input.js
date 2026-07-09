@@ -1,82 +1,67 @@
 /* ============================================================
-   合成塔防 · PvE —— 输入处理
+   合成攻城 · Merge Siege —— 输入处理
    ============================================================ */
 
 function toGame(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
-  return {
-    x: (clientX - rect.left) / scale,
-    y: (clientY - rect.top) / scale,
-  };
+  return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
 }
 
-/* ——— 双击强制产兵 ——— */
+function eventPoint(ev) {
+  const p = ev.touches?.[0] || ev.changedTouches?.[0] || ev;
+  return toGame(p.clientX, p.clientY);
+}
+
+/* ——— 双击强制出兵 ——— */
 let lastTap = { time: 0, r: -1, c: -1 };
 
 function onDown(ev) {
   if (state.phase !== 'playing' && state.phase !== 'paused') return;
   ev.preventDefault();
-  const p = toGame(ev.clientX || ev.touches[0].clientX, ev.clientY || ev.touches[0].clientY);
+  const p = eventPoint(ev);
 
-  // 暂停按钮
-  if (p.x >= PAUSE_RECT.x && p.x <= PAUSE_RECT.x + PAUSE_RECT.w
-    && p.y >= PAUSE_RECT.y && p.y <= PAUSE_RECT.y + PAUSE_RECT.h) {
+  if (p.x >= PAUSE_RECT.x && p.x <= PAUSE_RECT.x + PAUSE_RECT.w && p.y >= PAUSE_RECT.y && p.y <= PAUSE_RECT.y + PAUSE_RECT.h) {
     state.phase = state.phase === 'paused' ? 'playing' : 'paused';
     return;
   }
 
   if (state.phase === 'paused') return;
 
-  // 检测帮助按钮
-  if (p.x >= HELP_RECT.x && p.x <= HELP_RECT.x + HELP_RECT.w
-    && p.y >= HELP_RECT.y && p.y <= HELP_RECT.y + HELP_RECT.h) {
+  if (p.x >= HELP_RECT.x && p.x <= HELP_RECT.x + HELP_RECT.w && p.y >= HELP_RECT.y && p.y <= HELP_RECT.y + HELP_RECT.h) {
     document.getElementById('helpPanel').classList.remove('hide');
     return;
   }
 
-  // 检测速度按钮
-  if (p.x >= SPEED_RECT.x && p.x <= SPEED_RECT.x + SPEED_RECT.w
-    && p.y >= SPEED_RECT.y && p.y <= SPEED_RECT.y + SPEED_RECT.h) {
+  if (p.x >= SPEED_RECT.x && p.x <= SPEED_RECT.x + SPEED_RECT.w && p.y >= SPEED_RECT.y && p.y <= SPEED_RECT.y + SPEED_RECT.h) {
     state.speed = state.speed >= 3 ? 1 : state.speed + 1;
+    addFx(SPEED_RECT.x + SPEED_RECT.w / 2, SPEED_RECT.y + 42, `速度 ×${state.speed}`, THEME.gold, 12);
     return;
   }
 
-  // 检测溢出队列按钮
-  if (state.overflowQueue.length > 0
-    && p.x >= OVERFLOW_RECT.x && p.x <= OVERFLOW_RECT.x + OVERFLOW_RECT.w
-    && p.y >= OVERFLOW_RECT.y && p.y <= OVERFLOW_RECT.y + OVERFLOW_RECT.h) {
+  if (state.overflowQueue.length > 0 && p.x >= OVERFLOW_RECT.x && p.x <= OVERFLOW_RECT.x + OVERFLOW_RECT.w && p.y >= OVERFLOW_RECT.y && p.y <= OVERFLOW_RECT.y + OVERFLOW_RECT.h) {
     showOverflowPopup();
     return;
   }
 
-  // pendingPlace 模式：点空格放置
-  if (state.pendingPlace) {
-    return; // 由 onUp 处理
-  }
+  if (state.pendingPlace) return;
 
-  // 检测是否点中我方棋盘上的球
   const s = slotAt(p.x, p.y, false);
   if (!s) { lastTap.time = 0; return; }
   const [r, c] = s;
   const ball = state.playerSlots[r][c];
   if (!ball) { lastTap.time = 0; return; }
 
-  // 双击检测：300ms内同球→强制产兵
   const now = performance.now();
   if (lastTap.r === r && lastTap.c === c && (now - lastTap.time) < 350 && state.sp > 0) {
-    const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
-    if (ball.spawnTimer > 0) {
+    const alive = state.playerSoldiers.filter(s => s.alive).length;
+    if (alive < MAX_SOLDIERS) {
       state.sp -= 1;
+      const soldier = spawnSoldierFromBall(ball, r, c, 'player', true);
+      const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
+      ball.spawnTimer = cd;
       const center = slotCenter(r, c, false);
-      const soldier = createSoldier(ball.type, ball.level, getAtkMul(meta, ball.type), getHpMul(meta, ball.type));
-      soldier.x = center.x + (Math.random() - 0.5) * 10;
-      soldier.y = center.y;
-      soldier.side = 'player';
-      soldier.targetX = 40 + Math.random() * (W - 80);
-      soldier.targetY = LAYOUT.fieldY + LAYOUT.fieldH * 0.7 + Math.random() * LAYOUT.fieldH * 0.25;
-      state.playerSoldiers.push(soldier);
-      ball.spawnTimer = cd; // 重置冷却
-      state.rings.push({ x: center.x, y: center.y, r: 6, life: 0.3, maxLife: 0.3, color: '#ffe45a' });
+      state.rings.push({ x: center.x, y: center.y, r: 7, life: 0.34, maxLife: 0.34, color: THEME.gold });
+      addFx(center.x, center.y - 24, soldier ? '立即出兵!' : '兵数已满', soldier ? THEME.gold : THEME.accent, 13);
     }
     lastTap.time = 0;
     return;
@@ -99,15 +84,14 @@ function onDown(ev) {
 function onMove(ev) {
   if (!state.drag) return;
   ev.preventDefault();
-  const p = toGame(ev.clientX || ev.touches[0].clientX, ev.clientY || ev.touches[0].clientY);
+  const p = eventPoint(ev);
   state.drag.x = p.x;
   state.drag.y = p.y;
   const dx = p.x - state.drag.sx;
   const dy = p.y - state.drag.sy;
   if (dx * dx + dy * dy > 12 * 12) state.drag.moved = true;
 
-  // 磁吸辅助：检测最近的合法目标格
-  let bestDist = 15;
+  let bestDist = 16;
   state.drag.nearestSnap = null;
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -125,9 +109,8 @@ function onMove(ev) {
 }
 
 function onUp(ev) {
-  // pendingPlace 处理
   if (state.pendingPlace) {
-    const p = toGame(ev.clientX || ev.changedTouches[0].clientX, ev.clientY || ev.changedTouches[0].clientY);
+    const p = eventPoint(ev);
     const s = slotAt(p.x, p.y, false);
     if (s) {
       const [toR, toC] = s;
@@ -135,6 +118,9 @@ function onUp(ev) {
         const pp = state.pendingPlace;
         state.playerSlots[toR][toC] = createBall(pp.type, pp.level);
         state.overflowQueue.splice(pp.queueIndex, 1);
+        const center = slotCenter(toR, toC, false);
+        state.rings.push({ x: center.x, y: center.y, r: 8, life: 0.35, maxLife: 0.35, color: THEME.gold });
+        addFx(center.x, center.y - 22, '部署兵营', THEME.gold, 13);
       }
     }
     state.pendingPlace = null;
@@ -144,26 +130,21 @@ function onUp(ev) {
   if (!state.drag) return;
   const d = state.drag;
   state.drag = null;
-
-  // 没移动 = 原地点击
   if (!d.moved) return;
 
-  // 磁吸落点
   let s = slotAt(d.x, d.y, false);
-  if (!s && d.nearestSnap) {
-    // 不在任何格子上，用磁吸最近格
-    s = [d.nearestSnap.r, d.nearestSnap.c];
-  }
+  if (!s && d.nearestSnap) s = [d.nearestSnap.r, d.nearestSnap.c];
   if (!s) return;
   const [toR, toC] = s;
-
-  // 拖到自己原来的格子
   if (toR === d.fromR && toC === d.fromC) return;
 
-  // 尝试合成/交换/移动
   const targetBall = state.playerSlots[toR][toC];
   if (!targetBall) {
-    tryMove(state.playerSlots, d.fromR, d.fromC, toR, toC);
+    const moved = tryMove(state.playerSlots, d.fromR, d.fromC, toR, toC);
+    if (moved) {
+      const center = slotCenter(toR, toC, false);
+      state.rings.push({ x: center.x, y: center.y, r: 6, life: 0.22, maxLife: 0.22, color: 'rgba(255,255,255,0.55)' });
+    }
   } else {
     const result = tryMerge(state.playerSlots, d.fromR, d.fromC, toR, toC);
     if (result && result.merged) {
@@ -171,19 +152,19 @@ function onUp(ev) {
       playSfx('merge');
       const ct = TYPES[result.type];
       const center = slotCenter(toR, toC, false);
-      addFx(center.x, center.y - 20, `合成 ${ct.icon} Lv.${result.newLevel}`, '#ffe45a', 14);
-      state.rings.push({ x: center.x, y: center.y, r: 10, life: 0.5, maxLife: 0.5, color: '#ffe45a' });
-      for (let i = 0; i < 12; i++) {
-        const angle = (Math.PI * 2 / 12) * i + Math.random() * 0.3;
-        const speed = 60 + Math.random() * 80;
+      addFx(center.x, center.y - 24, `${ct.icon} ${ct.name} Lv.${result.newLevel}`, THEME.gold, 14);
+      if (result.newLevel >= 3) addFx(center.x, center.y + 26, '产兵速度提升', '#fff2be', 11);
+      state.rings.push({ x: center.x, y: center.y, r: 10, life: 0.55, maxLife: 0.55, color: THEME.gold });
+      for (let i = 0; i < 10; i++) {
+        const angle = (Math.PI * 2 / 10) * i;
+        const speed = 48 + Math.random() * 70;
         state.fx.push({
-          x: center.x, y: center.y, text: '●', color: ct.color,
-          size: 4 + Math.random() * 4, life: 0.8, maxLife: 0.8,
+          x: center.x, y: center.y, text: '✦', color: ct.color,
+          size: 5 + Math.random() * 4, life: 0.55, maxLife: 0.55,
           vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
         });
       }
-      const shakeIntensity = 0.3 + result.newLevel * 0.15;
-      state.shake = Math.min(shakeIntensity, 2.0);
+      state.shake = Math.min(0.35 + result.newLevel * 0.13, 1.7);
       drainOverflow(state.playerSlots, state.overflowQueue);
     }
   }
