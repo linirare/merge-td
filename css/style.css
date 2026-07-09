@@ -82,6 +82,19 @@ html, body {
 }
 .btn-primary.hide, .btn-secondary.hide { display: none; }
 
+/* ——— 重置按钮（小字、低调） ——— */
+.btn-reset {
+  width: 100%; padding: 6px 0;
+  font-size: 11px;
+  border: 1px solid rgba(255,100,60,0.2);
+  border-radius: 8px; cursor: pointer;
+  color: rgba(255,120,80,0.5); text-align: center;
+  background: transparent;
+  transition: color 0.2s, border-color 0.2s;
+  margin-top: 4px;
+}
+.btn-reset:hover { color: #ff6a4a; border-color: rgba(255,100,60,0.5); }
+
 #resultDetail {
   color: #c9b69a; font-size: 14px; text-align: center;
 }

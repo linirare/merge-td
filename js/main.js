@@ -111,7 +111,6 @@ function update(dt) {
           s.x = center.x + (Math.random() - 0.5) * 10;
           s.y = center.y;
           s.side = grp.side;
-          const fy = LAYOUT.fieldY + LAYOUT.fieldH / 2;
           s.targetX = 40 + Math.random() * (W - 80);
           s.targetY = grp.side === 'player'
             ? LAYOUT.fieldY + LAYOUT.fieldH * 0.7 + Math.random() * LAYOUT.fieldH * 0.25
@@ -191,10 +190,32 @@ function onGameOver(win) {
 
   panel.classList.remove('hide');
   if (win) {
-    title.textContent = '🎉 胜利！';
-    detail.textContent = `第 ${state.currentLevel} 关通关 · 获得 ${state.levelConfig.reward} 金币`;
-    meta.gold += state.levelConfig.reward;
+    // 星级评定
+    const wallRatio = state.playerWallHp / state.playerWallMax;
+    const elapsed = Math.floor(state.time);
+    let stars = 1;
+    if (wallRatio > 0.8 && elapsed < 60) stars = 3;
+    else if (wallRatio > 0.5) stars = 2;
+
+    const prevStars = meta.stars[state.currentLevel] || 0;
+    if (stars > prevStars) meta.stars[state.currentLevel] = stars;
+
+    const bonus = Math.round(state.levelConfig.reward * (stars - 1) * 0.5);
+    const totalReward = state.levelConfig.reward + bonus;
+    meta.gold += totalReward;
     meta.totalWins++;
+
+    title.textContent = '🎉 胜利！';
+    const starsStr = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+    const bestType = state.maxSoldierType ? (TYPES[state.maxSoldierType]?.name || '') : '';
+    detail.innerHTML = `
+      ${starsStr}<br>
+      第 ${state.currentLevel} 关 · ${elapsed}秒<br>
+      💰 +${totalReward} (基础${state.levelConfig.reward}${bonus > 0 ? ' + 星级'+bonus : ''})<br>
+      ⚔ 击杀 ${state.kills} · 合成 ${state.merges}次
+      ${bestType ? ' · 最佳: ' + bestType + ' ' + state.maxSoldierAtk + '攻' : ''}
+    `;
+    playSfx('win');
     refreshGold();
     if (state.currentLevel >= meta.highestLevel) {
       meta.highestLevel = state.currentLevel + 1;
@@ -202,11 +223,17 @@ function onGameOver(win) {
     nextBtn.classList.remove('hide');
   } else {
     title.textContent = '💀 战败';
-    detail.textContent = '城墙被攻破了...再试一次吧';
+    const elapsed = Math.floor(state.time);
+    detail.innerHTML = `
+      城墙被攻破了...<br>
+      ⚔ 击杀 ${state.kills} · 合成 ${state.merges}次 · ${elapsed}秒
+    `;
+    playSfx('lose');
     nextBtn.classList.add('hide');
   }
   saveMeta();
 }
+
 function loop(t) {
   const dt = Math.min((t - last) / 1000, 0.05);
   last = t;

@@ -420,7 +420,7 @@ function drawFx() {
     const scale = f.vx ? 1 : (1 + (1 - alpha) * 0.3);
     ctx.save();
     const baseY = f.vx ? f.y : (f.y - (1 - alpha) * 30);
-    ctx.translate(baseY === f.y ? f.x : f.x, baseY);
+    ctx.translate(f.x, baseY);
     if (scale !== 1) ctx.scale(scale, scale);
     ctx.globalAlpha = f.vx ? Math.min(alpha * 2, 1) : alpha;
     ctx.font = `bold ${f.size}px sans-serif`;

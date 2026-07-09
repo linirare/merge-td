@@ -121,6 +121,7 @@ function loadMeta() {
       meta.wallLv = saved.wallLv || 0;
       meta.highestLevel = Math.max(1, saved.highestLevel || 1);
       meta.totalWins = saved.totalWins || 0;
+      meta.stars = saved.stars || {};
     }
   } catch (e) {}
   refreshGold();
@@ -172,5 +173,36 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnNext').addEventListener('click', () => {
     document.getElementById('resultPanel').classList.add('hide');
     initLevel(state.currentLevel + 1);
+  });
+
+  // 重置数据（长按确认）
+  const resetBtn = document.getElementById('btnReset');
+  let resetTimer = null;
+  resetBtn.addEventListener('mousedown', () => {
+    resetTimer = setTimeout(() => {
+      localStorage.removeItem(META_KEY);
+      location.reload();
+    }, 1500);
+    resetBtn.textContent = '松手取消...';
+  });
+  resetBtn.addEventListener('mouseup', () => {
+    clearTimeout(resetTimer);
+    resetBtn.textContent = '重置数据';
+  });
+  resetBtn.addEventListener('mouseleave', () => {
+    clearTimeout(resetTimer);
+    resetBtn.textContent = '重置数据';
+  });
+  resetBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    resetTimer = setTimeout(() => {
+      localStorage.removeItem(META_KEY);
+      location.reload();
+    }, 1500);
+    resetBtn.textContent = '松手取消...';
+  });
+  resetBtn.addEventListener('touchend', () => {
+    clearTimeout(resetTimer);
+    resetBtn.textContent = '重置数据';
   });
 });

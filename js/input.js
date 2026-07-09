@@ -10,6 +10,9 @@ function toGame(clientX, clientY) {
   };
 }
 
+/* ——— 双击强制产兵 ——— */
+let lastTap = { time: 0, r: -1, c: -1 };
+
 function onDown(ev) {
   if (state.phase !== 'playing' && state.phase !== 'paused') return;
   ev.preventDefault();
@@ -53,10 +56,32 @@ function onDown(ev) {
 
   // 检测是否点中我方棋盘上的球
   const s = slotAt(p.x, p.y, false);
-  if (!s) return;
+  if (!s) { lastTap.time = 0; return; }
   const [r, c] = s;
   const ball = state.playerSlots[r][c];
-  if (!ball) return;
+  if (!ball) { lastTap.time = 0; return; }
+
+  // 双击检测：300ms内同球→强制产兵
+  const now = performance.now();
+  if (lastTap.r === r && lastTap.c === c && (now - lastTap.time) < 350 && state.sp > 0) {
+    const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
+    if (ball.spawnTimer > 0) {
+      state.sp -= 1;
+      const center = slotCenter(r, c, false);
+      const soldier = createSoldier(ball.type, ball.level, getAtkMul(meta, ball.type), getHpMul(meta, ball.type));
+      soldier.x = center.x + (Math.random() - 0.5) * 10;
+      soldier.y = center.y;
+      soldier.side = 'player';
+      soldier.targetX = 40 + Math.random() * (W - 80);
+      soldier.targetY = LAYOUT.fieldY + LAYOUT.fieldH * 0.7 + Math.random() * LAYOUT.fieldH * 0.25;
+      state.playerSoldiers.push(soldier);
+      ball.spawnTimer = cd; // 重置冷却
+      state.rings.push({ x: center.x, y: center.y, r: 6, life: 0.3, maxLife: 0.3, color: '#ffe45a' });
+    }
+    lastTap.time = 0;
+    return;
+  }
+  lastTap = { time: now, r, c };
 
   state.drag = {
     unit: ball,
@@ -142,6 +167,8 @@ function onUp(ev) {
   } else {
     const result = tryMerge(state.playerSlots, d.fromR, d.fromC, toR, toC);
     if (result && result.merged) {
+      state.merges++;
+      playSfx('merge');
       const ct = TYPES[result.type];
       const center = slotCenter(toR, toC, false);
       addFx(center.x, center.y - 20, `合成 ${ct.icon} Lv.${result.newLevel}`, '#ffe45a', 14);

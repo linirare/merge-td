@@ -117,7 +117,7 @@ function soldierCombat(s, enemies) {
       s.atkTimer -= dt_global;
       if (s.atkTimer <= 0) {
         if (s.side === 'player') {
-          state.enemyWallHp = Math.max(0, state.enemyWallHp - s.level * 2);
+          state.enemyWallHp = Math.max(0, state.enemyWallHp - (s.level * 2 + Math.round(s.atk * 0.1)));
           addFx(s.x, wallY - 8, '💥', '#ff8a5a', 14);
         } else {
           state.playerWallHp = Math.max(0, state.playerWallHp - s.level * 2);
@@ -156,6 +156,7 @@ function soldierCombat(s, enemies) {
 
       if (s.type === 'bow') {
         // 弓兵：射出箭矢飞行物
+        playSfx('arrow');
         state.projectiles.push({
           x: s.x, y: s.y,
           targetX: target.x, targetY: target.y,
@@ -165,6 +166,7 @@ function soldierCombat(s, enemies) {
         });
       } else {
         // 近战：直接扣血
+        playSfx('hit');
         target.hp -= dmg;
         target.hitFlash = 0.3;
         // 攻击划痕
@@ -179,10 +181,44 @@ function soldierCombat(s, enemies) {
         if (target.hp <= 0) {
           target.alive = false;
           if (s.side === 'player') state.sp = Math.min(state.sp + 1, SP_MAX); // 只有玩家杀敌得SP
+          state.kills++;
+          if (s.side === 'player' && s.atk > state.maxSoldierAtk) { state.maxSoldierAtk = s.atk; state.maxSoldierType = s.type; }
           state.rings.push({ x: target.x, y: target.y, r: 4, life: 0.25, maxLife: 0.25, color: '#ff4a3a' });
           addFx(target.x, target.y - 6, '💀', '#ff6a4a', 12);
         }
       }
+    }
+  }
+}
+
+/* ——— 兵碰撞排斥 ——— */
+function applySeparation(soldiers) {
+  const sepDist = 15;
+  for (let i = 0; i < soldiers.length; i++) {
+    const a = soldiers[i];
+    if (!a.alive) continue;
+    let fx = 0, fy = 0;
+    for (let j = 0; j < soldiers.length; j++) {
+      if (i === j) continue;
+      const b = soldiers[j];
+      if (!b.alive) continue;
+      const dx = a.x - b.x, dy = a.y - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < sepDist && dist > 0.1) {
+        const force = (sepDist - dist) / sepDist;
+        fx += (dx / dist) * force;
+        fy += (dy / dist) * force;
+      }
+    }
+    if (fx !== 0 || fy !== 0) {
+      const speed = 60 * dt_global;
+      a.x += fx * speed;
+      a.y += fy * speed;
+      // 边界夹紧
+      const fy0 = LAYOUT.fieldY, fh = LAYOUT.fieldH;
+      a.x = Math.max(24, Math.min(W - 24, a.x));
+      if (a.side === 'player') a.y = Math.max(fy0 + 4, Math.min(fy0 + fh - 4, a.y));
+      else a.y = Math.max(fy0 + 4, Math.min(fy0 + fh - 4, a.y));
     }
   }
 }
@@ -214,6 +250,10 @@ function updateCombat() {
   state.playerSoldiers = state.playerSoldiers.filter(s => s.alive);
   state.enemySoldiers = state.enemySoldiers.filter(s => s.alive);
 
+  // 兵碰撞排斥
+  applySeparation(state.playerSoldiers);
+  applySeparation(state.enemySoldiers);
+
   // 城墙受击震动衰减
   if (state.shake > 0) state.shake = Math.max(0, state.shake - dt_global * 4);
 
@@ -223,8 +263,8 @@ function updateCombat() {
     p.life -= dt_global;
     if (p.life <= 0) { state.projectiles.splice(i, 1); continue; }
 
-    // 查找目标（玩家箭找敌人，敌人箭找玩家——但目前只有玩家有弓）
-    const enemies = state.enemySoldiers;
+    // 按阵营区分箭矢目标
+    const enemies = p.side === 'player' ? state.enemySoldiers : state.playerSoldiers;
     const tgt = enemies.find(e => e.id === p.targetId && e.alive);
     if (tgt) {
       p.targetX = tgt.x; p.targetY = tgt.y;
@@ -234,7 +274,7 @@ function updateCombat() {
         // 命中
         tgt.hp -= p.dmg;
         tgt.hitFlash = 0.3;
-        if (tgt.hp <= 0) { tgt.alive = false; if (p.side === 'player') state.sp = Math.min(state.sp + 1, SP_MAX); state.rings.push({ x: tgt.x, y: tgt.y, r: 4, life: 0.25, maxLife: 0.25, color: '#ff4a3a' }); addFx(tgt.x, tgt.y - 6, '💀', '#ff6a4a', 12); }
+        if (tgt.hp <= 0) { tgt.alive = false; if (p.side === 'player') { state.sp = Math.min(state.sp + 1, SP_MAX); state.kills++; if (p.dmg > state.maxSoldierAtk) { state.maxSoldierAtk = p.dmg; state.maxSoldierType = 'bow'; } } state.rings.push({ x: tgt.x, y: tgt.y, r: 4, life: 0.25, maxLife: 0.25, color: '#ff4a3a' }); addFx(tgt.x, tgt.y - 6, '💀', '#ff6a4a', 12); }
         // 命中粒子
         for (let j = 0; j < 4; j++) {
           state.fx.push({

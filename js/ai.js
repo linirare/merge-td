@@ -1,20 +1,40 @@
 /* ============================================================
-   合成塔防 · PvE —— AI 对手
+   合成塔防 · PvE —— AI 对手（强化版）
    ============================================================ */
 
 const AI_MERGE_INTERVAL = 4.0; // AI 每 4 秒尝试一次合成
 let aiTimer = 0;
 
-/* ——— 敌方棋盘自动产球（与玩家同步） ——— */
-function updateEnemyBoard(dt) {
-  // 产球（在 main.js 中已由 spawnEnemyBalls 处理）
-  // 这里只做 AI 合成
+/* ——— 分析玩家棋盘品类分布，返回AI应优先合成的品类 ——— */
+function aiAnalyzePlayer() {
+  const typeCount = {};
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const ball = state.playerSlots[r][c];
+      if (!ball) continue;
+      typeCount[ball.type] = (typeCount[ball.type] || 0) + 1;
+    }
+  }
+
+  // 找玩家最多的品类
+  let maxType = null, maxCount = 0;
+  for (const [t, cnt] of Object.entries(typeCount)) {
+    if (cnt > maxCount) { maxType = t; maxCount = cnt; }
+  }
+
+  if (!maxType) return null;
+
+  // 返回克制品类（克制链：弓→枪→刀→盾→弓）
+  // 如果玩家最多是弓，AI优先合枪（弓→枪）
+  const counterMap = { bow: 'spear', spear: 'sword', sword: 'shield', shield: 'bow' };
+  return counterMap[maxType];
 }
 
-/* ——— AI 合成策略：找棋盘上同品类同级中最高级的对子 ——— */
+/* ——— AI 合成策略：优先克制品类，其次最高级对子 ——— */
 function aiMerge() {
   const slots = state.enemySlots;
   const pairs = {}; // key: "type_level" → [{r, c, level, type}, ...]
+  const preferType = aiAnalyzePlayer();
 
   // 按品类+等级分组
   for (let r = 0; r < ROWS; r++) {
@@ -27,7 +47,25 @@ function aiMerge() {
     }
   }
 
-  // 找最高级的可合对子
+  // 先找可合的克制品类对子
+  if (preferType) {
+    for (const [key, list] of Object.entries(pairs)) {
+      if (list.length >= 2 && list[0].type === preferType && list[0].level < MAX_LEVEL) {
+        const src = list[0];
+        const dst = list[1];
+        const result = tryMerge(slots, src.r, src.c, dst.r, dst.c);
+        if (result && result.merged) {
+          const center = slotCenter(dst.r, dst.c, true);
+          addFx(center.x, center.y - 12,
+            `${TYPES[result.type].icon} AI合成 Lv.${result.newLevel}`, '#ffb84a', 11);
+          state.rings.push({ x: center.x, y: center.y, r: 6, life: 0.3, maxLife: 0.3, color: '#ff8a5a' });
+          return; // 本轮只合一次
+        }
+      }
+    }
+  }
+
+  // 否则找最高级的可合对子
   let bestKey = null, bestLevel = 0;
   for (const [key, list] of Object.entries(pairs)) {
     if (list.length >= 2 && list[0].level > bestLevel && list[0].level < MAX_LEVEL) {
@@ -38,14 +76,10 @@ function aiMerge() {
 
   if (!bestKey) return;
 
-  // 执行合成
   const list = pairs[bestKey];
-  const src = list[0];
-  const dst = list[1];
-  const result = tryMerge(slots, src.r, src.c, dst.r, dst.c);
+  const result = tryMerge(slots, list[0].r, list[0].c, list[1].r, list[1].c);
   if (result && result.merged) {
-    // AI 合成飞字（放特效）
-    const center = slotCenter(dst.r, dst.c, true);
+    const center = slotCenter(list[1].r, list[1].c, true);
     addFx(center.x, center.y - 12,
       `${TYPES[result.type].icon} AI合成 Lv.${result.newLevel}`, '#ffb84a', 11);
     state.rings.push({ x: center.x, y: center.y, r: 6, life: 0.3, maxLife: 0.3, color: '#ff8a5a' });
@@ -56,18 +90,14 @@ function aiMerge() {
 function updateAI(dt) {
   if (state.phase !== 'playing') return;
 
-  // AI 合成计时
   aiTimer += dt;
   if (aiTimer >= AI_MERGE_INTERVAL) {
     aiTimer -= AI_MERGE_INTERVAL;
     aiMerge();
   }
-
-  // 敌方棋盘自动产球
-  // （在 main.js 的 update 中由 spawnEnemyBalls 处理）
 }
 
-/* ——— 重置 AI 计时器 ——— */
+/* ——— 重置 AI 计时器（随机开局延迟） ——— */
 function resetAI() {
-  aiTimer = 1.0; // 开局 1 秒后 AI 开始合成
+  aiTimer = 0.5 + Math.random() * 2.5; // 开局0.5-3.0秒随机
 }

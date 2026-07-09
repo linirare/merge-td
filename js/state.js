@@ -62,6 +62,12 @@ function createState() {
     currentLevel: 1,
     levelConfig: null,
 
+    // 战斗统计（本场）
+    kills: 0,
+    merges: 0,
+    maxSoldierAtk: 0,
+    maxSoldierType: '',
+
     // 拖拽
     drag: null, // { unit, fromR, fromC, x, y, sx, sy, moved }
 
@@ -91,6 +97,7 @@ function createMeta() {
     wallLv: 0,
     highestLevel: 1,
     totalWins: 0,
+    stars: {}, // { level: 1|2|3 }
   };
 }
 

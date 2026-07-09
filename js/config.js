@@ -86,9 +86,9 @@ function generateLevel(k) {
   return {
     id: k,
     enemyInitLevel: enemyLv,
-    enemyWallHp: Math.round(60 + (k - 1) * 5), // 原20+1.5
+    enemyWallHp: Math.round(60 * Math.pow(1.15, k - 1)),
     enemySpawnInterval: Math.max(3.5, 5 - k * 0.1),
     reward: stageReward(k),
-    desc: `第 ${k} 关 · 敌球 Lv${enemyLv.toFixed(1)} · 城${Math.round(60 + (k - 1) * 5)}HP`,
+    desc: `第 ${k} 关 · 敌球 Lv${enemyLv.toFixed(1)} · 城${Math.round(60 * Math.pow(1.15, k - 1))}HP`,
   };
 }
