@@ -3,8 +3,13 @@
    ============================================================ */
 
 /* ——— 常量 ——— */
-const SOLDIER_SPEED = 70;      // 像素/秒
-const ATTACK_RANGE = 18;       // 攻击距离
+const SOLDIER_SPEED = 95;      // 像素/秒
+const ATTACK_RANGES = {
+  bow: 120,    // 弓兵远程
+  sword: 18,   // 刀兵近战
+  spear: 22,   // 枪兵中距离
+  shield: 16,  // 盾兵贴脸
+};
 const WALL_ATTACK_INTERVAL = 1.0; // 砍墙间隔 (秒)
 
 /* ——— 兵移动至战场 ——— */
@@ -132,8 +137,9 @@ function soldierCombat(s, enemies) {
   // 有目标 → 战斗
   const dx = s.x - target.x, dy = s.y - target.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
+  const atkRange = ATTACK_RANGES[s.type] || 18;
 
-  if (dist > ATTACK_RANGE) {
+  if (dist > atkRange) {
     // 还没到攻击距离 → 走过去
     moveToTarget(s, target);
   } else {
@@ -141,31 +147,35 @@ function soldierCombat(s, enemies) {
     s.atkTimer -= dt_global;
     if (s.atkTimer <= 0) {
       let dmg = s.atk;
-      // 克制加成
-      if (target.type === COUNTER[s.type]) {
-        dmg = Math.round(dmg * COUNTER_DMG);
-      }
-      target.hp -= dmg;
+      if (target.type === COUNTER[s.type]) dmg = Math.round(dmg * COUNTER_DMG);
       s.atkTimer = s.speed;
 
-      // 攻击划痕
-      state.attackFx.push({
-        x1: s.x, y1: s.y, x2: target.x, y2: target.y,
-        life: 0.25, maxLife: 0.25,
-      });
-
-      // 伤害数字
-      const midX = (s.x + target.x) / 2;
-      const midY = (s.y + target.y) / 2 - 8;
-      addFx(midX, midY, `-${dmg}`, '#ff4a3a', 13);
-
-      // 受击闪红（延长到0.3s更明显）
-      target.hitFlash = 0.3;
-
-      // 死亡
-      if (target.hp <= 0) {
-        target.alive = false;
-        addFx(target.x, target.y - 6, '💀', '#ff6a4a', 12);
+      if (s.type === 'bow') {
+        // 弓兵：射出箭矢飞行物
+        state.projectiles.push({
+          x: s.x, y: s.y,
+          targetX: target.x, targetY: target.y,
+          targetId: target.id, dmg,
+          speed: 200, color: TYPES[s.type]?.color || '#ff6b4a',
+          life: 1.5,
+        });
+      } else {
+        // 近战：直接扣血
+        target.hp -= dmg;
+        target.hitFlash = 0.3;
+        // 攻击划痕
+        state.attackFx.push({
+          x1: s.x, y1: s.y, x2: target.x, y2: target.y,
+          life: 0.25, maxLife: 0.25,
+        });
+        // 伤害数字
+        const midX = (s.x + target.x) / 2;
+        const midY = (s.y + target.y) / 2 - 8;
+        addFx(midX, midY, `-${dmg}`, THEME.accent, 13);
+        if (target.hp <= 0) {
+          target.alive = false;
+          addFx(target.x, target.y - 6, '💀', '#ff6a4a', 12);
+        }
       }
     }
   }
@@ -200,6 +210,49 @@ function updateCombat() {
 
   // 城墙受击震动衰减
   if (state.shake > 0) state.shake = Math.max(0, state.shake - dt_global * 4);
+
+  // === 箭矢飞行物更新 ===
+  for (let i = state.projectiles.length - 1; i >= 0; i--) {
+    const p = state.projectiles[i];
+    p.life -= dt_global;
+    if (p.life <= 0) { state.projectiles.splice(i, 1); continue; }
+
+    // 查找目标（玩家箭找敌人，敌人箭找玩家——但目前只有玩家有弓）
+    const enemies = state.enemySoldiers;
+    const tgt = enemies.find(e => e.id === p.targetId && e.alive);
+    if (tgt) {
+      p.targetX = tgt.x; p.targetY = tgt.y;
+      const pdx = tgt.x - p.x, pdy = tgt.y - p.y;
+      const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+      if (pdist < 10) {
+        // 命中
+        tgt.hp -= p.dmg;
+        tgt.hitFlash = 0.3;
+        if (tgt.hp <= 0) { tgt.alive = false; addFx(tgt.x, tgt.y - 6, '💀', '#ff6a4a', 12); }
+        // 命中粒子
+        for (let j = 0; j < 4; j++) {
+          state.fx.push({
+            x: tgt.x, y: tgt.y, text: '·', color: p.color,
+            size: 6, life: 0.3, maxLife: 0.3,
+            vx: (Math.random() - 0.5) * 50, vy: (Math.random() - 0.5) * 50,
+          });
+        }
+        const midX = (p.x + tgt.x) / 2, midY = (p.y + tgt.y) / 2 - 8;
+        addFx(midX, midY, `-${p.dmg}`, THEME.accent, 13);
+        state.projectiles.splice(i, 1);
+        continue;
+      }
+      p.x += (pdx / pdist) * p.speed * dt_global;
+      p.y += (pdy / pdist) * p.speed * dt_global;
+    } else {
+      // 目标已死，惯性飞
+      const pdx = p.targetX - p.x, pdy = p.targetY - p.y;
+      const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+      if (pdist < 5) { state.projectiles.splice(i, 1); continue; }
+      p.x += (pdx / pdist) * p.speed * dt_global;
+      p.y += (pdy / pdist) * p.speed * dt_global;
+    }
+  }
 
   // 判定胜负
   if (state.playerWallHp <= 0) {

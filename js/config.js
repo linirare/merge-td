@@ -4,6 +4,20 @@
 
 const W = 480, H = 854;
 
+/* ——— 主题色 ——— */
+const THEME = {
+  bg:        '#1a1410',
+  panelBg:   '#241c10',
+  gold:      '#ffe45a',
+  goldGlow:  'rgba(255,228,90,0.3)',
+  accent:    '#ff6b4a',
+  safe:      '#6fd44e',
+  info:      '#4ab0ff',
+  text:      '#e8dcc0',
+  textDim:   '#8a7a5a',
+  textBright:'#fff8e0',
+};
+
 /* ——— 棋盘 ——— */
 const ROWS = 3, COLS = 5;
 const CELL = 64;
@@ -14,21 +28,15 @@ const BOARD_X = (W - BOARD_W) / 2;
 
 /* ——— Y 坐标布局 ——— */
 const LAYOUT = {
-  // 敌方棋盘顶 Y + 敌方信息
-  enemyInfoY:  8,
-  enemyBoardY: 30,
-  // 敌方城墙
-  enemyWallY:  30 + BOARD_H + 16,
-  wallH: 24,
-  // 战场
-  fieldY:      30 + BOARD_H + 16 + 24 + 10,
-  fieldH: 160,
-  // 我方城墙
-  playerWallY: 30 + BOARD_H + 16 + 24 + 10 + 160 + 10,
-  // 我方棋盘
-  playerBoardY: 30 + BOARD_H + 16 + 24 + 10 + 160 + 10 + 24 + 16,
-  // 底部信息
-  bottomY:     30 + BOARD_H + 16 + 24 + 10 + 160 + 10 + 24 + 16 + BOARD_H + 8,
+  enemyInfoY:  6,
+  enemyBoardY: 22,
+  enemyWallY:  22 + BOARD_H + 10,
+  wallH: 20,
+  fieldY:      22 + BOARD_H + 10 + 20 + 8,
+  fieldH: 220,
+  playerWallY: 22 + BOARD_H + 10 + 20 + 8 + 220 + 8,
+  playerBoardY: 22 + BOARD_H + 10 + 20 + 8 + 220 + 8 + 20 + 10,
+  bottomY:     22 + BOARD_H + 10 + 20 + 8 + 220 + 8 + 20 + 10 + BOARD_H + 4,
 };
 
 /* ——— 品类 ——— */

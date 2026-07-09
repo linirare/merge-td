@@ -14,6 +14,7 @@ function createSoldier(typeId, level, atkMul = 1, hpMul = 1) {
   return {
     type: typeId,
     level,
+    id: Math.random().toString(36).slice(2),
     atk: Math.round(t.atk * mul * atkMul),
     hp: Math.round(t.hp * mul * hpMul),
     maxHp: Math.round(t.hp * mul * hpMul),
@@ -66,6 +67,8 @@ function createState() {
     // 特效
     fx: [], // [{x, y, text, color, life, maxLife, size}]
     attackFx: [], // [{x1, y1, x2, y2, life, maxLife}] 攻击划痕
+    projectiles: [], // [{x, y, targetX, targetY, targetId, dmg, speed, color, life}]
+    dust: [], // [{x, y, vx, vy, size, alpha}] 环境尘埃
     // 环特效
     rings: [], // [{x, y, r, life, maxLife, color}]
 

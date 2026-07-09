@@ -7,7 +7,7 @@ const ctx = canvas.getContext('2d');
 let scale = 1;
 
 function resize() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
   scale = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.96;
   canvas.style.width = W * scale + 'px';
   canvas.style.height = H * scale + 'px';
@@ -22,6 +22,21 @@ initInput(canvas);
 /* ——— 更新 ——— */
 function update(dt) {
   dt_global = dt;
+
+  // 暂停处理
+  if (state.phase === 'paused') {
+    for (let i = state.rings.length - 1; i >= 0; i--) {
+      state.rings[i].life -= dt * 0.3;
+      state.rings[i].r += 10 * dt;
+      if (state.rings[i].life <= 0) state.rings.splice(i, 1);
+    }
+    for (let i = state.fx.length - 1; i >= 0; i--) {
+      state.fx[i].life -= dt * 0.3;
+      if (state.fx[i].life <= 0) state.fx.splice(i, 1);
+    }
+    return;
+  }
+
   if (state.phase !== 'playing') return;
 
   state.time += dt;
@@ -103,6 +118,11 @@ function update(dt) {
     if (ring.life <= 0) state.rings.splice(i, 1);
   }
 
+  // 特效：粒子物理移动
+  for (const f of state.fx) {
+    if (f.vx) { f.x += f.vx * dt; f.y += f.vy * dt; }
+  }
+
   // 特效衰减
   for (let i = state.fx.length - 1; i >= 0; i--) {
     state.fx[i].life -= dt;
@@ -114,6 +134,16 @@ function update(dt) {
     state.attackFx[i].life -= dt;
     if (state.attackFx[i].life <= 0) state.attackFx.splice(i, 1);
   }
+
+  // 尘埃更新
+  if (state.dust) {
+    for (const d of state.dust) {
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      if (d.y < LAYOUT.fieldY) { d.y = LAYOUT.fieldY + LAYOUT.fieldH; d.x = Math.random() * W; }
+      if (d.x < 0 || d.x > W) d.x = Math.random() * W;
+    }
+  }
 }
 
 /* ——— 产兵（暂为 Phase 3 占位，先做简单行走） ——— */
@@ -123,15 +153,22 @@ function spawnPlayerSoldiers() {
     for (let c = 0; c < COLS; c++) {
       const ball = state.playerSlots[r][c];
       if (!ball) continue;
-      const center = slotCenter(r, c, false);
-      const s = createSoldier(ball.type, ball.level,
-        getAtkMul(meta, ball.type), getHpMul(meta, ball.type));
-      s.x = center.x;
-      s.y = center.y;
-      s.side = 'player';
-      s.targetY = fy + (Math.random() - 0.5) * LAYOUT.fieldH * 0.6;
-      s.targetX = 40 + Math.random() * (W - 80);
-      state.playerSoldiers.push(s);
+
+      // 等级≥3概率多产1个，≥5概率多产2个
+      const extra = ball.level >= 5 ? 2 : ball.level >= 3 ? 1 : 0;
+      const count = 1 + (Math.random() < ball.level * 0.1 ? extra : 0);
+
+      for (let i = 0; i < count; i++) {
+        const center = slotCenter(r, c, false);
+        const s = createSoldier(ball.type, ball.level,
+          getAtkMul(meta, ball.type), getHpMul(meta, ball.type));
+        s.x = center.x + (Math.random() - 0.5) * 10;
+        s.y = center.y;
+        s.side = 'player';
+        s.targetY = fy + (Math.random() - 0.5) * LAYOUT.fieldH * 0.5;
+        s.targetX = 40 + Math.random() * (W - 80);
+        state.playerSoldiers.push(s);
+      }
     }
   }
 }
@@ -142,14 +179,20 @@ function spawnEnemySoldiers() {
     for (let c = 0; c < COLS; c++) {
       const ball = state.enemySlots[r][c];
       if (!ball) continue;
-      const center = slotCenter(r, c, true);
-      const s = createSoldier(ball.type, ball.level);
-      s.x = center.x;
-      s.y = center.y;
-      s.side = 'enemy';
-      s.targetY = fy + (Math.random() - 0.5) * LAYOUT.fieldH * 0.6;
-      s.targetX = 40 + Math.random() * (W - 80);
-      state.enemySoldiers.push(s);
+
+      const extra = ball.level >= 5 ? 2 : ball.level >= 3 ? 1 : 0;
+      const count = 1 + (Math.random() < ball.level * 0.1 ? extra : 0);
+
+      for (let i = 0; i < count; i++) {
+        const center = slotCenter(r, c, true);
+        const s = createSoldier(ball.type, ball.level);
+        s.x = center.x + (Math.random() - 0.5) * 10;
+        s.y = center.y;
+        s.side = 'enemy';
+        s.targetY = fy + (Math.random() - 0.5) * LAYOUT.fieldH * 0.5;
+        s.targetX = 40 + Math.random() * (W - 80);
+        state.enemySoldiers.push(s);
+      }
     }
   }
 }
@@ -173,6 +216,7 @@ function onGameOver(win) {
     detail.textContent = `第 ${state.currentLevel} 关通关 · 获得 ${state.levelConfig.reward} 金币`;
     meta.gold += state.levelConfig.reward;
     meta.totalWins++;
+    refreshGold();
     if (state.currentLevel >= meta.highestLevel) {
       meta.highestLevel = state.currentLevel + 1;
     }

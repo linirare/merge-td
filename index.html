@@ -7,6 +7,10 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="rotate-hint">
+  <span style="font-size:48px;animation:rotateHint 1.5s infinite alternate;">📱</span>
+  <p>请竖屏游戏</p>
+</div>
 <div id="wrap">
   <canvas id="game"></canvas>
 </div>
@@ -16,6 +20,7 @@
   <div class="panel-inner">
     <h1>⚔️ 合成塔防</h1>
     <p class="sub">PvE 关卡制 · 合成出兵 · 推倒敌城</p>
+    <p class="sub" style="color:#ffe45a;">💰 <span id="menuGold">0</span></p>
     <button id="btnStart" class="btn-primary">开始游戏</button>
     <button id="btnUpgrade" class="btn-secondary">永久升级</button>
   </div>

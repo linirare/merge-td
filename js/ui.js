@@ -56,6 +56,7 @@ function renderUpgrades() {
         }
         saveMeta();
         renderUpgrades();
+        refreshGold();
       });
     }
 
@@ -82,18 +83,16 @@ function showOverflowPopup() {
         color:#e8dcc0;font-size:13px;
       `;
       el.innerHTML = `${t.icon} Lv.${item.level}`;
-      el.title = '点击放置到棋盘';
-      el.addEventListener('click', () => {
-        const empties = emptySlots(state.playerSlots);
-        if (empties.length === 0) {
-          addFx(W / 2, LAYOUT.fieldY, '棋盘满了!', '#ff8a6a', 13);
-          return;
-        }
-        // 从队列取出并放置
-        state.overflowQueue.splice(i, 1);
-        const [r, c] = empties[Math.floor(Math.random() * empties.length)];
-        state.playerSlots[r][c] = createBall(item.type, item.level);
-        showOverflowPopup(); // 刷新
+      el.title = '点击后选择棋盘空格放置';
+      el.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        document.getElementById('overflowPopup').classList.add('hide');
+        state.pendingPlace = { type: item.type, level: item.level, queueIndex: i };
+      });
+      el.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        document.getElementById('overflowPopup').classList.add('hide');
+        state.pendingPlace = { type: item.type, level: item.level, queueIndex: i };
       });
       list.appendChild(el);
     }
@@ -117,7 +116,6 @@ function loadMeta() {
     const raw = localStorage.getItem(META_KEY);
     if (raw) {
       const saved = JSON.parse(raw);
-      // 合并默认值
       meta.gold = saved.gold || 0;
       meta.upgrades = saved.upgrades || {};
       meta.wallLv = saved.wallLv || 0;
@@ -125,6 +123,16 @@ function loadMeta() {
       meta.totalWins = saved.totalWins || 0;
     }
   } catch (e) {}
+  refreshGold();
+}
+
+/* ——— 刷新金币显示 ——— */
+function refreshGold() {
+  const g = meta.gold || 0;
+  const menuEl = document.getElementById('menuGold');
+  if (menuEl) menuEl.textContent = g;
+  const upEl = document.getElementById('upGold');
+  if (upEl) upEl.textContent = g;
 }
 
 /* ——— 按钮事件绑定 ——— */
@@ -137,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btnUpgrade').addEventListener('click', () => {
+    refreshGold();
     document.getElementById('upgradePanel').classList.remove('hide');
     renderUpgrades();
   });

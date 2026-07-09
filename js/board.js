@@ -142,6 +142,15 @@ function initLevel(k) {
   state.enemyOverflow = 0;
   state.fx = [];
   state.attackFx = [];
+  state.projectiles = [];
+  state.dust = Array.from({ length: 12 }, () => ({
+    x: Math.random() * W,
+    y: LAYOUT.fieldY + Math.random() * LAYOUT.fieldH,
+    vx: (Math.random() - 0.5) * 6,
+    vy: -Math.random() * 4 - 2,
+    size: 1 + Math.random() * 2,
+    alpha: 0.02 + Math.random() * 0.04,
+  }));
   state.time = 0;
   state.drag = null;
   state.shake = 0;

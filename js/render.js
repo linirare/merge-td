@@ -62,6 +62,21 @@ function drawBoard(slots, isEnemy, dragHint = null) {
         drawBall(ball, x + CELL / 2, y + CELL / 2, CELL * 0.38);
         ctx.restore();
       }
+
+      // pendingPlace 预览：空格显示虚线框
+      if (state.pendingPlace && !ball && !isEnemy) {
+        ctx.fillStyle = 'rgba(255,228,90,0.08)';
+        roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 8);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,228,90,0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 8);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // 磁吸高亮
     }
   }
 }
@@ -72,7 +87,8 @@ function drawBall(ball, cx, cy, radius, extraY = 0) {
   const bounceOff = ball.bounce ? -Math.sin(ball.bounce * Math.PI) * 12 : 0;
   const lvScale = 1 + (ball.level - 1) * 0.12; // 每级+12%，Lv.7是Lv.1的1.72倍
   const r = radius * lvScale;
-  const drawY = cy - bounceOff + extraY;
+  const floatOff = Math.sin(state.time * 1.5 + cx * 0.1 + cy * 0.1) * 1.2;
+  const drawY = cy - bounceOff + floatOff + extraY;
 
   // 等级光环
   if (ball.level >= 3) {
@@ -148,10 +164,28 @@ function drawWall(hp, maxHp, isEnemy) {
   roundRect(x, y, w, h, 4);
   ctx.fill();
 
-  // 垛口
-  ctx.fillStyle = '#6a563c';
-  for (let i = 0; i < 12; i++)
+  // 垛口 — 按血量比例减少
+  const healthRatio = hp / maxHp;
+  const crenelCount = Math.max(2, Math.round(12 * healthRatio));
+  ctx.fillStyle = healthRatio > 0.5 ? '#6a563c'
+                : healthRatio > 0.25 ? '#5a4630'
+                : '#3a2e1e';
+  for (let i = 0; i < crenelCount; i++)
     ctx.fillRect(x + 4 + i * (w - 8) / 11, y - 6, (w - 8) / 12 - 2, 6);
+
+  // 血量 < 30% 显示裂痕
+  if (healthRatio < 0.3) {
+    ctx.strokeStyle = 'rgba(255,100,60,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.3, y);
+    ctx.lineTo(x + w * 0.4, y + h * 0.5);
+    ctx.lineTo(x + w * 0.35, y + h);
+    ctx.moveTo(x + w * 0.6, y);
+    ctx.lineTo(x + w * 0.7, y + h * 0.3);
+    ctx.lineTo(x + w * 0.65, y + h);
+    ctx.stroke();
+  }
 
   // HP 条
   const barW = w - 12, barH = 8;
@@ -180,27 +214,46 @@ function drawField() {
   const fy = LAYOUT.fieldY;
   const fh = LAYOUT.fieldH;
 
-  // 战场底色
-  ctx.fillStyle = 'rgba(60,44,28,0.4)';
+  // 渐变底色（上暗下亮，模拟景深）
+  const g = ctx.createLinearGradient(0, fy, 0, fy + fh);
+  g.addColorStop(0, 'rgba(30,22,12,0.6)');
+  g.addColorStop(0.5, 'rgba(50,36,20,0.35)');
+  g.addColorStop(1, 'rgba(30,22,12,0.6)');
+  ctx.fillStyle = g;
   roundRect(20, fy, W - 40, fh, 8);
   ctx.fill();
 
-  // 中线
-  ctx.strokeStyle = 'rgba(255,200,100,0.12)';
+  // 透视网格
+  ctx.strokeStyle = 'rgba(255,200,100,0.08)';
   ctx.lineWidth = 1;
+  const vanishX = W / 2, vanishY = fy + fh * 0.3;
+  for (let i = 0; i < 8; i++) {
+    const spread = 30 + i * 35;
+    ctx.beginPath();
+    ctx.moveTo(vanishX, vanishY);
+    ctx.lineTo(vanishX - spread, fy + fh);
+    ctx.moveTo(vanishX, vanishY);
+    ctx.lineTo(vanishX + spread, fy + fh);
+    ctx.stroke();
+  }
+
+  // 中线
+  ctx.strokeStyle = 'rgba(255,200,100,0.15)';
   ctx.setLineDash([6, 6]);
   ctx.beginPath();
   ctx.moveTo(20, fy + fh / 2);
   ctx.lineTo(W - 20, fy + fh / 2);
   ctx.stroke();
   ctx.setLineDash([]);
-
 }
 
 /* ——— 兵 ——— */
 function drawSoldier(s) {
   const t = TYPES[s.type];
-  const r = 8 + s.level * 1.5;
+  const fy = LAYOUT.fieldY, fh = LAYOUT.fieldH;
+  // 深度缩放：越靠近敌方（Y越小）画越小
+  const depthFactor = 0.7 + 0.3 * ((s.y - fy) / fh);
+  const r = (8 + s.level * 1.5) * depthFactor;
 
   // 阴影
   ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -218,7 +271,6 @@ function drawSoldier(s) {
     ctx.fill();
     ctx.shadowBlur = 0;
   } else {
-    // 兵的身体
     ctx.fillStyle = s.side === 'enemy' ? t.color + '99' : t.color;
     ctx.beginPath();
     ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
@@ -238,13 +290,26 @@ function drawSoldier(s) {
   ctx.textBaseline = 'middle';
   ctx.fillText(t.icon, s.x, s.y + 1);
 
-  // 血条
+  // 分段血条
   if (s.hp < s.maxHp) {
     const bw = r * 2.2, bh = 3;
+    const segments = 5;
+    const segW = bw / segments;
+
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(s.x - bw / 2, s.y - r - 6, bw, bh);
-    ctx.fillStyle = s.hp / s.maxHp > 0.5 ? '#7aff5a' : s.hp / s.maxHp > 0.25 ? '#ffd24a' : '#ff5a3a';
-    ctx.fillRect(s.x - bw / 2, s.y - r - 6, bw * (s.hp / s.maxHp), bh);
+
+    for (let i = 0; i < segments; i++) {
+      const segHp = (s.hp / s.maxHp) * segments;
+      if (i >= segHp) break;
+      const alpha = 1 - (i / segments) * 0.3;
+      ctx.globalAlpha = Math.max(0.4, alpha);
+      ctx.fillStyle = s.hp / s.maxHp > 0.5 ? '#7aff5a'
+                    : s.hp / s.maxHp > 0.25 ? '#ffd24a'
+                    : '#ff5a3a';
+      ctx.fillRect(s.x - bw / 2 + i * segW + 1, s.y - r - 5, segW - 2, bh - 2);
+    }
+    ctx.globalAlpha = 1;
   }
   ctx.textBaseline = 'alphabetic';
 }
@@ -261,6 +326,26 @@ function drawRings() {
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
+}
+
+/* ——— 箭矢渲染 ——— */
+function drawProjectiles() {
+  for (const p of state.projectiles) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(Math.atan2(p.targetY - p.y, p.targetX - p.x));
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(8, 0);
+    ctx.lineTo(-4, -3);
+    ctx.lineTo(-4, 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
 }
 
 /* ——— 攻击划痕 ——— */
@@ -293,13 +378,33 @@ function drawAttackFx() {
 function drawFx() {
   for (const f of state.fx) {
     const alpha = f.life / f.maxLife;
-    ctx.globalAlpha = alpha;
+    const scale = f.vx ? 1 : (1 + (1 - alpha) * 0.3);
+    ctx.save();
+    const baseY = f.vx ? f.y : (f.y - (1 - alpha) * 30);
+    ctx.translate(baseY === f.y ? f.x : f.x, baseY);
+    if (scale !== 1) ctx.scale(scale, scale);
+    ctx.globalAlpha = f.vx ? Math.min(alpha * 2, 1) : alpha;
     ctx.font = `bold ${f.size}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillStyle = f.color;
-    ctx.fillText(f.text, f.x, f.y - (1 - alpha) * 30);
+    ctx.fillText(f.text, 0, 0);
+    ctx.restore();
   }
-  ctx.globalAlpha = 1;
+}
+
+/* ——— 暂停按钮 ——— */
+const PAUSE_RECT = { x: W - 150, y: 4, w: 28, h: 26 };
+
+function drawPauseBtn() {
+  if (state.phase !== 'playing' && state.phase !== 'paused') return;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  roundRect(PAUSE_RECT.x, PAUSE_RECT.y, PAUSE_RECT.w, PAUSE_RECT.h, 8);
+  ctx.fill();
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#c9b69a';
+  ctx.fillText(state.phase === 'paused' ? '▶' : '⏸',
+    PAUSE_RECT.x + PAUSE_RECT.w / 2, PAUSE_RECT.y + 19);
 }
 
 /* ——— 帮助按钮 ——— */
@@ -364,33 +469,42 @@ function drawInfo() {
 
 /* ——— HUD / 对战状态 ——— */
 function drawHUD() {
-  if (state.phase !== 'playing') return;
+  if (state.phase !== 'playing' && state.phase !== 'paused') return;
 
-  // 兵数量对比
   const pCount = state.playerSoldiers.filter(s => s.alive).length;
   const eCount = state.enemySoldiers.filter(s => s.alive).length;
+  const total = pCount + eCount || 1;
   const elapsed = Math.floor(state.time);
 
-  // 右上：时间 + 兵数
+  // 时间
   ctx.font = '12px sans-serif';
   ctx.textAlign = 'right';
-  ctx.fillStyle = '#8a7a5a';
+  ctx.fillStyle = THEME.textDim;
   ctx.fillText(`⏱ ${elapsed}s`, W - 12, LAYOUT.enemyInfoY + 13);
 
-  // 兵数标签（放在战场两侧）
-  ctx.font = 'bold 12px sans-serif';
+  // 兵数对比比例条
+  const barW = 80, barH = 6;
+  const bx = W / 2 - barW / 2, by = LAYOUT.fieldY + LAYOUT.fieldH - 14;
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  roundRect(bx, by, barW, barH, 3);
+  ctx.fill();
+  ctx.fillStyle = THEME.safe;
+  roundRect(bx, by, barW * (pCount / total), barH, 3);
+  ctx.fill();
+  ctx.fillStyle = THEME.accent;
+  roundRect(bx + barW * (pCount / total), by, barW * (eCount / total), barH, 3);
+  ctx.fill();
+  ctx.font = '10px sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#6fd44e';
-  ctx.fillText(`⚔️ ${pCount}`, 28, LAYOUT.fieldY + LAYOUT.fieldH - 8);
+  ctx.fillStyle = THEME.safe;
+  ctx.fillText(`⚔ ${pCount}`, bx, by - 3);
   ctx.textAlign = 'right';
-  ctx.fillStyle = '#ff6b4a';
-  ctx.fillText(`${eCount} ⚔️`, W - 28, LAYOUT.fieldY + 14);
-
-  // 中间"战场"标签改为动态
+  ctx.fillStyle = THEME.accent;
+  ctx.fillText(`${eCount} ⚔`, bx + barW, by - 3);
   ctx.textAlign = 'center';
   ctx.font = '11px sans-serif';
   ctx.fillStyle = 'rgba(200,180,140,0.4)';
-  ctx.fillText(`⚔️ 第 ${state.currentLevel} 关 ⚔️`, W / 2, LAYOUT.fieldY + LAYOUT.fieldH - 4);
+  ctx.fillText(`第 ${state.currentLevel} 关`, W / 2, LAYOUT.fieldY + LAYOUT.fieldH - 20);
 }
 
 /* ——— 主绘制 ——— */
@@ -412,6 +526,16 @@ function draw() {
   // 战场
   drawField();
 
+  // 尘埃
+  if (state.dust) {
+    for (const d of state.dust) {
+      ctx.fillStyle = `rgba(255,220,180,${d.alpha})`;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   // 我方城墙
   drawWall(state.playerWallHp, state.playerWallMax, false);
   // 拖拽提示（可合成的目标）
@@ -423,6 +547,19 @@ function draw() {
 
   // 我方棋盘（拖拽中时高亮可合成目标）
   drawBoard(state.playerSlots, false, dragHint);
+
+  // 拖拽取消提示（出棋盘时）
+  if (state.drag && state.drag.moved) {
+    const inBoard = slotAt(state.drag.x, state.drag.y, false) !== null;
+    if (!inBoard) {
+      ctx.fillStyle = 'rgba(255,80,60,0.12)';
+      ctx.fillRect(0, LAYOUT.playerBoardY - 8, W, BOARD_H + 16);
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,80,60,0.7)';
+      ctx.fillText('↩ 松手取消', W / 2, LAYOUT.playerBoardY + BOARD_H + 14);
+    }
+  }
 
   // 兵（画在棋盘之后，避免被格子遮盖）
   for (const s of state.playerSoldiers) drawSoldier(s);
@@ -441,10 +578,25 @@ function draw() {
 
   drawOverflowIndicator();
   drawHUD();
+  drawProjectiles();
   drawAttackFx();
   drawRings();
   drawSpeedBtn();
+  drawPauseBtn();
   drawHelpBtn();
   drawFx();
+
+  // 暂停遮罩
+  if (state.phase === 'paused') {
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = THEME.gold;
+    ctx.fillText('⏸ 已暂停', W / 2, H / 2);
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = THEME.textDim;
+    ctx.fillText('点击 ▶ 继续', W / 2, H / 2 + 32);
+  }
   ctx.restore();
 }
