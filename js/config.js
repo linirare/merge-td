@@ -57,7 +57,8 @@ const TYPES = {
 };
 
 const UNIT_POOL = Object.keys(TYPES);
-const DEFAULT_DECK = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'];
+const OLD_DEFAULT_DECK = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'];
+const DEFAULT_DECK = ['watermelon_guard','grape_archer','orange_cannon','peach_medic','kiwi_wildcard'];
 const DECK_SIZE = 5;
 const TYPE_IDS = UNIT_POOL;
 
@@ -71,12 +72,23 @@ const LEGACY_TYPE_MAP = {
 function normalizeTypeId(id) {
   return LEGACY_TYPE_MAP[id] || id || DEFAULT_DECK[0];
 }
-function normalizeDeck(deck) {
+function deckSignature(deck) {
+  return normalizeDeckNoFill(deck).join('|');
+}
+function normalizeDeckNoFill(deck) {
   const result = [];
   for (const raw of deck || []) {
     const id = normalizeTypeId(raw);
     if (TYPES[id] && !result.includes(id)) result.push(id);
   }
+  return result.slice(0, DECK_SIZE);
+}
+function shouldForceNewDefaultDeck(deck) {
+  const sig = deckSignature(deck);
+  return !sig || sig === OLD_DEFAULT_DECK.join('|') || sig === ['grape_archer','banana_raider','pineapple_lancer','watermelon_guard'].join('|');
+}
+function normalizeDeck(deck) {
+  const result = shouldForceNewDefaultDeck(deck) ? DEFAULT_DECK.slice() : normalizeDeckNoFill(deck);
   for (const id of DEFAULT_DECK) if (result.length < DECK_SIZE && !result.includes(id)) result.push(id);
   return result.slice(0, DECK_SIZE);
 }
@@ -86,31 +98,26 @@ function activeDeck() {
 
 /* 多维克制：不是简单剪刀石头布，先做第一版可读的核心克制网络 */
 const COUNTER = {
-  grape_archer: 'pineapple_lancer',      // 高频远程压枪线
+  grape_archer: 'pineapple_lancer',
   blueberry_sniper: 'pear_frost',
-  banana_raider: 'watermelon_guard',     // 突击破慢坦/后排
+  banana_raider: 'watermelon_guard',
   lemon_assassin: 'grape_archer',
-  pineapple_lancer: 'banana_raider',     // 枪兵反突击
-  watermelon_guard: 'grape_archer',      // 厚皮抗远程
+  pineapple_lancer: 'banana_raider',
+  watermelon_guard: 'grape_archer',
   coconut_guard: 'lemon_assassin',
-  orange_cannon: 'wall',                 // 攻城特化
+  orange_cannon: 'wall',
   pumpkin_roller: 'wall',
-  pear_frost: 'banana_raider',           // 控制克快攻
+  pear_frost: 'banana_raider',
   peach_medic: '',
   kiwi_wildcard: '',
   passion_copy: '',
 };
 const COUNTER_DMG = 1.55;
 
-/* ——— 等级系数 ——— */
 const LEVEL_MUL = [0, 1.0, 1.58, 2.34, 3.32, 4.62, 6.3, 8.5];
 const MAX_LEVEL = 7;
-
-/* ——— 果堡 ——— */
 const BASE_WALL_HP = 72;
 const SIEGE_SLOTS_PER_LANE = 3;
-
-/* ——— 时序 ——— */
 const BALL_SPAWN_INTERVAL = 4.4;
 const SOLDIER_SPAWN_INTERVAL = 5;
 const SPAWN_COOLDOWNS = [0, 5.6, 4.9, 4.25, 3.65, 3.15, 2.7, 2.35];
@@ -119,7 +126,6 @@ const MAX_SOLDIERS = 24;
 const SP_MAX = 18;
 const SP_PASSIVE = 3.6;
 
-/* ——— 经济/科技 ——— */
 function upgradeCost(lv) { return 10 + lv * 8; }
 function stageReward(k) { return k * 8 + 18; }
 const UPGRADE_MAX = 20;
@@ -136,7 +142,6 @@ for (const id of UNIT_POOL) {
 TECH_MILESTONES.wall = { title: '果堡加固', at: 5, desc: '降低被偷家失败概率。' };
 TECH_MILESTONES.sp = { title: '果汁号角', at: 5, desc: '开局果汁能量和上限提升。' };
 
-/* ——— 关卡 ——— */
 function generateLevel(k) {
   const boss = k > 0 && k % 5 === 0;
   const enemyLv = 1 + (k - 1) * 0.19 + (boss ? 0.18 : 0);
