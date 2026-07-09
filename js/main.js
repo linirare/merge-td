@@ -90,7 +90,9 @@ function update(dt) {
         const ball = grp.slots[r][c];
         if (!ball) continue;
         ball.spawnTimer -= dt;
-        if (ball.spawnTimer <= 0) {
+        const canSpawn = grp.side === 'enemy' || state.sp > 0;
+        if (ball.spawnTimer <= 0 && canSpawn) {
+          if (grp.side === 'player') state.sp -= 1;
           const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
           ball.spawnTimer += cd;
           // 产1个兵（高等级概率多产但累计冷却）

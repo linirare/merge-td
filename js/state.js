@@ -76,6 +76,7 @@ function createState() {
     // 时间
     time: 0,
     speed: 1,
+    sp: 5, // 灵魂点数，杀敌获得，产兵消耗
 
     // 震动
     shake: 0,

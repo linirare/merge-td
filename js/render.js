@@ -161,12 +161,15 @@ function drawBall(ball, cx, cy, radius, extraY = 0) {
   // 产兵倒计时环（每球独立）
   if (state.phase === 'playing') {
     const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
-    const progress = ball.spawnTimer / cd;
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 2;
+    const ready = ball.spawnTimer <= 0;
+    const progress = ready ? 1 : (1 - ball.spawnTimer / cd);
+    ctx.strokeStyle = ready ? 'rgba(255,228,90,0.6)' : 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = ready ? 2.5 : 2;
+    if (ready) { ctx.shadowColor = '#ffe45a'; ctx.shadowBlur = 6; }
     ctx.beginPath();
-    ctx.arc(cx, drawY, r + 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - progress));
+    ctx.arc(cx, drawY, r + 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
     ctx.stroke();
+    ctx.shadowBlur = 0;
   }
 }
 
@@ -517,6 +520,11 @@ function drawHUD() {
   ctx.textAlign = 'right';
   ctx.fillStyle = THEME.textDim;
   ctx.fillText(`⏱ ${elapsed}s`, W - 12, LAYOUT.enemyInfoY + 13);
+  // SP 显示
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = state.sp > 0 ? THEME.gold : '#5a4a3a';
+  ctx.fillText(`⚡ ${state.sp}`, 12, LAYOUT.enemyInfoY + 13);
 
   // 兵数对比比例条
   const barW = 80, barH = 6;

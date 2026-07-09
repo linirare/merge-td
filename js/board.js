@@ -157,6 +157,7 @@ function initLevel(k) {
   state.fx = [];
   state.attackFx = [];
   state.projectiles = [];
+  state.sp = 5;
   state.dust = Array.from({ length: 12 }, () => ({
     x: Math.random() * W,
     y: LAYOUT.fieldY + Math.random() * LAYOUT.fieldH,
