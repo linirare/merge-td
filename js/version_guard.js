@@ -3,7 +3,7 @@
    作用：强制标记当前构建，清理旧 bow/sword/spear/shield 存档。
    ============================================================ */
 
-const BUILD_VERSION = 'fruit-v12-squad-mode';
+const BUILD_VERSION = 'fruit-v13-troop-tier';
 
 (function versionGuard() {
   try {
