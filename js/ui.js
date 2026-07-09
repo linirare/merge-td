@@ -1,31 +1,28 @@
 /* ============================================================
-   合成塔防 · PvE —— DOM 界面管理
+   合成攻城 · Merge Siege —— DOM 界面管理
    ============================================================ */
 
 /* ——— 升级项配置 ——— */
 const UPGRADE_ITEMS = [
-  { key: 'bow_atk',   label: '🏹 弓攻击',   type: 'bow',   stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
-  { key: 'bow_hp',    label: '🏹 弓血量',   type: 'bow',   stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
-  { key: 'sword_atk', label: '🗡️ 刀攻击',  type: 'sword', stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
-  { key: 'sword_hp',  label: '🗡️ 刀血量',  type: 'sword', stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
-  { key: 'spear_atk', label: '🔱 枪攻击',  type: 'spear', stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
-  { key: 'spear_hp',  label: '🔱 枪血量',  type: 'spear', stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
-  { key: 'shield_atk',label: '🛡️ 盾攻击', type: 'shield',stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
-  { key: 'shield_hp', label: '🛡️ 盾血量', type: 'shield',stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
-  { key: 'wall',       label: '🏰 城墙HP',   type: null,    stat: null, maxLv: WALL_UPGRADE_MAX, wall: true },
+  { key: 'bow_atk',   label: '🏹 弓营攻击',   type: 'bow',   stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
+  { key: 'bow_hp',    label: '🏹 弓营血量',   type: 'bow',   stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
+  { key: 'sword_atk', label: '🗡️ 刀营攻击',  type: 'sword', stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
+  { key: 'sword_hp',  label: '🗡️ 刀营血量',  type: 'sword', stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
+  { key: 'spear_atk', label: '🔱 枪营攻击',  type: 'spear', stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
+  { key: 'spear_hp',  label: '🔱 枪营血量',  type: 'spear', stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
+  { key: 'shield_atk',label: '🛡️ 盾营攻击', type: 'shield',stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
+  { key: 'shield_hp', label: '🛡️ 盾营血量', type: 'shield',stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
+  { key: 'wall',       label: '🏰 我方城墙',   type: null,    stat: null, maxLv: WALL_UPGRADE_MAX, wall: true },
 ];
 
-/* ——— 渲染升级列表 ——— */
 function renderUpgrades() {
   const list = document.getElementById('upgradeList');
   const goldSpan = document.getElementById('upGold');
   goldSpan.textContent = meta.gold;
-
   list.innerHTML = '';
+
   for (const item of UPGRADE_ITEMS) {
     const el = document.createElement('div');
-    el.className = 'upgrade-item';
-
     let lv, cost, maxed;
     if (item.wall) {
       lv = meta.wallLv;
@@ -36,30 +33,26 @@ function renderUpgrades() {
       maxed = lv >= item.maxLv;
       cost = upgradeCost(lv + 1);
     }
-
     const canAfford = meta.gold >= cost && !maxed;
     el.className = 'upgrade-item' + (canAfford ? '' : ' disabled');
+    const effect = item.wall ? `+${WALL_PER_LV}耐久/级` : `+${Math.round(UPGRADE_PER_LV * 100)}%/级`;
     el.innerHTML = `
-      <span class="uilabel">${item.label} <span class="uilevel">Lv.${lv}</span></span>
+      <span class="uilabel">${item.label} <span class="uilevel">Lv.${lv}</span><br><small style="color:#9d8a66;font-size:10px;">${effect}</small></span>
       <span class="uicost ${maxed ? 'maxed' : canAfford ? 'can-afford' : ''}">${maxed ? 'MAX' : cost + '💰'}</span>
     `;
-
     if (canAfford) {
       el.addEventListener('click', () => {
-        if (item.wall) {
-          meta.wallLv++;
-          meta.gold -= cost;
-        } else {
+        if (item.wall) meta.wallLv++;
+        else {
           const key = upgradeKey(item.type, item.stat);
           meta.upgrades[key] = (meta.upgrades[key] || 0) + 1;
-          meta.gold -= cost;
         }
+        meta.gold -= cost;
         saveMeta();
         renderUpgrades();
         refreshGold();
       });
     }
-
     list.appendChild(el);
   }
 }
@@ -78,22 +71,19 @@ function showOverflowPopup() {
       const t = TYPES[item.type];
       const el = document.createElement('div');
       el.style.cssText = `
-        display:flex;align-items:center;gap:4px;padding:6px 10px;
-        background:rgba(255,255,255,0.06);border-radius:8px;cursor:pointer;
-        color:#e8dcc0;font-size:13px;
+        display:flex;align-items:center;gap:5px;padding:8px 11px;
+        background:rgba(255,255,255,0.07);border:1px solid rgba(255,228,90,0.12);
+        border-radius:10px;cursor:pointer;color:#e8dcc0;font-size:13px;
       `;
-      el.innerHTML = `${t.icon} Lv.${item.level}`;
+      el.innerHTML = `${t.icon} ${t.name} Lv.${item.level}`;
       el.title = '点击后选择棋盘空格放置';
-      el.addEventListener('mousedown', (e) => {
+      const pick = (e) => {
         e.stopPropagation();
         document.getElementById('overflowPopup').classList.add('hide');
         state.pendingPlace = { type: item.type, level: item.level, queueIndex: i };
-      });
-      el.addEventListener('touchstart', (e) => {
-        e.stopPropagation();
-        document.getElementById('overflowPopup').classList.add('hide');
-        state.pendingPlace = { type: item.type, level: item.level, queueIndex: i };
-      });
+      };
+      el.addEventListener('mousedown', pick);
+      el.addEventListener('touchstart', pick, { passive: true });
       list.appendChild(el);
     }
   }
@@ -127,13 +117,14 @@ function loadMeta() {
   refreshGold();
 }
 
-/* ——— 刷新金币显示 ——— */
 function refreshGold() {
   const g = meta.gold || 0;
   const menuEl = document.getElementById('menuGold');
   if (menuEl) menuEl.textContent = g;
   const upEl = document.getElementById('upGold');
   if (upEl) upEl.textContent = g;
+  const stageEl = document.getElementById('menuStage');
+  if (stageEl) stageEl.textContent = meta.highestLevel || 1;
 }
 
 /* ——— 按钮事件绑定 ——— */
@@ -168,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('resultPanel').classList.add('hide');
     document.getElementById('menuPanel').classList.remove('hide');
     state.phase = 'menu';
+    refreshGold();
   });
 
   document.getElementById('btnNext').addEventListener('click', () => {
@@ -175,34 +167,20 @@ document.addEventListener('DOMContentLoaded', () => {
     initLevel(state.currentLevel + 1);
   });
 
-  // 重置数据（长按确认）
   const resetBtn = document.getElementById('btnReset');
   let resetTimer = null;
-  resetBtn.addEventListener('mousedown', () => {
-    resetTimer = setTimeout(() => {
-      localStorage.removeItem(META_KEY);
-      location.reload();
-    }, 1500);
-    resetBtn.textContent = '松手取消...';
-  });
-  resetBtn.addEventListener('mouseup', () => {
+  const resetStart = (e) => {
+    if (e) e.preventDefault();
+    resetTimer = setTimeout(() => { localStorage.removeItem(META_KEY); location.reload(); }, 1500);
+    resetBtn.textContent = '继续按住以确认...';
+  };
+  const resetCancel = () => {
     clearTimeout(resetTimer);
-    resetBtn.textContent = '重置数据';
-  });
-  resetBtn.addEventListener('mouseleave', () => {
-    clearTimeout(resetTimer);
-    resetBtn.textContent = '重置数据';
-  });
-  resetBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    resetTimer = setTimeout(() => {
-      localStorage.removeItem(META_KEY);
-      location.reload();
-    }, 1500);
-    resetBtn.textContent = '松手取消...';
-  });
-  resetBtn.addEventListener('touchend', () => {
-    clearTimeout(resetTimer);
-    resetBtn.textContent = '重置数据';
-  });
+    resetBtn.textContent = '长按重置数据';
+  };
+  resetBtn.addEventListener('mousedown', resetStart);
+  resetBtn.addEventListener('mouseup', resetCancel);
+  resetBtn.addEventListener('mouseleave', resetCancel);
+  resetBtn.addEventListener('touchstart', resetStart, { passive: false });
+  resetBtn.addEventListener('touchend', resetCancel);
 });
