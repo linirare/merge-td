@@ -87,6 +87,8 @@ function createState() {
     currentLevel: 1,
     levelConfig: null,
     kills: 0,
+    killSpCd: 0,
+    killSpProgress: 0,
     merges: 0,
     specialMerges: 0,
     maxSoldierAtk: 0,
@@ -126,7 +128,7 @@ function createMeta() {
     totalWins: 0,
     stars: {},
     deck: DEFAULT_DECK.slice(),
-    unlocked: UNIT_POOL.slice(),
+    unlocked: BASIC_UNLOCKED.slice(),
   };
 }
 
