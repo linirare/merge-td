@@ -27,8 +27,8 @@ const BOARD_H = ROWS * CELL + (ROWS - 1) * GAP;
 const BOARD_X = (W - BOARD_W) / 2;
 
 /* ——— Y 坐标布局 ——— */
-const FIELD_H = 260;             // 拉大战场区，让中线对推更清楚。
-const PLAYER_BOARD_SHIFT = 40;   // 保留底部安全边距，同时不再贴近我方城墙。
+const FIELD_H = 260;
+const PLAYER_BOARD_SHIFT = 40;
 const LAYOUT = {
   enemyInfoY:  6,
   enemyBoardY: 24,
@@ -126,7 +126,7 @@ const SPAWN_COOLDOWNS = [0, 5.6, 4.9, 4.25, 3.65, 3.15, 2.7, 2.35];
 const OVERFLOW_MAX = 10;
 const MAX_SOLDIERS = 24;
 const SP_MAX = 18;
-const SP_PASSIVE = 3.6;
+const SP_PASSIVE = 3.0;
 
 function upgradeCost(lv) { return 10 + lv * 8; }
 function stageReward(k) { return k * 8 + 18; }
