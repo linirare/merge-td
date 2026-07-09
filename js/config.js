@@ -1,5 +1,5 @@
 /* ============================================================
-   水果突击 · Fruit Assault —— 配置常量 / 12 水果球卡组制
+   水果突击 · Fruit Assault —— 配置常量 / 13水果球卡组制
    ============================================================ */
 
 const W = 480, H = 854;
@@ -41,28 +41,57 @@ const LAYOUT = {
   bottomY:     24 + BOARD_H + 10 + 22 + 8 + FIELD_H + 8 + 22 + 10 + PLAYER_BOARD_SHIFT + BOARD_H + 4,
 };
 
-/* ——— 12 个水果球：像球球英雄一样，单位是“卡组组件”而不是纯兵种 ——— */
+/* ——— 13 个水果球：局内只从5个上阵水果中随机召唤 ——— */
 const TYPES = {
   watermelon_guard: { id:'watermelon_guard', name:'西瓜盾卫', icon:'🍉', color:'#34c96b', rarity:'normal', role:'tank',    range:'melee', atk:8,  hp:68, speed:1.55, move:76,  siege:0.75, armor:12, tags:['front','tank','anti_range'], desc:'主坦抗线。Lv3周期护盾，Lv5进场嘲讽同路敌人。', skill:'shield' },
   coconut_guard:    { id:'coconut_guard',    name:'椰子守卫', icon:'🥥', color:'#9f7a4c', rarity:'normal', role:'tank',    range:'melee', atk:7,  hp:62, speed:1.62, move:72,  siege:0.65, armor:16, tags:['front','shield'], desc:'硬坦。第一次接战获得厚护盾，适合抗爆发。', skill:'first_shield' },
-  grape_archer:     { id:'grape_archer',     name:'葡萄射手', icon:'🍇', color:'#9b5cff', rarity:'normal', role:'back',    range:'far',   atk:10, hp:30, speed:1.00, move:86,  siege:0.90, armor:2,  tags:['range','dps'], desc:'高攻速后排。Lv3后周期穿透葡萄籽。', skill:'rapid' },
-  blueberry_sniper: { id:'blueberry_sniper', name:'蓝莓狙手', icon:'🫐', color:'#4d7dff', rarity:'rare',   role:'back',    range:'long',  atk:18, hp:26, speed:1.75, move:72,  siege:1.05, armor:1,  tags:['range','burst','backline'], desc:'长射程爆发，优先打后排。怕香蕉突击。', skill:'snipe' },
-  banana_raider:    { id:'banana_raider',    name:'香蕉突击', icon:'🍌', color:'#ffd447', rarity:'normal', role:'rush',    range:'melee', atk:13, hp:36, speed:0.82, move:118, siege:0.95, armor:3,  tags:['rush','assassin'], desc:'快速突击。Lv3首次接战冲刺，Lv5击杀后再冲刺。', skill:'dash' },
-  lemon_assassin:   { id:'lemon_assassin',   name:'柠檬刺客', icon:'🍋', color:'#ffe76a', rarity:'rare',   role:'rush',    range:'melee', atk:17, hp:28, speed:0.92, move:126, siege:0.80, armor:1,  tags:['rush','crit'], desc:'首击暴击，适合切远程和补刀。', skill:'first_crit' },
-  pineapple_lancer: { id:'pineapple_lancer', name:'菠萝枪兵', icon:'🍍', color:'#ffb337', rarity:'normal', role:'front',   range:'mid',   atk:11, hp:48, speed:1.10, move:90,  siege:0.95, armor:7,  tags:['front','anti_rush'], desc:'中线枪兵，克制香蕉/柠檬突击。', skill:'anti_rush' },
-  orange_cannon:    { id:'orange_cannon',    name:'橙子炮手', icon:'🍊', color:'#ff9838', rarity:'rare',   role:'siege',   range:'far',   atk:9,  hp:34, speed:1.65, move:64,  siege:2.45, armor:2,  tags:['siege','range'], desc:'攻城核心。打兵一般，打果堡极强。', skill:'siege' },
-  pumpkin_roller:   { id:'pumpkin_roller',   name:'南瓜滚轮', icon:'🎃', color:'#ff7d35', rarity:'rare',   role:'siege',   range:'melee', atk:10, hp:42, speed:1.20, move:96,  siege:1.55, armor:6,  tags:['siege','death'], desc:'死亡后向前滚动，撞敌或撞墙爆炸。', skill:'death_roll' },
-  pear_frost:       { id:'pear_frost',       name:'冰梨术士', icon:'🍐', color:'#9be7ff', rarity:'rare',   role:'control', range:'far',   atk:7,  hp:31, speed:1.35, move:70,  siege:0.70, armor:1,  tags:['control','slow'], desc:'攻击附带减速，克制快攻和突进。', skill:'slow' },
-  peach_medic:      { id:'peach_medic',      name:'蜜桃医师', icon:'🍑', color:'#ff9fbd', rarity:'rare',   role:'support', range:'support', atk:4,  hp:32, speed:1.65, move:70,  siege:0.40, armor:1,  tags:['support','heal'], desc:'周期性治疗同路最前排友军，推进流核心。', skill:'heal' },
-  kiwi_wildcard:    { id:'kiwi_wildcard',    name:'奇异果万能', icon:'🥝', color:'#8bd34e', rarity:'epic',   role:'merge',   range:'support', atk:2,  hp:24, speed:1.80, move:62,  siege:0.20, armor:0,  tags:['merge','wildcard'], desc:'可作为任意同星水果的合成材料，防卡手核心。', skill:'wildcard' },
-  passion_copy:     { id:'passion_copy',     name:'百香果复制', icon:'🟣', color:'#b85cff', rarity:'epic',   role:'merge',   range:'support', atk:2,  hp:24, speed:1.80, move:62,  siege:0.20, armor:0,  tags:['merge','copy'], desc:'拖到同星水果上，复制成目标水果。养核心必带。', skill:'copy' },
+  grape_archer:     { id:'grape_archer',     name:'葡萄射手', icon:'🍇', color:'#9b5cff', rarity:'normal', role:'back',    range:'far',   atk:10, hp:30, speed:1.00, move:86,  siege:0.90, armor:2,  tags:['range','dps'], desc:'稳定后排输出。怕突击切入，需要前排保护。', skill:'rapid' },
+  blueberry_sniper: { id:'blueberry_sniper', name:'蓝莓狙手', icon:'🫐', color:'#4d7dff', rarity:'rare',   role:'back',    range:'long',  atk:18, hp:26, speed:1.75, move:72,  siege:1.05, armor:1,  tags:['range','burst','backline'], desc:'长射程爆发，优先处理后排。怕突击贴脸。', skill:'snipe' },
+  banana_raider:    { id:'banana_raider',    name:'香蕉突击', icon:'🍌', color:'#ffd447', rarity:'normal', role:'rush',    range:'melee', atk:13, hp:36, speed:0.82, move:118, siege:0.95, armor:3,  tags:['rush','assassin'], desc:'快速突击，克制后排、医师和炮车。怕枪线拦截。', skill:'dash' },
+  lemon_assassin:   { id:'lemon_assassin',   name:'柠檬刺客', icon:'🍋', color:'#ffe76a', rarity:'rare',   role:'rush',    range:'melee', atk:17, hp:28, speed:0.92, move:126, siege:0.80, armor:1,  tags:['rush','crit'], desc:'首击爆发，适合切远程和补刀。怕控制与枪线。', skill:'first_crit' },
+  pineapple_lancer: { id:'pineapple_lancer', name:'菠萝枪兵', icon:'🍍', color:'#ffb337', rarity:'normal', role:'front',   range:'mid',   atk:11, hp:48, speed:1.10, move:90,  siege:0.95, armor:7,  tags:['front','anti_rush'], desc:'中线枪兵，职责克制突击单位。', skill:'anti_rush' },
+  orange_cannon:    { id:'orange_cannon',    name:'橙子炮手', icon:'🍊', color:'#ff9838', rarity:'rare',   role:'siege',   range:'far',   atk:9,  hp:34, speed:1.65, move:64,  siege:2.45, armor:2,  tags:['siege','range'], desc:'攻城核心。拆果堡极强，打兵偏弱，怕突击。', skill:'siege' },
+  pumpkin_roller:   { id:'pumpkin_roller',   name:'南瓜滚轮', icon:'🎃', color:'#ff7d35', rarity:'rare',   role:'siege',   range:'melee', atk:10, hp:42, speed:1.20, move:96,  siege:1.55, armor:6,  tags:['siege','death'], desc:'死亡后向前滚动爆破。适合制造攻城突破点。', skill:'death_roll' },
+  pear_frost:       { id:'pear_frost',       name:'冰梨术士', icon:'🍐', color:'#9be7ff', rarity:'rare',   role:'control', range:'far',   atk:7,  hp:31, speed:1.35, move:70,  siege:0.70, armor:1,  tags:['control','slow'], desc:'攻击附带减速，职责克制高速突击。', skill:'slow' },
+  peach_medic:      { id:'peach_medic',      name:'蜜桃医师', icon:'🍑', color:'#ff9fbd', rarity:'rare',   role:'support', range:'support', atk:4,  hp:32, speed:1.65, move:70,  siege:0.40, armor:1,  tags:['support','heal'], desc:'周期治疗同路前排。怕突击切入。', skill:'heal' },
+  kiwi_wildcard:    { id:'kiwi_wildcard',    name:'奇异果万能', icon:'🥝', color:'#8bd34e', rarity:'epic',   role:'merge',   range:'support', atk:2,  hp:24, speed:1.80, move:62,  siege:0.20, armor:0,  tags:['merge','wildcard'], desc:'同星万能合成材料。合成辅助，不派兵。', skill:'wildcard' },
+  passion_copy:     { id:'passion_copy',     name:'百香果复制', icon:'🟣', color:'#b85cff', rarity:'epic',   role:'merge',   range:'support', atk:2,  hp:24, speed:1.80, move:62,  siege:0.20, armor:0,  tags:['merge','copy'], desc:'拖到同星目标上复制成目标水果。合成辅助，不派兵。', skill:'copy' },
 };
 
 const UNIT_POOL = Object.keys(TYPES);
 const OLD_DEFAULT_DECK = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'];
-const DEFAULT_DECK = ['watermelon_guard','grape_archer','orange_cannon','peach_medic','kiwi_wildcard'];
+const DEFAULT_DECK = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'];
 const DECK_SIZE = 5;
 const TYPE_IDS = UNIT_POOL;
+const BASIC_UNLOCKED = DEFAULT_DECK.slice();
+const PROGRESS_UNLOCKS = [
+  { level: 2, ids: ['coconut_guard'] },
+  { level: 3, ids: ['peach_medic','pear_frost'] },
+  { level: 4, ids: ['blueberry_sniper','lemon_assassin'] },
+  { level: 5, ids: ['pumpkin_roller'] },
+  { level: 6, ids: ['kiwi_wildcard'] },
+  { level: 8, ids: ['passion_copy'] },
+];
+function unlockLevelFor(id) {
+  if (BASIC_UNLOCKED.includes(id)) return 1;
+  for (const item of PROGRESS_UNLOCKS) if (item.ids.includes(id)) return item.level;
+  return 1;
+}
+function progressUnlocked(m = null) {
+  const highest = Math.max(1, m?.highestLevel || 1);
+  const list = BASIC_UNLOCKED.slice();
+  for (const item of PROGRESS_UNLOCKS) if (highest >= item.level) for (const id of item.ids) if (!list.includes(id)) list.push(id);
+  return list.filter(id => TYPES[id]);
+}
+function syncProgressUnlocks(m = null) {
+  if (!m) return BASIC_UNLOCKED.slice();
+  const list = progressUnlocked(m);
+  m.unlocked = list.slice();
+  if (!Array.isArray(m.deck) || m.deck.length === 0) m.deck = DEFAULT_DECK.slice();
+  m.deck = normalizeDeck(m.deck).filter(id => list.includes(id));
+  for (const id of DEFAULT_DECK) if (m.deck.length < DECK_SIZE && list.includes(id) && !m.deck.includes(id)) m.deck.push(id);
+  return list;
+}
 
 /* 老存档/老代码兼容 */
 const LEGACY_TYPE_MAP = {
@@ -87,7 +116,10 @@ function normalizeDeckNoFill(deck) {
 }
 function shouldForceNewDefaultDeck(deck) {
   const sig = deckSignature(deck);
-  return !sig || sig === OLD_DEFAULT_DECK.join('|') || sig === ['grape_archer','banana_raider','pineapple_lancer','watermelon_guard'].join('|');
+  return !sig
+    || sig === OLD_DEFAULT_DECK.join('|')
+    || sig === ['grape_archer','banana_raider','pineapple_lancer','watermelon_guard'].join('|')
+    || sig === ['watermelon_guard','grape_archer','orange_cannon','peach_medic','kiwi_wildcard'].join('|');
 }
 function normalizeDeck(deck) {
   const result = shouldForceNewDefaultDeck(deck) ? DEFAULT_DECK.slice() : normalizeDeckNoFill(deck);
@@ -98,25 +130,64 @@ function activeDeck() {
   return normalizeDeck(meta?.deck || DEFAULT_DECK);
 }
 
-/* 多维克制：不是简单剪刀石头布，先做第一版可读的核心克制网络 */
+/* 职责克制：不再要求玩家背水果表 */
+const ROLE_COUNTER_DMG = 1.35;
+const ROLE_SOFT_COUNTER_DMG = 1.22;
+const ROLE_WEAK_DMG = 0.85;
+const COUNTER_DMG = ROLE_COUNTER_DMG;
 const COUNTER = {
-  grape_archer: 'pineapple_lancer',
-  blueberry_sniper: 'pear_frost',
-  banana_raider: 'watermelon_guard',
-  lemon_assassin: 'grape_archer',
-  pineapple_lancer: 'banana_raider',
-  watermelon_guard: 'grape_archer',
-  coconut_guard: 'lemon_assassin',
-  orange_cannon: 'wall',
-  pumpkin_roller: 'wall',
-  pear_frost: 'banana_raider',
+  grape_archer: 'front',
+  blueberry_sniper: 'back',
+  banana_raider: 'back',
+  lemon_assassin: 'support',
+  pineapple_lancer: 'rush',
+  watermelon_guard: 'back',
+  coconut_guard: 'back',
+  orange_cannon: 'tank',
+  pumpkin_roller: 'tank',
+  pear_frost: 'rush',
   peach_medic: '',
   kiwi_wildcard: '',
   passion_copy: '',
 };
-const COUNTER_DMG = 1.55;
+function roleCounterMultiplier(sourceType, targetType) {
+  const source = TYPES[sourceType] || {};
+  const target = TYPES[targetType] || {};
+  const sr = source.role;
+  const tr = target.role;
+  if (!sr || !tr || sr === 'merge') return 1;
+  if (sr === 'rush' && ['back','support','siege','control'].includes(tr)) return ROLE_COUNTER_DMG;
+  if (sr === 'rush' && ['tank','front'].includes(tr)) return ROLE_WEAK_DMG;
+  if (sr === 'front' && tr === 'rush') return 1.40;
+  if (sr === 'control' && (tr === 'rush' || (target.move || 0) >= 112)) return ROLE_COUNTER_DMG;
+  if (sr === 'siege' && tr === 'tank') return ROLE_SOFT_COUNTER_DMG;
+  if (sr === 'siege' && tr === 'rush') return ROLE_WEAK_DMG;
+  if (sr === 'back' && tr === 'front') return ROLE_SOFT_COUNTER_DMG;
+  if (sr === 'back' && tr === 'tank') return 0.92;
+  if (sr === 'back' && tr === 'rush') return ROLE_WEAK_DMG;
+  if (sr === 'tank' && tr === 'back') return 1.12;
+  if (sr === 'tank' && ['siege','control'].includes(tr)) return 0.90;
+  return 1;
+}
+function roleCounterText(sourceType, targetType) {
+  const mul = roleCounterMultiplier(sourceType, targetType);
+  if (mul >= 1.32) return '克制';
+  if (mul >= 1.15) return '优势';
+  if (mul <= 0.9) return '受制';
+  return '';
+}
+function bestCounterForEnemy(enemyType, pool = null) {
+  const list = pool || UNIT_POOL;
+  let best = null, bestScore = 1;
+  for (const id of list) {
+    if (!TYPES[id] || TYPES[id].role === 'merge') continue;
+    const score = roleCounterMultiplier(id, enemyType);
+    if (score > bestScore) { best = id; bestScore = score; }
+  }
+  return best;
+}
 
-const LEVEL_MUL = [0, 1.0, 1.58, 2.34, 3.32, 4.62, 6.3, 8.5];
+const LEVEL_MUL = [0, 1.0, 1.45, 2.05, 2.8, 3.75, 4.9, 6.2];
 const MAX_LEVEL = 7;
 const BASE_WALL_HP = 72;
 const SIEGE_SLOTS_PER_LANE = 3;
