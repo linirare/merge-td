@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>水果突击 · Fruit Assault</title>
-<link rel="stylesheet" href="css/style.css?v=20260709n">
+<link rel="stylesheet" href="css/style.css?v=20260709o">
 </head>
 <body>
 <div id="rotate-hint">
@@ -25,7 +25,7 @@
       <span class="logo-mark">🍉</span>
       <div>
         <h1>水果突击</h1>
-        <p class="sub">5选卡组 · 兵阶出兵 · 中线对推</p>
+        <p class="sub">5选卡组 · 兵阶出兵 · 清晰对推</p>
         <p class="sub" style="font-size:10px;color:#2c8d3f;">BUILD <span id="buildBadge">loading</span></p>
       </div>
     </div>
@@ -44,7 +44,7 @@
 
     <div class="feature-chips">
       <span>低频出兵</span>
-      <span>兵阶进化</span>
+      <span>单铭牌</span>
       <span>克制对推</span>
     </div>
 
@@ -57,90 +57,45 @@
   </div>
 </div>
 
-<div id="overflowPopup" class="panel hide">
-  <div class="panel-inner">
-    <h2>📦 待部署水果营</h2>
-    <p class="sub">点选后放到棋盘空格</p>
-    <div id="overflowList" class="overflow-list"></div>
-    <button id="btnOverflowClose" class="btn-secondary">关闭</button>
-  </div>
-</div>
-
-<div id="upgradePanel" class="panel hide">
-  <div class="panel-inner wide tech-panel">
-    <h2>🌱 水果科技树</h2>
-    <p class="sub">果汁 <span id="upGold">0</span> · 解锁关键节点强化局内策略</p>
-    <div id="upgradeList"></div>
-    <button id="btnUpClose" class="btn-secondary">返回</button>
-  </div>
-</div>
-
-<div id="simPanel" class="panel hide">
-  <div class="panel-inner wide sim-panel">
-    <h2>📊 数值模拟</h2>
-    <p class="sub">快速估算 1-20 关胜率、时长和压力点</p>
-    <div id="simResult" class="sim-result">点击菜单中的“数值模拟”开始。</div>
-    <button id="btnSimClose" class="btn-secondary">关闭</button>
-  </div>
-</div>
-
-<div id="resultPanel" class="panel hide">
-  <div class="panel-inner result-card">
-    <h2 id="resultTitle"></h2>
-    <p id="resultDetail"></p>
-    <button id="btnRetry" class="btn-primary">重打本关</button>
-    <button id="btnNext" class="btn-primary hide">下一关</button>
-    <button id="btnMenu" class="btn-secondary">回到营地</button>
-  </div>
-</div>
+<div id="overflowPopup" class="panel hide"><div class="panel-inner"><h2>📦 待部署水果营</h2><p class="sub">点选后放到棋盘空格</p><div id="overflowList" class="overflow-list"></div><button id="btnOverflowClose" class="btn-secondary">关闭</button></div></div>
+<div id="upgradePanel" class="panel hide"><div class="panel-inner wide tech-panel"><h2>🌱 水果科技树</h2><p class="sub">果汁 <span id="upGold">0</span> · 解锁关键节点强化局内策略</p><div id="upgradeList"></div><button id="btnUpClose" class="btn-secondary">返回</button></div></div>
+<div id="simPanel" class="panel hide"><div class="panel-inner wide sim-panel"><h2>📊 数值模拟</h2><p class="sub">快速估算 1-20 关胜率、时长和压力点</p><div id="simResult" class="sim-result">点击菜单中的“数值模拟”开始。</div><button id="btnSimClose" class="btn-secondary">关闭</button></div></div>
+<div id="resultPanel" class="panel hide"><div class="panel-inner result-card"><h2 id="resultTitle"></h2><p id="resultDetail"></p><button id="btnRetry" class="btn-primary">重打本关</button><button id="btnNext" class="btn-primary hide">下一关</button><button id="btnMenu" class="btn-secondary">回到营地</button></div></div>
 
 <div id="helpPanel" class="panel hide">
   <div class="panel-inner help-panel">
     <h2>📖 果园战术</h2>
-    <div class="help-section">
-      <h3>🎯 目标</h3>
-      <p>局外从12个水果球里选5个上阵；局内水果营低频派遣不同兵阶的单位，兵在路线中线对推并拆掉敌方果堡。</p>
-    </div>
-    <div class="help-section">
-      <h3>🖐️ 操作</h3>
-      <p><b>拖拽水果营</b>到同类同级营地上 → 合成；拖到空格 → 移动；拖到不同营地 → 交换。</p>
-      <p><b>奇异果万能</b>可当任意同星材料；<b>百香果复制</b>拖到同星目标上会复制成目标水果。</p>
-    </div>
-    <div class="help-section">
-      <h3>🍓 兵阶模式</h3>
-      <p>星级不再主要缩短出兵CD，而是决定派出的兵阶：小兵、大兵、精英兵、高级兵、将领。重复出兵会补强现有单位。</p>
-    </div>
-    <div class="help-section">
-      <h3>🏰 机制</h3>
-      <p>出兵CD整体加大，合成后的下一波兵会更大、更强、名字和表现更明显，减少战场拥挤。</p>
-    </div>
+    <div class="help-section"><h3>🎯 目标</h3><p>局外从12个水果球里选5个上阵；局内水果营低频派遣不同兵阶的单位，兵在路线中线对推并拆掉敌方果堡。</p></div>
+    <div class="help-section"><h3>🖐️ 操作</h3><p><b>拖拽水果营</b>到同类同级营地上 → 合成；拖到空格 → 移动；拖到不同营地 → 交换。</p><p><b>奇异果万能</b>可当任意同星材料；<b>百香果复制</b>拖到同星目标上会复制成目标水果。</p></div>
+    <div class="help-section"><h3>🍓 表现优化</h3><p>兵阶单位现在只显示一个主铭牌、一个定位标签、一个血条；低伤害飘字也会降噪，减少战场拥挤感。</p></div>
     <button id="btnHelpClose" class="btn-secondary">知道了</button>
   </div>
 </div>
 
-<script src="js/config.js?v=20260709n"></script>
-<script src="js/version_guard.js?v=20260709n"></script>
-<script src="js/state.js?v=20260709n"></script>
-<script src="js/board.js?v=20260709n"></script>
-<script src="js/combat.js?v=20260709n"></script>
-<script src="js/ai.js?v=20260709n"></script>
-<script src="js/render.js?v=20260709n"></script>
-<script src="js/skin.js?v=20260709n"></script>
-<script src="js/battle_skin.js?v=20260709n"></script>
-<script src="js/hud_skin.js?v=20260709n"></script>
-<script src="js/fruit_skin.js?v=20260709n"></script>
-<script src="js/balance_sim.js?v=20260709n"></script>
-<script src="js/input.js?v=20260709n"></script>
-<script src="js/audio.js?v=20260709n"></script>
-<script src="js/ui.js?v=20260709n"></script>
-<script src="js/main.js?v=20260709n"></script>
-<script src="js/tutorial_balance.js?v=20260709n"></script>
-<script src="js/squad_mode.js?v=20260709n"></script>
-<script src="js/troop_tier_mode.js?v=20260709n"></script>
-<script src="js/fruit_deck_runtime.js?v=20260709n"></script>
-<script src="js/gameplay_assist.js?v=20260709n"></script>
-<script src="js/fruit_mechanics.js?v=20260709n"></script>
-<script src="js/juice.js?v=20260709n"></script>
-<script src="js/deck_ui.js?v=20260709n"></script>
+<script src="js/config.js?v=20260709o"></script>
+<script src="js/version_guard.js?v=20260709o"></script>
+<script src="js/state.js?v=20260709o"></script>
+<script src="js/board.js?v=20260709o"></script>
+<script src="js/combat.js?v=20260709o"></script>
+<script src="js/ai.js?v=20260709o"></script>
+<script src="js/render.js?v=20260709o"></script>
+<script src="js/skin.js?v=20260709o"></script>
+<script src="js/battle_skin.js?v=20260709o"></script>
+<script src="js/hud_skin.js?v=20260709o"></script>
+<script src="js/fruit_skin.js?v=20260709o"></script>
+<script src="js/balance_sim.js?v=20260709o"></script>
+<script src="js/input.js?v=20260709o"></script>
+<script src="js/audio.js?v=20260709o"></script>
+<script src="js/ui.js?v=20260709o"></script>
+<script src="js/main.js?v=20260709o"></script>
+<script src="js/tutorial_balance.js?v=20260709o"></script>
+<script src="js/squad_mode.js?v=20260709o"></script>
+<script src="js/troop_tier_mode.js?v=20260709o"></script>
+<script src="js/fruit_deck_runtime.js?v=20260709o"></script>
+<script src="js/gameplay_assist.js?v=20260709o"></script>
+<script src="js/fruit_mechanics.js?v=20260709o"></script>
+<script src="js/juice.js?v=20260709o"></script>
+<script src="js/combat_clarity.js?v=20260709o"></script>
+<script src="js/deck_ui.js?v=20260709o"></script>
 </body>
 </html>
