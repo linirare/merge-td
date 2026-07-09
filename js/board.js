@@ -1,5 +1,5 @@
 /* ============================================================
-   合成塔防 · PvE —— 棋盘逻辑
+   合成攻城 · Merge Siege —— 棋盘逻辑
    ============================================================ */
 
 /* ——— 棋盘辅助 ——— */
@@ -13,20 +13,14 @@ function slotCenter(r, c, isEnemy) {
 
 function slotRect(r, c, isEnemy) {
   const bx = BOARD_X, by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
-  return {
-    x: bx + c * (CELL + GAP),
-    y: by + r * (CELL + GAP),
-    w: CELL, h: CELL,
-  };
+  return { x: bx + c * (CELL + GAP), y: by + r * (CELL + GAP), w: CELL, h: CELL };
 }
 
 function slotAt(px, py, isEnemy) {
-  const by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const rect = slotRect(r, c, isEnemy);
-      if (px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h)
-        return [r, c];
+      if (px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h) return [r, c];
     }
   }
   return null;
@@ -34,35 +28,65 @@ function slotAt(px, py, isEnemy) {
 
 function emptySlots(slots) {
   const result = [];
-  for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++)
-      if (!slots[r][c]) result.push([r, c]);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (!slots[r][c]) result.push([r, c]);
   return result;
 }
 
-/* ——— 球逻辑 ——— */
+/* ——— 兵营逻辑 ——— */
 function randomType() {
   return TYPE_IDS[Math.floor(Math.random() * TYPE_IDS.length)];
 }
 
-// 初始放 N 个球
-function initBalls(slots, n, level = 1) {
-  const empties = emptySlots(slots);
-  // 随机打乱，让球散落在棋盘不同位置
-  for (let i = empties.length - 1; i > 0; i--) {
+function shuffleSlots(list) {
+  for (let i = list.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [empties[i], empties[j]] = [empties[j], empties[i]];
+    [list[i], list[j]] = [list[j], list[i]];
   }
+  return list;
+}
+
+function placeBall(slots, r, c, type, level = 1) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+  slots[r][c] = createBall(type, level);
+}
+
+// 初始放 N 个兵营
+function initBalls(slots, n, level = 1) {
+  const empties = shuffleSlots(emptySlots(slots));
   for (let i = 0; i < Math.min(n, empties.length); i++) {
     const [r, c] = empties[i];
     slots[r][c] = createBall(randomType(), level);
   }
 }
 
-// 自动产球：找空闲位放一个随机球
+// 前几关给玩家可合成对子，降低冷启动挫败
+function initPlayerOpening(k) {
+  const starter = k === 1 ? 'bow' : k === 2 ? 'spear' : k === 3 ? 'shield' : randomType();
+  placeBall(state.playerSlots, 1, 1, starter, 1);
+  placeBall(state.playerSlots, 1, 2, starter, 1);
+  placeBall(state.playerSlots, 2, 0, 'sword', 1);
+  placeBall(state.playerSlots, 2, 4, 'shield', 1);
+  placeBall(state.playerSlots, 0, 0, 'bow', 1);
+  placeBall(state.playerSlots, 0, 4, 'spear', 1);
+  if (k >= 4) placeBall(state.playerSlots, 2, 2, randomType(), 2);
+}
+
+function initEnemyOpening(k, level) {
+  const enemyCount = k <= 2 ? 4 : 5;
+  initBalls(state.enemySlots, enemyCount, Math.max(1, level));
+  if (k % 5 === 0) {
+    const empties = emptySlots(state.enemySlots);
+    if (empties.length) {
+      const [r, c] = empties[0];
+      state.enemySlots[r][c] = createBall(randomType(), Math.min(MAX_LEVEL, level + 1));
+    }
+  }
+}
+
+// 自动产兵营：找空闲位放一个随机兵营
 function autoSpawnBall(slots, level = 1) {
   const empties = emptySlots(slots);
-  if (empties.length === 0) return null; // 满了
+  if (empties.length === 0) return null;
   const [r, c] = empties[Math.floor(Math.random() * empties.length)];
   slots[r][c] = createBall(randomType(), level);
   return [r, c];
@@ -79,13 +103,12 @@ function drainOverflow(slots, queue) {
   }
 }
 
-// 入溢出队列
 function pushOverflow(queue, type, level = 1) {
   if (queue.length < OVERFLOW_MAX) {
     queue.push({ type, level });
     return true;
   }
-  return false; // 队列也满了，丢弃
+  return false;
 }
 
 /* ——— 合成 ——— */
@@ -94,29 +117,24 @@ function tryMerge(slots, fromR, fromC, toR, toC) {
   const dst = slots[toR][toC];
   if (!src || !dst) return null;
 
-  // 同品类 + 同级 → 合成
   if (src.type === dst.type && src.level === dst.level && src.level < MAX_LEVEL) {
     slots[fromR][fromC] = null;
     dst.level++;
     dst.bounce = 1;
-    // 合并后按新等级重设冷却
     const newCd = SPAWN_COOLDOWNS[dst.level] || SPAWN_COOLDOWNS[1];
-    dst.spawnTimer = newCd * 0.3; // 合并后快速产出一个兵
+    dst.spawnTimer = newCd * 0.22;
     return { merged: true, newLevel: dst.level, type: src.type, fromR, fromC, toR, toC };
   }
 
-  // 否则交换位置
   slots[fromR][fromC] = dst;
   slots[toR][toC] = src;
   return { merged: false, swap: true };
 }
 
-// 移动到空格
 function tryMove(slots, fromR, fromC, toR, toC) {
   const src = slots[fromR][fromC];
   const dst = slots[toR][toC];
-  if (!src) return null;
-  if (dst) return null; // 目标不是空格，不处理
+  if (!src || dst) return null;
   slots[fromR][fromC] = null;
   slots[toR][toC] = src;
   return { moved: true };
@@ -128,48 +146,52 @@ function initLevel(k) {
   state.currentLevel = k;
   state.levelConfig = lv;
 
-  // 重置棋盘
   state.playerSlots = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
   state.enemySlots  = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
 
-  // 初始球
-  initBalls(state.playerSlots, 5, 1);
+  initPlayerOpening(k);
   const eLv = Math.floor(lv.enemyInitLevel);
   const eFrac = lv.enemyInitLevel - eLv;
-  const eLevel = eFrac > 0.5 ? eLv + 1 : eLv;
-  initBalls(state.enemySlots, 5, eLevel);
+  const eLevel = eFrac > 0.55 ? eLv + 1 : eLv;
+  initEnemyOpening(k, eLevel);
 
-  // 城墙
   state.playerWallHp = BASE_WALL_HP + getWallBonus(meta);
   state.playerWallMax = state.playerWallHp;
   state.enemyWallHp = lv.enemyWallHp;
   state.enemyWallMax = lv.enemyWallHp;
 
-  // 清零
   state.playerSoldiers = [];
   state.enemySoldiers = [];
   state.overflowQueue = [];
-  state.ballTimer = 0;
-  state.enemyBallTimer = 0;
+  state.enemyOverflow = 0;
+  state.ballTimer = 1.2;
+  state.enemyBallTimer = 0.4;
   state.playerSpawnTimer = 0;
   state.enemySpawnTimer = 0;
-  state.enemyOverflow = 0;
+  state.kills = 0;
+  state.merges = 0;
+  state.maxSoldierAtk = 0;
+  state.maxSoldierType = '';
+  state.drag = null;
+  state.pendingPlace = null;
   state.fx = [];
   state.attackFx = [];
   state.projectiles = [];
-  state.sp = 5;
+  state.rings = [];
+  state.sp = 6;
   state._spTimer = 0;
-  state.dust = Array.from({ length: 12 }, () => ({
-    x: Math.random() * W,
-    y: LAYOUT.fieldY + Math.random() * LAYOUT.fieldH,
-    vx: (Math.random() - 0.5) * 6,
-    vy: -Math.random() * 4 - 2,
-    size: 1 + Math.random() * 2,
-    alpha: 0.02 + Math.random() * 0.04,
-  }));
-  state.time = 0;
-  state.drag = null;
   state.shake = 0;
+  state.time = 0;
+  state.dust = Array.from({ length: 8 }, (_, i) => ({
+    x: 42 + i * 54 + Math.random() * 12,
+    y: LAYOUT.fieldY + 26 + Math.random() * (LAYOUT.fieldH - 52),
+    vx: (Math.random() - 0.5) * 4,
+    vy: -1.5 - Math.random() * 2,
+    size: 1.1 + Math.random() * 1.4,
+    alpha: 0.018 + Math.random() * 0.028,
+  }));
+
+  addFx(W / 2, LAYOUT.playerBoardY - 14, k <= 3 ? '拖拽同类兵营合成升级' : (lv.isBoss ? 'Boss城门：集中高等级兵营破门' : '合成升级，压过中线'), THEME.gold, 14);
   state.phase = 'playing';
   resetAI();
 }
