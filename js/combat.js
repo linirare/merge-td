@@ -6,11 +6,11 @@
 
 const SOLDIER_SPEED = 92;
 const CHASE_SPEED = 82;
-const SIEGE_SPEED = 112;
+const SIEGE_SPEED = 104;
 const FIELD_PAD = 12;
 const LANE_TOLERANCE = 48;
 const SCAN_RANGE = 168;
-const WALL_ATTACK_INTERVAL = 0.82;
+const WALL_ATTACK_INTERVAL = 1.05;
 
 const ATTACK_RANGES = {
   bow: 116,
@@ -195,11 +195,11 @@ function attackWall(s) {
   if (s.atkTimer > 0) return;
 
   if (s.side === 'player') {
-    const dmg = Math.max(2, Math.round(s.level * 2.2 + s.atk * 0.15));
+    const dmg = Math.max(2, Math.round(s.level * 1.75 + s.atk * 0.11));
     state.enemyWallHp = Math.max(0, state.enemyWallHp - dmg);
     addFx(s.x, wall.wallY + wall.wallH + 4, `破城 -${dmg}`, THEME.gold, 13);
   } else {
-    const dmg = Math.max(2, Math.round(s.level * 1.7 + s.atk * 0.1));
+    const dmg = Math.max(2, Math.round(s.level * 1.45 + s.atk * 0.08));
     state.playerWallHp = Math.max(0, state.playerWallHp - dmg);
     addFx(s.x, wall.wallY - 8, `-${dmg}`, THEME.accent, 13);
   }
