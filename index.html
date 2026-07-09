@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>合成攻城 · Merge Siege</title>
-<link rel="stylesheet" href="css/style.css?v=20260709b">
+<link rel="stylesheet" href="css/style.css?v=20260709c">
 </head>
 <body>
 <div id="rotate-hint">
@@ -25,7 +25,7 @@
       <span class="logo-mark">⚔️</span>
       <div>
         <h1>合成攻城</h1>
-        <p class="sub">小兵合成 · 自动冲锋 · 推倒敌城</p>
+        <p class="sub">五路兵营 · 士气出兵 · 推倒敌城</p>
       </div>
     </div>
 
@@ -42,13 +42,14 @@
     </div>
 
     <div class="feature-chips">
-      <span>拖拽合成</span>
-      <span>克制优先</span>
-      <span>局外升级</span>
+      <span>五路推进</span>
+      <span>克制锁敌</span>
+      <span>科技成长</span>
     </div>
 
     <button id="btnStart" class="btn-primary">继续攻城</button>
-    <button id="btnUpgrade" class="btn-secondary">兵营永久升级</button>
+    <button id="btnUpgrade" class="btn-secondary">兵营科技树</button>
+    <button id="btnSim" class="btn-secondary small">数值模拟 1-20关</button>
     <button id="btnReset" class="btn-reset">长按重置数据</button>
   </div>
 </div>
@@ -63,11 +64,20 @@
 </div>
 
 <div id="upgradePanel" class="panel hide">
-  <div class="panel-inner wide">
-    <h2>⚔️ 兵营永久升级</h2>
-    <p class="sub">金币 <span id="upGold">0</span> · 提升局内小兵属性</p>
+  <div class="panel-inner wide tech-panel">
+    <h2>⚔️ 兵营科技树</h2>
+    <p class="sub">金币 <span id="upGold">0</span> · 解锁关键节点强化局内策略</p>
     <div id="upgradeList"></div>
     <button id="btnUpClose" class="btn-secondary">返回</button>
+  </div>
+</div>
+
+<div id="simPanel" class="panel hide">
+  <div class="panel-inner wide sim-panel">
+    <h2>📊 数值模拟</h2>
+    <p class="sub">快速估算 1-20 关胜率、时长和压力点</p>
+    <div id="simResult" class="sim-result">点击菜单中的“数值模拟”开始。</div>
+    <button id="btnSimClose" class="btn-secondary">关闭</button>
   </div>
 </div>
 
@@ -86,36 +96,37 @@
     <h2>📖 新手战术</h2>
     <div class="help-section">
       <h3>🎯 目标</h3>
-      <p>把同品类、同等级的兵营拖到一起升级，持续产出小兵，推倒敌方城墙。</p>
+      <p>把同品类、同等级的兵营拖到一起升级，持续产出小兵，压过中线并推倒敌方城墙。</p>
     </div>
     <div class="help-section">
       <h3>🖐️ 操作</h3>
-      <p><b>拖拽兵营</b>到同类同级兵营上 → 升级；拖到空格 → 移动；拖到不同兵营 → 交换。</p>
-      <p><b>双击兵营</b>可消耗士气立即出兵，适合补刀破城。</p>
+      <p><b>拖拽兵营</b>到同类同级兵营上 → 合成；拖到空格 → 移动；拖到不同兵营 → 交换。</p>
+      <p><b>双击兵营</b>消耗 1 点士气立即出兵，适合救线或补刀破城。</p>
     </div>
     <div class="help-section">
-      <h3>⚔️ 克制</h3>
-      <p><span class="red">弓克枪</span> · <span class="green">枪克刀</span> · <span class="blue">刀克盾</span> · <span class="gold">盾克弓</span>。</p>
+      <h3>⚔️ 克制与站位</h3>
+      <p><span class="red">弓克枪</span> · <span class="green">枪克刀</span> · <span class="blue">刀克盾</span> · <span class="gold">盾克弓</span>。弓兵会保持后排距离，盾/枪更适合抗线。</p>
     </div>
     <div class="help-section">
-      <h3>🏆 成长</h3>
-      <p>胜利获得金币，用于提升兵营攻击、血量和城墙耐久。右上角可切换 1x / 2x / 3x 速度。</p>
+      <h3>🏰 攻城</h3>
+      <p>每一路最多 3 个兵同时打墙，后续士兵会排队，避免一波兵瞬间秒墙。</p>
     </div>
     <button id="btnHelpClose" class="btn-secondary">知道了</button>
   </div>
 </div>
 
-<script src="js/config.js?v=20260709b"></script>
-<script src="js/state.js?v=20260709b"></script>
-<script src="js/board.js?v=20260709b"></script>
-<script src="js/combat.js?v=20260709b"></script>
-<script src="js/ai.js?v=20260709b"></script>
-<script src="js/render.js?v=20260709b"></script>
-<script src="js/skin.js?v=20260709b"></script>
-<script src="js/battle_skin.js?v=20260709b"></script>
-<script src="js/input.js?v=20260709b"></script>
-<script src="js/audio.js?v=20260709b"></script>
-<script src="js/ui.js?v=20260709b"></script>
-<script src="js/main.js?v=20260709b"></script>
+<script src="js/config.js?v=20260709c"></script>
+<script src="js/state.js?v=20260709c"></script>
+<script src="js/board.js?v=20260709c"></script>
+<script src="js/combat.js?v=20260709c"></script>
+<script src="js/ai.js?v=20260709c"></script>
+<script src="js/render.js?v=20260709c"></script>
+<script src="js/skin.js?v=20260709c"></script>
+<script src="js/battle_skin.js?v=20260709c"></script>
+<script src="js/balance_sim.js?v=20260709c"></script>
+<script src="js/input.js?v=20260709c"></script>
+<script src="js/audio.js?v=20260709c"></script>
+<script src="js/ui.js?v=20260709c"></script>
+<script src="js/main.js?v=20260709c"></script>
 </body>
 </html>
