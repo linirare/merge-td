@@ -2,18 +2,72 @@
    合成攻城 · Merge Siege —— DOM 界面管理
    ============================================================ */
 
-/* ——— 升级项配置 ——— */
-const UPGRADE_ITEMS = [
-  { key: 'bow_atk',   label: '🏹 弓营攻击',   type: 'bow',   stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
-  { key: 'bow_hp',    label: '🏹 弓营血量',   type: 'bow',   stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
-  { key: 'sword_atk', label: '🗡️ 刀营攻击',  type: 'sword', stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
-  { key: 'sword_hp',  label: '🗡️ 刀营血量',  type: 'sword', stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
-  { key: 'spear_atk', label: '🔱 枪营攻击',  type: 'spear', stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
-  { key: 'spear_hp',  label: '🔱 枪营血量',  type: 'spear', stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
-  { key: 'shield_atk',label: '🛡️ 盾营攻击', type: 'shield',stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
-  { key: 'shield_hp', label: '🛡️ 盾营血量', type: 'shield',stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
-  { key: 'wall',       label: '🏰 我方城墙',   type: null,    stat: null, maxLv: WALL_UPGRADE_MAX, wall: true },
+/* ——— 科技项配置 ——— */
+const UPGRADE_GROUPS = [
+  {
+    title: '🏹 弓营 · 后排输出',
+    items: [
+      { key: 'bow_atk', label: '弓营攻击', type: 'bow', stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
+      { key: 'bow_hp',  label: '弓营血量', type: 'bow', stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
+    ],
+  },
+  {
+    title: '🗡️ 刀营 · 破盾突进',
+    items: [
+      { key: 'sword_atk', label: '刀营攻击', type: 'sword', stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
+      { key: 'sword_hp',  label: '刀营血量', type: 'sword', stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
+    ],
+  },
+  {
+    title: '🔱 枪营 · 中线抗压',
+    items: [
+      { key: 'spear_atk', label: '枪营攻击', type: 'spear', stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
+      { key: 'spear_hp',  label: '枪营血量', type: 'spear', stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
+    ],
+  },
+  {
+    title: '🛡️ 盾营 · 前排守线',
+    items: [
+      { key: 'shield_atk', label: '盾营攻击', type: 'shield', stat: 'atk', maxLv: UPGRADE_MAX, wall: false },
+      { key: 'shield_hp',  label: '盾营血量', type: 'shield', stat: 'hp',  maxLv: UPGRADE_MAX, wall: false },
+    ],
+  },
+  {
+    title: '🏰 战略科技',
+    items: [
+      { key: 'wall', label: '我方城墙', type: null, stat: null, maxLv: WALL_UPGRADE_MAX, wall: true },
+      { key: 'sp',   label: '士气号角', type: null, stat: null, maxLv: SP_UPGRADE_MAX, sp: true },
+    ],
+  },
 ];
+
+function getItemLv(item) {
+  if (item.wall) return meta.wallLv || 0;
+  if (item.sp) return meta.spLv || 0;
+  return getUpgradeLv(meta, item.type, item.stat);
+}
+
+function addItemLv(item) {
+  if (item.wall) meta.wallLv++;
+  else if (item.sp) meta.spLv = (meta.spLv || 0) + 1;
+  else {
+    const key = upgradeKey(item.type, item.stat);
+    meta.upgrades[key] = (meta.upgrades[key] || 0) + 1;
+  }
+}
+
+function itemEffectText(item) {
+  if (item.wall) return `+${WALL_PER_LV}耐久/级`;
+  if (item.sp) return '开局士气/上限提升';
+  return `+${Math.round(UPGRADE_PER_LV * 100)}%/级`;
+}
+
+function milestoneText(item, lv) {
+  const m = TECH_MILESTONES[item.key];
+  if (!m) return '';
+  if (lv >= m.at) return `已解锁：${m.title} · ${m.desc}`;
+  return `节点 Lv.${m.at}：${m.title}`;
+}
 
 function renderUpgrades() {
   const list = document.getElementById('upgradeList');
@@ -21,39 +75,37 @@ function renderUpgrades() {
   goldSpan.textContent = meta.gold;
   list.innerHTML = '';
 
-  for (const item of UPGRADE_ITEMS) {
-    const el = document.createElement('div');
-    let lv, cost, maxed;
-    if (item.wall) {
-      lv = meta.wallLv;
-      maxed = lv >= item.maxLv;
-      cost = upgradeCost(lv + 1);
-    } else {
-      lv = getUpgradeLv(meta, item.type, item.stat);
-      maxed = lv >= item.maxLv;
-      cost = upgradeCost(lv + 1);
+  for (const group of UPGRADE_GROUPS) {
+    const section = document.createElement('div');
+    section.className = 'upgrade-section';
+    section.innerHTML = `<h3>${group.title}</h3>`;
+
+    for (const item of group.items) {
+      const el = document.createElement('div');
+      const lv = getItemLv(item);
+      const maxed = lv >= item.maxLv;
+      const cost = upgradeCost(lv + 1);
+      const canAfford = meta.gold >= cost && !maxed;
+      el.className = 'upgrade-item' + (canAfford ? '' : ' disabled');
+      const node = milestoneText(item, lv);
+      el.innerHTML = `
+        <span class="uilabel">${item.label} <span class="uilevel">Lv.${lv}</span><br>
+          <small>${itemEffectText(item)}${node ? ' · ' + node : ''}</small>
+        </span>
+        <span class="uicost ${maxed ? 'maxed' : canAfford ? 'can-afford' : ''}">${maxed ? 'MAX' : cost + '💰'}</span>
+      `;
+      if (canAfford) {
+        el.addEventListener('click', () => {
+          addItemLv(item);
+          meta.gold -= cost;
+          saveMeta();
+          renderUpgrades();
+          refreshGold();
+        });
+      }
+      section.appendChild(el);
     }
-    const canAfford = meta.gold >= cost && !maxed;
-    el.className = 'upgrade-item' + (canAfford ? '' : ' disabled');
-    const effect = item.wall ? `+${WALL_PER_LV}耐久/级` : `+${Math.round(UPGRADE_PER_LV * 100)}%/级`;
-    el.innerHTML = `
-      <span class="uilabel">${item.label} <span class="uilevel">Lv.${lv}</span><br><small style="color:#9d8a66;font-size:10px;">${effect}</small></span>
-      <span class="uicost ${maxed ? 'maxed' : canAfford ? 'can-afford' : ''}">${maxed ? 'MAX' : cost + '💰'}</span>
-    `;
-    if (canAfford) {
-      el.addEventListener('click', () => {
-        if (item.wall) meta.wallLv++;
-        else {
-          const key = upgradeKey(item.type, item.stat);
-          meta.upgrades[key] = (meta.upgrades[key] || 0) + 1;
-        }
-        meta.gold -= cost;
-        saveMeta();
-        renderUpgrades();
-        refreshGold();
-      });
-    }
-    list.appendChild(el);
+    list.appendChild(section);
   }
 }
 
@@ -109,6 +161,7 @@ function loadMeta() {
       meta.gold = saved.gold || 0;
       meta.upgrades = saved.upgrades || {};
       meta.wallLv = saved.wallLv || 0;
+      meta.spLv = saved.spLv || 0;
       meta.highestLevel = Math.max(1, saved.highestLevel || 1);
       meta.totalWins = saved.totalWins || 0;
       meta.stars = saved.stars || {};
@@ -145,6 +198,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnUpClose').addEventListener('click', () => {
     document.getElementById('upgradePanel').classList.add('hide');
   });
+
+  const simBtn = document.getElementById('btnSim');
+  if (simBtn) {
+    simBtn.addEventListener('click', () => {
+      document.getElementById('simPanel').classList.remove('hide');
+      if (typeof renderBalanceSim === 'function') renderBalanceSim(20, 80);
+    });
+  }
+  const simClose = document.getElementById('btnSimClose');
+  if (simClose) simClose.addEventListener('click', () => document.getElementById('simPanel').classList.add('hide'));
 
   document.getElementById('btnHelpClose').addEventListener('click', () => {
     document.getElementById('helpPanel').classList.add('hide');
