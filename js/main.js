@@ -35,8 +35,11 @@ function spawnSoldierFromBall(ball, r, c, side, forced = false) {
   soldier.side = side;
   soldier.laneIndex = c;
   soldier.laneX = BOARD_X + c * (CELL + GAP) + CELL / 2 + (Math.random() - 0.5) * 10;
-  soldier.mode = 'march';
+  soldier.mode = 'deploy';
   soldier.target = null;
+  soldier.battleReady = false;
+  soldier.protected = true;
+  soldier._gateFx = false;
 
   group.push(soldier);
 
