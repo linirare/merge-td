@@ -1,7 +1,81 @@
 /* ============================================================
    合成攻城 · 战斗表现补丁
-   让画面与五路推进机制一致。
+   五路推进 / 路线状态 / 攻城位 / 拖拽意图提示。
    ============================================================ */
+
+function drawBoard(slots, isEnemy, dragHint = null) {
+  const by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const x = BOARD_X + c * (CELL + GAP);
+      const y = by + r * (CELL + GAP);
+      const ball = slots[r][c];
+      const isSnap = !isEnemy && state.drag?.nearestSnap && state.drag.nearestSnap.r === r && state.drag.nearestSnap.c === c;
+      const action = isSnap ? state.drag.snapAction : '';
+      const canMerge = state.drag && ball && !isEnemy && state.drag.unit.type === ball.type && state.drag.unit.level === ball.level && ball.level < MAX_LEVEL;
+      const isEmptyTarget = state.drag && !ball && !isEnemy;
+
+      let bg = (r + c) % 2 === 0 ? 'rgba(255,235,180,0.05)' : 'rgba(255,235,180,0.09)';
+      if (canMerge) bg = 'rgba(255,228,90,0.12)';
+      if (isEmptyTarget) bg = 'rgba(105,236,118,0.07)';
+      if (isSnap && action === 'swap') bg = 'rgba(91,185,255,0.11)';
+      if (isSnap && action === 'merge') bg = 'rgba(255,228,90,0.20)';
+      if (state.pendingPlace && !ball && !isEnemy) bg = 'rgba(255,228,90,0.08)';
+
+      ctx.fillStyle = bg;
+      roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 8);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,228,90,0.10)';
+      ctx.lineWidth = 1;
+      roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 8);
+      ctx.stroke();
+
+      if (canMerge) {
+        ctx.strokeStyle = 'rgba(255,228,90,0.52)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        roundRect(x + 4, y + 4, CELL - 8, CELL - 8, 8);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      if (ball) {
+        ctx.save();
+        if (isEnemy) ctx.globalAlpha = 0.72;
+        drawBall(ball, x + CELL / 2, y + CELL / 2, CELL * 0.38);
+        ctx.restore();
+      }
+
+      if (state.pendingPlace && !ball && !isEnemy) {
+        ctx.strokeStyle = 'rgba(255,228,90,0.42)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 8);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      if (isSnap && !isEnemy) {
+        const color = action === 'merge' ? THEME.gold : action === 'move' ? THEME.safe : THEME.info;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 18;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 8);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = color;
+        const label = action === 'merge' ? '合成' : action === 'move' ? '移动' : '交换';
+        ctx.fillText(label, x + CELL / 2, y + CELL - 6);
+      }
+    }
+  }
+}
 
 function drawField() {
   const fy = LAYOUT.fieldY;
@@ -14,23 +88,49 @@ function drawField() {
   g.addColorStop(1, 'rgba(42,80,44,0.40)');
   drawPanel(x, fy, w, fh, 16, g, 'rgba(255,228,125,0.14)');
 
-  // 五条纵向推进线，对应棋盘五列兵营。
   for (let c = 0; c < COLS; c++) {
     const lx = BOARD_X + c * (CELL + GAP) + CELL / 2;
-    ctx.strokeStyle = 'rgba(255,225,150,0.16)';
-    ctx.lineWidth = c === 2 ? 2.2 : 1.4;
+    const st = state.laneStats?.[c];
+    let laneColor = 'rgba(255,225,150,0.16)';
+    if (st?.status === 'enemy_adv' || st?.status === 'wall_danger') laneColor = 'rgba(255,94,70,0.42)';
+    else if (st?.status === 'player_adv' || st?.status === 'siege_ready') laneColor = 'rgba(105,236,118,0.36)';
+    else if (st?.status === 'clash') laneColor = 'rgba(255,228,90,0.30)';
+
+    if (st?.danger > 38) {
+      ctx.fillStyle = 'rgba(255,75,55,0.08)';
+      roundRect(lx - 26, fy + 10, 52, fh - 20, 12);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = laneColor;
+    ctx.lineWidth = c === 2 ? 2.2 : 1.5;
     ctx.beginPath();
     ctx.moveTo(lx, fy + 14);
     ctx.lineTo(lx, fy + fh - 14);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(255,228,90,0.12)';
-    ctx.beginPath();
-    ctx.arc(lx, fy + fh / 2, 4, 0, Math.PI * 2);
-    ctx.fill();
+    // 攻城位：每路最多 3 个同时打墙。
+    const slotN = typeof SIEGE_SLOTS_PER_LANE === 'number' ? SIEGE_SLOTS_PER_LANE : 3;
+    for (let i = 0; i < slotN; i++) {
+      const off = (i - (slotN - 1) / 2) * 13;
+      ctx.strokeStyle = 'rgba(255,228,90,0.20)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(lx + off, LAYOUT.enemyWallY + LAYOUT.wallH + 4, 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(lx + off, LAYOUT.playerWallY - 4, 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if (st && st.pressureText) {
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = laneColor;
+      ctx.fillText(st.pressureText, lx, fy + fh / 2 - 8);
+    }
   }
 
-  // 中央接战线。
   ctx.strokeStyle = 'rgba(255,228,90,0.32)';
   ctx.setLineDash([8, 7]);
   ctx.lineWidth = 2;
@@ -40,7 +140,6 @@ function drawField() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // 推进方向箭头，强化读法。
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(255,116,92,0.90)';
@@ -48,21 +147,20 @@ function drawField() {
   ctx.fillStyle = 'rgba(105,236,118,0.90)';
   ctx.fillText('我方向上攻城', W / 2, fy + fh - 8);
 
-  ctx.fillStyle = 'rgba(255,116,92,0.70)';
-  ctx.beginPath();
-  ctx.moveTo(W / 2 - 7, fy + 30);
-  ctx.lineTo(W / 2 + 7, fy + 30);
-  ctx.lineTo(W / 2, fy + 42);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = 'rgba(105,236,118,0.70)';
-  ctx.beginPath();
-  ctx.moveTo(W / 2 - 7, fy + fh - 30);
-  ctx.lineTo(W / 2 + 7, fy + fh - 30);
-  ctx.lineTo(W / 2, fy + fh - 42);
-  ctx.closePath();
-  ctx.fill();
+  for (const alert of state.laneAlerts || []) {
+    const lx = BOARD_X + alert.lane * (CELL + GAP) + CELL / 2;
+    const a = Math.max(0, alert.life / alert.maxLife);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(255,80,55,0.16)';
+    roundRect(lx - 29, fy + 6, 58, fh - 12, 14);
+    ctx.fill();
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff8a68';
+    ctx.fillText(alert.text, lx, LAYOUT.playerWallY - 20);
+    ctx.restore();
+  }
 }
 
 function drawSoldier(s) {
@@ -75,9 +173,22 @@ function drawSoldier(s) {
 
   ctx.save();
 
-  // 行军/战斗状态底圈。
-  if (s.mode === 'fight') {
+  if (s.protected || s.mode === 'deploy') {
+    ctx.strokeStyle = s.side === 'player' ? 'rgba(105,236,118,0.42)' : 'rgba(255,116,92,0.42)';
+    ctx.setLineDash([3, 3]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y + r * 0.10, r + 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else if (s.mode === 'fight') {
     ctx.strokeStyle = s.side === 'player' ? 'rgba(105,236,118,0.65)' : 'rgba(255,116,92,0.65)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y + r * 0.12, r + 5, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (s.mode === 'backline') {
+    ctx.strokeStyle = 'rgba(91,185,255,0.58)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(s.x, s.y + r * 0.12, r + 5, 0, Math.PI * 2);
@@ -88,6 +199,14 @@ function drawSoldier(s) {
     ctx.beginPath();
     ctx.arc(s.x, s.y + r * 0.12, r + 5, 0, Math.PI * 2);
     ctx.stroke();
+  } else if (s.mode === 'siege_queue') {
+    ctx.strokeStyle = 'rgba(255,228,90,0.34)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y + r * 0.12, r + 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
   ctx.fillStyle = 'rgba(0,0,0,0.28)';
@@ -120,7 +239,6 @@ function drawSoldier(s) {
   ctx.fillStyle = '#fff';
   ctx.fillText(t.icon, s.x, s.y - r * 0.36);
 
-  // 小箭头表示行军方向。
   ctx.fillStyle = s.side === 'player' ? 'rgba(130,255,140,0.85)' : 'rgba(255,140,112,0.85)';
   ctx.beginPath();
   ctx.moveTo(s.x, s.y + facing * r * 1.35);
