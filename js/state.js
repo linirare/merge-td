@@ -1,8 +1,8 @@
 /* ============================================================
-   合成塔防 · PvE —— 游戏状态管理
+   合成攻城 · Merge Siege —— 游戏状态管理
    ============================================================ */
 
-/* ——— 球对象 ——— */
+/* ——— 兵营对象 ——— */
 function createBall(typeId, level = 1) {
   const cd = SPAWN_COOLDOWNS[Math.min(level, MAX_LEVEL)] || SPAWN_COOLDOWNS[1];
   return { type: typeId, level: Math.min(level, MAX_LEVEL), bounce: 0, spawnTimer: cd * Math.random() };
@@ -26,7 +26,30 @@ function createSoldier(typeId, level, atkMul = 1, hpMul = 1) {
     atkTimer: 0,
     hitFlash: 0,
     side: '', // 'player' | 'enemy'
+    laneIndex: 0,
+    laneX: 0,
+    mode: 'deploy',
+    battleReady: false,
+    protected: true,
+    siegeSlot: -1,
+    damageDone: 0,
+    wallDamageDone: 0,
   };
+}
+
+function emptyLaneStats() {
+  return Array.from({ length: COLS }, (_, i) => ({
+    lane: i,
+    playerPower: 0,
+    enemyPower: 0,
+    playerCount: 0,
+    enemyCount: 0,
+    playerFront: null,
+    enemyFront: null,
+    status: 'idle',
+    danger: 0,
+    pressureText: '',
+  }));
 }
 
 /* ——— 主游戏状态 ——— */
@@ -67,22 +90,31 @@ function createState() {
     merges: 0,
     maxSoldierAtk: 0,
     maxSoldierType: '',
+    laneStats: emptyLaneStats(),
+    laneAlertCd: 0,
+    laneAlerts: [],
+    enemyWallDamageDealt: 0,
+    playerWallDamageTaken: 0,
+    damageByType: {},
+    wallDamageByLane: Array(COLS).fill(0),
+    breachLane: -1,
+    lastBattleReport: null,
 
     // 拖拽
-    drag: null, // { unit, fromR, fromC, x, y, sx, sy, moved }
+    drag: null, // { unit, fromR, fromC, x, y, sx, sy, moved, snapAction }
+    pendingPlace: null,
 
     // 特效
     fx: [], // [{x, y, text, color, life, maxLife, size}]
     attackFx: [], // [{x1, y1, x2, y2, life, maxLife}] 攻击划痕
     projectiles: [], // [{x, y, targetX, targetY, targetId, dmg, speed, color, life}]
     dust: [], // [{x, y, vx, vy, size, alpha}] 环境尘埃
-    // 环特效
     rings: [], // [{x, y, r, life, maxLife, color}]
 
     // 时间
     time: 0,
     speed: 1,
-    sp: 5, // 灵魂点数，杀敌获得，产兵消耗
+    sp: 5, // 士气，杀敌/回复获得，产兵消耗
 
     // 震动
     shake: 0,
@@ -95,6 +127,7 @@ function createMeta() {
     gold: 0,
     upgrades: {}, // { 'bow_atk': 1, 'bow_hp': 0, ... }
     wallLv: 0,
+    spLv: 0,
     highestLevel: 1,
     totalWins: 0,
     stars: {}, // { level: 1|2|3 }
@@ -102,7 +135,7 @@ function createMeta() {
 }
 
 function upgradeKey(typeId, stat) {
-  return typeId + '_' + stat; // e.g. 'bow_atk', 'bow_hp'
+  return typeId + '_' + stat;
 }
 
 function getUpgradeLv(meta, typeId, stat) {
@@ -119,6 +152,18 @@ function getHpMul(meta, typeId) {
 
 function getWallBonus(meta) {
   return meta.wallLv * WALL_PER_LV;
+}
+
+function getSpStart(meta) {
+  return 8 + Math.floor((meta.spLv || 0) / 2);
+}
+
+function getSpMax(meta) {
+  return SP_MAX + (meta.spLv || 0);
+}
+
+function getSpRecoverCap(meta) {
+  return 6 + Math.floor((meta.spLv || 0) / 2);
 }
 
 /* ——— init ——— */
