@@ -1,9 +1,9 @@
 /* ============================================================
    水果突击 · 版本守卫
-   作用：强制标记当前构建，清理旧 bow/sword/spear/shield 存档。
+   作用：强制标记当前构建，清理旧 bow/sword/spear/shield 和旧默认奇异果卡组。
    ============================================================ */
 
-const BUILD_VERSION = 'fruit-v14-sp-summon-loop';
+const BUILD_VERSION = 'fruit-v15-economy-role-balance';
 
 (function versionGuard() {
   try {
@@ -13,11 +13,14 @@ const BUILD_VERSION = 'fruit-v14-sp-summon-loop';
     const raw = localStorage.getItem(metaKey);
     let saved = raw ? JSON.parse(raw) : null;
     const deck = saved?.deck || [];
-    const hasOldDeck = deck.some(id => ['bow','sword','spear','shield'].includes(id)) || deck.join('|') === 'watermelon_guard|grape_archer|banana_raider|pineapple_lancer|orange_cannon';
-    if (last !== BUILD_VERSION || hasOldDeck) {
+    const sig = deck.map(normalizeTypeId).join('|');
+    const badDeck = deck.some(id => ['bow','sword','spear','shield'].includes(id))
+      || sig === 'watermelon_guard|grape_archer|orange_cannon|peach_medic|kiwi_wildcard'
+      || sig === 'watermelon_guard|grape_archer|banana_raider|pineapple_lancer|orange_cannon';
+    if (last !== BUILD_VERSION || badDeck) {
       if (!saved) saved = {};
-      saved.deck = ['watermelon_guard','grape_archer','orange_cannon','peach_medic','kiwi_wildcard'];
-      saved.unlocked = Object.keys(TYPES || {});
+      saved.deck = DEFAULT_DECK.slice();
+      saved.unlocked = BASIC_UNLOCKED.slice();
       localStorage.setItem(metaKey, JSON.stringify(saved));
       localStorage.setItem(key, BUILD_VERSION);
     }
