@@ -72,7 +72,7 @@ function initPlayerOpening(k) {
 }
 
 function initEnemyOpening(k, level) {
-  const enemyCount = k <= 2 ? 4 : 5;
+  const enemyCount = k === 1 ? 3 : k <= 3 ? 4 : 5;
   initBalls(state.enemySlots, enemyCount, Math.max(1, level));
   if (k % 5 === 0) {
     const empties = emptySlots(state.enemySlots);
@@ -122,7 +122,7 @@ function tryMerge(slots, fromR, fromC, toR, toC) {
     dst.level++;
     dst.bounce = 1;
     const newCd = SPAWN_COOLDOWNS[dst.level] || SPAWN_COOLDOWNS[1];
-    dst.spawnTimer = newCd * 0.22;
+    dst.spawnTimer = newCd * 0.28;
     return { merged: true, newLevel: dst.level, type: src.type, fromR, fromC, toR, toC };
   }
 
@@ -152,7 +152,7 @@ function initLevel(k) {
   initPlayerOpening(k);
   const eLv = Math.floor(lv.enemyInitLevel);
   const eFrac = lv.enemyInitLevel - eLv;
-  const eLevel = eFrac > 0.55 ? eLv + 1 : eLv;
+  const eLevel = eFrac > 0.68 ? eLv + 1 : eLv;
   initEnemyOpening(k, eLevel);
 
   state.playerWallHp = BASE_WALL_HP + getWallBonus(meta);
@@ -164,8 +164,8 @@ function initLevel(k) {
   state.enemySoldiers = [];
   state.overflowQueue = [];
   state.enemyOverflow = 0;
-  state.ballTimer = 1.2;
-  state.enemyBallTimer = 0.4;
+  state.ballTimer = 1.9;
+  state.enemyBallTimer = 0.2;
   state.playerSpawnTimer = 0;
   state.enemySpawnTimer = 0;
   state.kills = 0;
@@ -178,7 +178,7 @@ function initLevel(k) {
   state.attackFx = [];
   state.projectiles = [];
   state.rings = [];
-  state.sp = 6;
+  state.sp = 8;
   state._spTimer = 0;
   state.shake = 0;
   state.time = 0;
