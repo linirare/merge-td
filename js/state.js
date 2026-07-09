@@ -109,7 +109,7 @@ function getHpMul(meta, typeId) {
 }
 
 function getWallBonus(meta) {
-  return meta.wallLv * 2;
+  return meta.wallLv * WALL_PER_LV;
 }
 
 /* ——— init ——— */

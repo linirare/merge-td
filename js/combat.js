@@ -117,10 +117,10 @@ function soldierCombat(s, enemies) {
       s.atkTimer -= dt_global;
       if (s.atkTimer <= 0) {
         if (s.side === 'player') {
-          state.enemyWallHp = Math.max(0, state.enemyWallHp - s.level);
+          state.enemyWallHp = Math.max(0, state.enemyWallHp - s.level * 2);
           addFx(s.x, wallY - 8, '💥', '#ff8a5a', 14);
         } else {
-          state.playerWallHp = Math.max(0, state.playerWallHp - s.level);
+          state.playerWallHp = Math.max(0, state.playerWallHp - s.level * 2);
           addFx(s.x, wallY + wallH + 8, '💥', '#ff5a3a', 14);
         }
         s.atkTimer = WALL_ATTACK_INTERVAL;
