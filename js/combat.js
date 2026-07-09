@@ -92,39 +92,44 @@ function moveToTarget(s, target) {
 function soldierCombat(s, enemies) {
   if (!s.alive) return;
 
-  // 已到敌方城墙 → 砍墙
-  if (s.side === 'player' && s.y <= LAYOUT.enemyWallY + LAYOUT.wallH) {
-    s.atkTimer -= dt_global;
-    if (s.atkTimer <= 0) {
-      state.enemyWallHp = Math.max(0, state.enemyWallHp - s.level);
-      s.atkTimer = WALL_ATTACK_INTERVAL;
-      state.shake = 0.3;
-      addFx(s.x, LAYOUT.enemyWallY - 8, '💥', '#ff8a5a', 14);
-    }
-    s.y = LAYOUT.enemyWallY + LAYOUT.wallH; // 卡在城墙前
-    return;
-  }
-  if (s.side === 'enemy' && s.y >= LAYOUT.playerWallY) {
-    s.atkTimer -= dt_global;
-    if (s.atkTimer <= 0) {
-      state.playerWallHp = Math.max(0, state.playerWallHp - s.level);
-      s.atkTimer = WALL_ATTACK_INTERVAL;
-      state.shake = 0.3;
-      addFx(s.x, LAYOUT.playerWallY + LAYOUT.wallH + 8, '💥', '#ff5a3a', 14);
-    }
-    s.y = LAYOUT.playerWallY; // 卡在城墙前
-    return;
-  }
-
-  // 找目标
+  // 找目标：优先克制品类，其次最近
   const target = findTarget(s, enemies);
+
   if (!target) {
-    // 没有敌人 → 走向敌方城墙
-    const wallY = s.side === 'player' ? LAYOUT.enemyWallY : LAYOUT.playerWallY + LAYOUT.wallH;
-    moveToTarget(s, { x: s.x, y: wallY + (s.side === 'player' ? 0 : 0) });
+    // 没有敌人 → 走向/攻击敌方城墙
+    const wallY = s.side === 'player' ? LAYOUT.enemyWallY : LAYOUT.playerWallY;
+    const wallH = LAYOUT.wallH;
+    const atWall = s.side === 'player'
+      ? s.y <= wallY + wallH
+      : s.y >= wallY;
+
+    if (atWall) {
+      // 已在城墙前 → 砍墙
+      s.atkTimer -= dt_global;
+      if (s.atkTimer <= 0) {
+        if (s.side === 'player') {
+          state.enemyWallHp = Math.max(0, state.enemyWallHp - s.level);
+          addFx(s.x, wallY - 8, '💥', '#ff8a5a', 14);
+        } else {
+          state.playerWallHp = Math.max(0, state.playerWallHp - s.level);
+          addFx(s.x, wallY + wallH + 8, '💥', '#ff5a3a', 14);
+        }
+        s.atkTimer = WALL_ATTACK_INTERVAL;
+        state.shake = 0.3;
+      }
+      s.y = s.side === 'player' ? wallY + wallH : wallY;
+      return;
+    }
+
+    // 走向城墙
+    const targetY = s.side === 'player'
+      ? wallY + wallH
+      : wallY;
+    moveToTarget(s, { x: s.x, y: targetY });
     return;
   }
 
+  // 有目标 → 战斗
   const dx = s.x - target.x, dy = s.y - target.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
