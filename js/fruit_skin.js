@@ -1,6 +1,6 @@
 /* ============================================================
    水果突击 · Fruit Assault —— 清新果园 Canvas 皮肤
-   Loaded after existing skin files and overrides visual-only functions.
+   v24：棋盘水果营改为“大号水果表情主体”，去掉厚重底色/圆盘。
    ============================================================ */
 
 function drawPanel(x, y, w, h, r, fill = 'rgba(255,255,255,0.54)', stroke = 'rgba(72,174,70,0.16)') {
@@ -24,7 +24,6 @@ function drawBackground() {
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
-  // 远处果园树冠
   ctx.fillStyle = 'rgba(69,166,73,0.16)';
   for (let i = 0; i < 8; i++) {
     const x = -20 + i * 68;
@@ -35,7 +34,6 @@ function drawBackground() {
     ctx.fill();
   }
 
-  // 清新的水果泡泡点缀，不使用脏纹理
   const fruits = [
     ['rgba(255,93,108,0.12)', 52, 86, 18],
     ['rgba(155,92,255,0.10)', 400, 102, 22],
@@ -70,18 +68,73 @@ function drawInfo() {
 }
 
 function fruitSlotFill(r, c, isEnemy, intent = '') {
-  if (intent === 'merge') return 'rgba(255,201,60,0.24)';
-  if (intent === 'move') return 'rgba(83,201,106,0.16)';
-  if (intent === 'swap') return 'rgba(77,182,255,0.16)';
-  if (isEnemy) return (r + c) % 2 === 0 ? 'rgba(255,93,108,0.08)' : 'rgba(255,120,145,0.13)';
-  return (r + c) % 2 === 0 ? 'rgba(255,255,255,0.48)' : 'rgba(255,252,211,0.62)';
+  if (intent === 'merge') return 'rgba(255,201,60,0.18)';
+  if (intent === 'move') return 'rgba(83,201,106,0.10)';
+  if (intent === 'swap') return 'rgba(77,182,255,0.10)';
+  if (isEnemy) return 'rgba(255,93,108,0.025)';
+  return 'rgba(255,255,255,0.018)';
+}
+
+function fruitBoardLvScale(level) {
+  return ({ 1:1.10, 2:1.18, 3:1.28, 4:1.40, 5:1.54, 6:1.68, 7:1.84 })[Math.max(1, Math.min(7, level || 1))] || 1;
+}
+function fruitBoardSkillColor(type) {
+  return ({
+    watermelon_guard:'#53e77b', grape_archer:'#b076ff', banana_raider:'#ffd24a', pineapple_lancer:'#ffb547', orange_cannon:'#ff9a35',
+    coconut_guard:'#9be7ff', peach_medic:'#ff9fbd', pear_frost:'#8fe9ff', blueberry_sniper:'#829cff', lemon_assassin:'#ffe45a',
+    pumpkin_roller:'#ff9a35', kiwi_wildcard:'#8dff91', passion_copy:'#d08cff'
+  })[type] || '#ffd54f';
+}
+function drawFruitBoardSkillMark(x, y, type, size, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(2, size * 0.18);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (type === 'watermelon_guard' || type === 'coconut_guard') {
+    ctx.beginPath();
+    ctx.moveTo(x, y - size);
+    ctx.lineTo(x + size * 0.72, y - size * 0.35);
+    ctx.lineTo(x + size * 0.40, y + size * 0.78);
+    ctx.lineTo(x, y + size);
+    ctx.lineTo(x - size * 0.40, y + size * 0.78);
+    ctx.lineTo(x - size * 0.72, y - size * 0.35);
+    ctx.closePath();
+    ctx.stroke();
+  } else if (type === 'grape_archer' || type === 'blueberry_sniper') {
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(x - size * 0.72, y + i * size * 0.34);
+      ctx.lineTo(x + size * 0.72, y + i * size * 0.08);
+      ctx.stroke();
+    }
+  } else if (type === 'banana_raider' || type === 'lemon_assassin') {
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.65, y + size * 0.48);
+    ctx.lineTo(x + size * 0.06, y - size * 0.78);
+    ctx.lineTo(x + size * 0.68, y - size * 0.05);
+    ctx.stroke();
+  } else if (type === 'pineapple_lancer') {
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.72, y + size * 0.62);
+    ctx.lineTo(x + size * 0.75, y - size * 0.62);
+    ctx.stroke();
+  } else if (type === 'orange_cannon' || type === 'pumpkin_roller') {
+    ctx.strokeRect(x - size * 0.62, y - size * 0.25, size * 1.05, size * 0.50);
+  } else {
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawBoard(slots, isEnemy, dragHint = null) {
   const by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
   const title = isEnemy ? '腐坏水果营' : '水果突击营';
-  const fill = isEnemy ? 'rgba(255,240,231,0.42)' : 'rgba(255,255,239,0.54)';
-  const stroke = isEnemy ? 'rgba(255,93,108,0.24)' : 'rgba(83,201,106,0.22)';
+  const fill = isEnemy ? 'rgba(255,240,231,0.24)' : 'rgba(255,255,239,0.30)';
+  const stroke = isEnemy ? 'rgba(255,93,108,0.16)' : 'rgba(83,201,106,0.14)';
   drawPanel(BOARD_X - 10, by - 22, BOARD_W + 20, BOARD_H + 30, 16, fill, stroke);
 
   ctx.font = 'bold 11px sans-serif';
@@ -101,15 +154,15 @@ function drawBoard(slots, isEnemy, dragHint = null) {
       const intent = isSnap ? action : canMerge ? 'merge' : isEmptyTarget ? 'move' : '';
 
       ctx.fillStyle = fruitSlotFill(r, c, isEnemy, intent);
-      roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 12);
+      roundRect(x + 3, y + 3, CELL - 6, CELL - 6, 12);
       ctx.fill();
-      ctx.strokeStyle = isEnemy ? 'rgba(255,93,108,0.15)' : 'rgba(83,201,106,0.18)';
+      ctx.strokeStyle = isEnemy ? 'rgba(255,93,108,0.07)' : 'rgba(83,201,106,0.08)';
       ctx.lineWidth = 1;
-      roundRect(x + 2.5, y + 2.5, CELL - 5, CELL - 5, 12);
+      roundRect(x + 4, y + 4, CELL - 8, CELL - 8, 11);
       ctx.stroke();
 
       if (canMerge) {
-        ctx.strokeStyle = 'rgba(255,201,60,0.70)';
+        ctx.strokeStyle = 'rgba(255,201,60,0.74)';
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
         roundRect(x + 4, y + 4, CELL - 8, CELL - 8, 10);
@@ -119,8 +172,8 @@ function drawBoard(slots, isEnemy, dragHint = null) {
 
       if (ball) {
         ctx.save();
-        if (isEnemy) ctx.globalAlpha = 0.82;
-        drawBall(ball, x + CELL / 2, y + CELL / 2, CELL * 0.38);
+        if (isEnemy) ctx.globalAlpha = 0.78;
+        drawBall(ball, x + CELL / 2, y + CELL / 2, CELL * 0.39, 0, isEnemy);
         ctx.restore();
       }
 
@@ -152,72 +205,92 @@ function drawBoard(slots, isEnemy, dragHint = null) {
   }
 }
 
-function drawBall(ball, cx, cy, radius, extraY = 0) {
-  const t = TYPES[ball.type];
-  const bounceOff = ball.bounce ? -Math.sin(ball.bounce * Math.PI) * 12 : 0;
-  const pulse = Math.sin(state.time * 4 + ball.level) * 0.018;
-  const lvScale = 1 + (ball.level - 1) * 0.08 + pulse;
-  const w = radius * 2.15 * lvScale;
-  const h = radius * 1.86 * lvScale;
-  const x = cx - w / 2;
-  const y = cy - h / 2 - bounceOff + extraY;
-
-  if (ball.level >= 3) {
-    ctx.save();
-    ctx.globalAlpha = 0.20 + ball.level * 0.035;
-    ctx.shadowColor = t.color;
-    ctx.shadowBlur = 8 + ball.level * 3;
-    ctx.strokeStyle = ball.level >= 5 ? THEME.gold : t.color;
-    ctx.lineWidth = 1.8;
-    roundRect(x - 3, y - 3, w + 6, h + 6, 15);
-    ctx.stroke();
-    ctx.restore();
-  }
+function drawBall(ball, cx, cy, radius, extraY = 0, isEnemy = false) {
+  const t = TYPES[ball.type] || TYPES[DEFAULT_DECK[0]];
+  const level = Math.max(1, Math.min(7, ball.level || 1));
+  const bounceOff = ball.bounce ? -Math.sin(ball.bounce * Math.PI) * 10 : 0;
+  const floatOff = Math.sin(state.time * 1.45 + cx * 0.06 + cy * 0.06) * 0.9;
+  const drawY = cy - bounceOff + floatOff + extraY;
+  const lvScale = fruitBoardLvScale(level);
+  const emojiSize = Math.round(radius * 1.78 * lvScale);
+  const ringR = radius * (0.98 + (level - 1) * 0.09);
+  const ringColor = isEnemy ? '#ff6578' : (t.color || '#53c96a');
 
   ctx.save();
-  ctx.shadowColor = 'rgba(57,126,47,0.24)';
-  ctx.shadowBlur = 9;
-  ctx.shadowOffsetY = 3;
-  const g = ctx.createLinearGradient(x, y, x, y + h);
-  g.addColorStop(0, '#fffbd0');
-  g.addColorStop(0.18, t.color);
-  g.addColorStop(1, ball.type === 'bow' ? '#6d37cf' : ball.type === 'sword' ? '#f4a91f' : ball.type === 'spear' ? '#df7d1e' : '#189a4e');
-  ctx.fillStyle = g;
-  roundRect(x, y, w, h, 15);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
 
-  ctx.strokeStyle = ball.level >= 5 ? '#fff176' : 'rgba(255,255,255,0.72)';
-  ctx.lineWidth = 2.2;
-  roundRect(x + 1, y + 1, w - 2, h - 2, 14);
+  // 轻阴影：有落点，但没有厚重底盘。
+  ctx.globalAlpha = isEnemy ? 0.14 : 0.20;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.ellipse(cx, drawY + radius * 0.90, radius * 0.72 * lvScale, radius * 0.20, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 极淡外圈：敌我/边界识别。
+  ctx.globalAlpha = isEnemy ? 0.48 : 0.62;
+  ctx.strokeStyle = ringColor;
+  ctx.lineWidth = level >= 6 ? 3.2 : level >= 4 ? 2.6 : 2;
+  ctx.beginPath();
+  ctx.arc(cx, drawY, ringR, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.fillStyle = 'rgba(255,255,255,0.22)';
-  ctx.beginPath();
-  ctx.moveTo(cx, y + 7);
-  ctx.lineTo(x + w - 9, y + h * 0.42);
-  ctx.lineTo(x + 9, y + h * 0.42);
-  ctx.closePath();
-  ctx.fill();
+  // 高级水果营光环，无文字等级。
+  if (level >= 4) {
+    ctx.globalAlpha = level >= 7 ? 0.36 : level >= 6 ? 0.28 : 0.18;
+    ctx.shadowColor = ringColor;
+    ctx.shadowBlur = level >= 7 ? 18 : level >= 6 ? 13 : 8;
+    ctx.strokeStyle = level >= 7 ? '#fff176' : ringColor;
+    ctx.lineWidth = level >= 7 ? 4 : 2.8;
+    ctx.beginPath();
+    ctx.arc(cx, drawY, ringR + 5 + level * 0.8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
 
-  ctx.font = `${Math.round(radius * 0.72)}px sans-serif`;
+  // 大号水果表情主体。这里不再画任何彩色圆盘/矩形底色。
+  ctx.globalAlpha = isEnemy ? 0.82 : 1;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  ctx.font = `900 ${emojiSize}px sans-serif`;
+  ctx.lineWidth = Math.max(3, emojiSize * 0.055);
+  ctx.strokeStyle = 'rgba(255,255,255,0.34)';
+  ctx.strokeText(t.icon, cx, drawY + 1);
   ctx.fillStyle = '#fff';
-  ctx.fillText(t.icon, cx, y + h * 0.50);
+  ctx.fillText(t.icon, cx, drawY + 1);
 
-  const badgeR = Math.max(11, radius * 0.38);
-  ctx.fillStyle = ball.level >= 5 ? '#fff176' : '#ffffff';
-  ctx.beginPath();
-  ctx.arc(x + badgeR + 2, y + badgeR + 1, badgeR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(63,139,49,0.28)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.font = `900 ${Math.round(badgeR * 0.95)}px sans-serif`;
-  ctx.fillStyle = ball.level >= 5 ? '#e38300' : '#2c8d3f';
-  ctx.fillText(ball.level, x + badgeR + 2, y + badgeR + 2);
+  // Lv4+ 技能小标记。
+  if (level >= 4) {
+    const skillColor = fruitBoardSkillColor(ball.type);
+    const markX = cx + ringR * 0.70;
+    const markY = drawY - ringR * 0.70;
+    const markR = Math.max(7, radius * 0.20);
+    ctx.globalAlpha = isEnemy ? 0.70 : 0.96;
+    ctx.fillStyle = 'rgba(20,24,16,0.56)';
+    ctx.beginPath();
+    ctx.arc(markX, markY, markR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = skillColor;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(markX, markY, markR, 0, Math.PI * 2);
+    ctx.stroke();
+    drawFruitBoardSkillMark(markX, markY, ball.type, Math.max(4.6, radius * 0.12), skillColor);
+  }
+
+  // 原始冷却弧保留，后续 v20/v22 还会叠加更清楚的短进度条。
+  if (state.phase === 'playing') {
+    const cd = SPAWN_COOLDOWNS[level] || SPAWN_COOLDOWNS[1];
+    const ready = ball.spawnTimer <= 0;
+    const progress = ready ? 1 : clamp01(1 - ball.spawnTimer / cd);
+    ctx.globalAlpha = ready ? 0.88 : 0.52;
+    ctx.strokeStyle = ready ? '#fff176' : ringColor;
+    ctx.lineWidth = ready ? 3.0 : 2.4;
+    if (ready) { ctx.shadowColor = '#fff176'; ctx.shadowBlur = 8; }
+    ctx.beginPath();
+    ctx.arc(cx, drawY, ringR + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
 }
@@ -270,7 +343,6 @@ function drawField() {
   g.addColorStop(1, 'rgba(142,231,168,0.76)');
   drawPanel(x, fy, w, fh, 18, g, 'rgba(255,255,255,0.55)');
 
-  // 果园小径
   ctx.fillStyle = 'rgba(255,236,154,0.30)';
   roundRect(x + 14, fy + 12, w - 28, fh - 24, 16);
   ctx.fill();
