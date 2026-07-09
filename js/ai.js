@@ -2,7 +2,7 @@
    合成塔防 · PvE —— AI 对手（强化版）
    ============================================================ */
 
-const AI_MERGE_INTERVAL = 4.0; // AI 每 4 秒尝试一次合成
+const AI_MERGE_INTERVAL = 5.6; // AI 基础合成间隔，随关卡缓慢加速
 let aiTimer = 0;
 
 /* ——— 分析玩家棋盘品类分布，返回AI应优先合成的品类 ——— */
@@ -47,8 +47,11 @@ function aiMerge() {
     }
   }
 
+  // 前 3 关 AI 不强行针对玩家最高数量品类，避免新手被系统性克制。
+  const allowCounterBias = state.currentLevel >= 4;
+
   // 先找可合的克制品类对子
-  if (preferType) {
+  if (preferType && allowCounterBias) {
     for (const [key, list] of Object.entries(pairs)) {
       if (list.length >= 2 && list[0].type === preferType && list[0].level < MAX_LEVEL) {
         const src = list[0];
@@ -91,13 +94,14 @@ function updateAI(dt) {
   if (state.phase !== 'playing') return;
 
   aiTimer += dt;
-  if (aiTimer >= AI_MERGE_INTERVAL) {
-    aiTimer -= AI_MERGE_INTERVAL;
+  const interval = Math.max(3.8, AI_MERGE_INTERVAL - state.currentLevel * 0.08);
+  if (aiTimer >= interval) {
+    aiTimer -= interval;
     aiMerge();
   }
 }
 
 /* ——— 重置 AI 计时器（随机开局延迟） ——— */
 function resetAI() {
-  aiTimer = 0.5 + Math.random() * 2.5; // 开局0.5-3.0秒随机
+  aiTimer = -1.2 + Math.random() * 1.4; // 开局给玩家 4 秒左右读盘/合成窗口
 }
