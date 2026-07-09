@@ -20,7 +20,6 @@ const ATTACK_RANGES = {
 
 function fieldTop() { return LAYOUT.fieldY + FIELD_PAD; }
 function fieldBottom() { return LAYOUT.fieldY + LAYOUT.fieldH - FIELD_PAD; }
-
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
 function laneXByIndex(i) {
@@ -52,20 +51,43 @@ function steerToLane(s, ratio = 0.65) {
   s.x = clamp(s.x, 24, W - 24);
 }
 
+function isInsideOwnCastle(s) {
+  if (s.side === 'player') return s.y > fieldBottom();
+  return s.y < fieldTop();
+}
+
+function isEngageable(s) {
+  return !!s && s.alive && !isInsideOwnCastle(s) && s.mode !== 'dead';
+}
+
 function enterField(s) {
   ensureLane(s);
   steerToLane(s, 0.8);
 
   if (s.side === 'player' && s.y > fieldBottom()) {
+    s.mode = 'deploy';
+    s.invulnerable = true;
     s.y -= SOLDIER_SPEED * dt_global;
-    if (s.y <= fieldBottom()) s.y = fieldBottom();
+    if (s.y <= fieldBottom()) {
+      s.y = fieldBottom();
+      s.mode = 'march';
+      s.invulnerable = false;
+    }
     return true;
   }
   if (s.side === 'enemy' && s.y < fieldTop()) {
+    s.mode = 'deploy';
+    s.invulnerable = true;
     s.y += SOLDIER_SPEED * dt_global;
-    if (s.y >= fieldTop()) s.y = fieldTop();
+    if (s.y >= fieldTop()) {
+      s.y = fieldTop();
+      s.mode = 'march';
+      s.invulnerable = false;
+    }
     return true;
   }
+
+  s.invulnerable = false;
   return false;
 }
 
@@ -80,7 +102,7 @@ function findTarget(s, enemies) {
   let bestScore = Infinity;
 
   for (const e of enemies) {
-    if (!e.alive) continue;
+    if (!isEngageable(e)) continue;
     ensureLane(e);
     const dx = e.x - s.x;
     const dy = e.y - s.y;
@@ -89,7 +111,6 @@ function findTarget(s, enemies) {
     const sameLane = laneGap <= LANE_TOLERANCE;
     const forward = isForwardOf(s, e);
 
-    // 允许近身补打，但不要跨全场追怪。
     const canSee = dist <= SCAN_RANGE || (sameLane && forward && Math.abs(dy) <= 240) || dist <= 52;
     if (!canSee) continue;
 
@@ -192,6 +213,11 @@ function killSoldier(target, killerSide, killerAtk, killerType) {
 }
 
 function attackTarget(s, target) {
+  if (!isEngageable(target)) {
+    s.target = null;
+    return;
+  }
+
   const dx = s.x - target.x;
   const dy = s.y - target.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
@@ -277,7 +303,7 @@ function applySeparation(soldiers) {
     if (fx || fy) {
       const speed = 42 * dt_global;
       a.x = clamp(a.x + fx * speed, 24, W - 24);
-      if (a.mode !== 'siege') a.y = clamp(a.y + fy * speed, fieldTop(), fieldBottom());
+      if (a.mode !== 'siege' && !isInsideOwnCastle(a)) a.y = clamp(a.y + fy * speed, fieldTop(), fieldBottom());
     }
   }
 }
@@ -289,7 +315,7 @@ function updateProjectiles() {
     if (p.life <= 0) { state.projectiles.splice(i, 1); continue; }
 
     const enemies = p.side === 'player' ? state.enemySoldiers : state.playerSoldiers;
-    const tgt = enemies.find(e => e.id === p.targetId && e.alive);
+    const tgt = enemies.find(e => e.id === p.targetId && isEngageable(e));
     if (!tgt) {
       const dx = p.targetX - p.x;
       const dy = p.targetY - p.y;
