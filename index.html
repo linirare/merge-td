@@ -2,77 +2,104 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>合成塔防</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>合成攻城 · Merge Siege</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div id="rotate-hint">
-  <span style="font-size:48px;animation:rotateHint 1.5s infinite alternate;">📱</span>
-  <p>请竖屏游戏</p>
+  <div class="phone-rotate">📱</div>
+  <p>请切换到竖屏体验</p>
+  <small>更适合手机 H5 的攻城战斗布局</small>
 </div>
+
 <div id="wrap">
-  <canvas id="game"></canvas>
+  <canvas id="game" aria-label="合成攻城游戏画布"></canvas>
 </div>
-<!-- DOM 浮层容器（Phase 5 使用） -->
+
 <div id="overlay"></div>
+
 <div id="menuPanel" class="panel">
-  <div class="panel-inner">
-    <h1>⚔️ 合成塔防</h1>
-    <p class="sub">PvE 关卡制 · 合成出兵 · 推倒敌城</p>
-    <p class="sub" style="color:#ffe45a;">💰 <span id="menuGold">0</span></p>
-    <button id="btnStart" class="btn-primary">开始游戏</button>
-    <button id="btnUpgrade" class="btn-secondary">永久升级</button>
-    <button id="btnReset" class="btn-reset">重置数据</button>
+  <div class="panel-inner menu-card">
+    <div class="game-logo">
+      <span class="logo-mark">⚔️</span>
+      <div>
+        <h1>合成攻城</h1>
+        <p class="sub">小兵合成 · 自动冲锋 · 推倒敌城</p>
+      </div>
+    </div>
+
+    <div class="hero-preview" aria-hidden="true">
+      <div class="castle enemy-castle">敌城</div>
+      <div class="lane-line"></div>
+      <div class="troop-row"><span>🏹</span><span>🛡️</span><span>🔱</span><span>🗡️</span></div>
+      <div class="castle player-camp">兵营</div>
+    </div>
+
+    <div class="menu-stats">
+      <span>💰 <b id="menuGold">0</b></span>
+      <span>🚩 关卡 <b id="menuStage">1</b></span>
+    </div>
+
+    <div class="feature-chips">
+      <span>拖拽合成</span>
+      <span>克制优先</span>
+      <span>局外升级</span>
+    </div>
+
+    <button id="btnStart" class="btn-primary">继续攻城</button>
+    <button id="btnUpgrade" class="btn-secondary">兵营永久升级</button>
+    <button id="btnReset" class="btn-reset">长按重置数据</button>
   </div>
 </div>
+
 <div id="overflowPopup" class="panel hide">
   <div class="panel-inner">
-    <h2>📦 溢出队列</h2>
-    <div id="overflowList" style="width:100%;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;min-height:40px;"></div>
+    <h2>📦 待部署兵营</h2>
+    <p class="sub">点选后放到棋盘空格</p>
+    <div id="overflowList" class="overflow-list"></div>
     <button id="btnOverflowClose" class="btn-secondary">关闭</button>
   </div>
 </div>
+
 <div id="upgradePanel" class="panel hide">
   <div class="panel-inner wide">
-    <h2>⚔️ 永久升级</h2>
-    <p class="sub">金币 <span id="upGold">0</span>💰</p>
+    <h2>⚔️ 兵营永久升级</h2>
+    <p class="sub">金币 <span id="upGold">0</span> · 提升局内小兵属性</p>
     <div id="upgradeList"></div>
-    <button id="btnUpClose" class="btn-secondary">关闭</button>
+    <button id="btnUpClose" class="btn-secondary">返回</button>
   </div>
 </div>
+
 <div id="resultPanel" class="panel hide">
-  <div class="panel-inner">
+  <div class="panel-inner result-card">
     <h2 id="resultTitle"></h2>
     <p id="resultDetail"></p>
-    <button id="btnRetry" class="btn-primary">再来一次</button>
+    <button id="btnRetry" class="btn-primary">重打本关</button>
     <button id="btnNext" class="btn-primary hide">下一关</button>
-    <button id="btnMenu" class="btn-secondary">返回菜单</button>
+    <button id="btnMenu" class="btn-secondary">回到营地</button>
   </div>
 </div>
+
 <div id="helpPanel" class="panel hide">
   <div class="panel-inner help-panel">
-    <h2>📖 玩法说明</h2>
+    <h2>📖 新手战术</h2>
     <div class="help-section">
       <h3>🎯 目标</h3>
-      <p>合成更强力的兵种，推倒敌方城墙</p>
+      <p>把同品类、同等级的兵营拖到一起升级，持续产出小兵，推倒敌方城墙。</p>
     </div>
     <div class="help-section">
       <h3>🖐️ 操作</h3>
-      <p><b>拖拽球</b>到同品类同级球上 → <b>合成升级</b>（等级+1）</p>
-      <p>拖到空格 → 移动；拖到不同球 → 交换位置</p>
-      <p>合成预览：同品同级格子会<b>高亮</b></p>
+      <p><b>拖拽兵营</b>到同类同级兵营上 → 升级；拖到空格 → 移动；拖到不同兵营 → 交换。</p>
+      <p><b>双击兵营</b>可消耗士气立即出兵，适合补刀破城。</p>
     </div>
     <div class="help-section">
-      <h3>⚔️ 战斗</h3>
-      <p>棋盘上的球自动产兵到中间战场</p>
-      <p>兵优先攻击克制品类（<span style="color:#ff6b4a">弓→枪</span> <span style="color:#6fd44e">枪→刀</span> <span style="color:#4ab0ff">刀→盾</span> <span style="color:#e8c96a">盾→弓</span>）</p>
-      <p>兵清完敌人后会去砍敌方城墙</p>
+      <h3>⚔️ 克制</h3>
+      <p><span class="red">弓克枪</span> · <span class="green">枪克刀</span> · <span class="blue">刀克盾</span> · <span class="gold">盾克弓</span>。</p>
     </div>
     <div class="help-section">
       <h3>🏆 成长</h3>
-      <p>每关胜利获得金币 → 永久升级品类攻/血</p>
-      <p>右上 ⏩ 按钮可切换 1x/2x/3x 速度</p>
+      <p>胜利获得金币，用于提升兵营攻击、血量和城墙耐久。右上角可切换 1x / 2x / 3x 速度。</p>
     </div>
     <button id="btnHelpClose" class="btn-secondary">知道了</button>
   </div>
