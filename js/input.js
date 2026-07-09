@@ -1,5 +1,5 @@
 /* ============================================================
-   合成攻城 · Merge Siege —— 输入处理
+   水果突击 · Fruit Assault —— 输入处理
    ============================================================ */
 
 function toGame(clientX, clientY) {
@@ -56,7 +56,7 @@ function onDown(ev) {
     const alive = state.playerSoldiers.filter(s => s.alive).length;
     const center = slotCenter(r, c, false);
     if (state.sp <= 0) {
-      addFx(center.x, center.y - 24, '士气不足', THEME.accent, 13);
+      addFx(center.x, center.y - 24, '果汁不足', THEME.accent, 13);
     } else if (alive >= MAX_SOLDIERS) {
       addFx(center.x, center.y - 24, '兵数已满', THEME.accent, 13);
     } else {
@@ -65,7 +65,7 @@ function onDown(ev) {
       const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
       ball.spawnTimer = cd;
       state.rings.push({ x: center.x, y: center.y, r: 7, life: 0.34, maxLife: 0.34, color: THEME.gold });
-      addFx(center.x, center.y - 24, soldier ? '士气 -1 · 立即出兵!' : '兵数已满', soldier ? THEME.gold : THEME.accent, 13);
+      addFx(center.x, center.y - 24, soldier ? '果汁 -1 · 立即出兵!' : '兵数已满', soldier ? THEME.gold : THEME.accent, 13);
     }
     lastTap.time = 0;
     return;
@@ -132,7 +132,7 @@ function onUp(ev) {
         state.overflowQueue.splice(pp.queueIndex, 1);
         const center = slotCenter(toR, toC, false);
         state.rings.push({ x: center.x, y: center.y, r: 8, life: 0.35, maxLife: 0.35, color: THEME.gold });
-        addFx(center.x, center.y - 22, '部署兵营', THEME.gold, 13);
+        addFx(center.x, center.y - 22, '部署水果营', THEME.gold, 13);
       }
     }
     state.pendingPlace = null;
