@@ -1,5 +1,5 @@
 /* ============================================================
-   合成攻城 · Merge Siege —— 玩法辅助与手感优化
+   水果突击 · Fruit Assault —— 玩法辅助与手感优化
    目标：让玩家知道该合成、该救哪一路、该什么时候双击出兵。
    Loaded after main.js and wraps update/draw safely.
    ============================================================ */
@@ -128,7 +128,7 @@ function updateAssistHighlights() {
   }
 }
 
-function updateMercyMorale(dt) {
+function updateMercyJuice(dt) {
   const a = ensureAssistState();
   a.mercyCd = Math.max(0, a.mercyCd - dt);
   if (state.currentLevel > 8) return;
@@ -139,8 +139,8 @@ function updateMercyMorale(dt) {
   if (wallRatio < 0.38 && state.sp < 2 && danger) {
     state.sp = Math.min(state.sp + 1, getSpMax(meta));
     a.mercyCd = 14;
-    addFx(W / 2, LAYOUT.playerWallY - 26, '危急士气 +1', THEME.gold, 13);
-    setAssistTip('危急士气已补充', '双击高等级兵营救线', 'danger', danger.lane, '');
+    addFx(W / 2, LAYOUT.playerWallY - 26, '危急果汁 +1', THEME.gold, 13);
+    setAssistTip('危急果汁已补充', '双击高等级水果营救线', 'danger', danger.lane, '');
   }
 }
 
@@ -149,7 +149,7 @@ function updateGameplayAssist(dt) {
   a.pulse += dt;
   a.life = Math.max(0, a.life - dt);
   a.cd = Math.max(0, a.cd - dt);
-  updateMercyMorale(dt);
+  updateMercyJuice(dt);
   updateAssistHighlights();
   if (a.cd > 0) return;
 
@@ -158,12 +158,12 @@ function updateGameplayAssist(dt) {
   const danger = findDangerLane();
 
   if (state.pendingPlace) {
-    setAssistTip('选择空格部署兵营', '把待部署兵营放到空格里', 'info');
+    setAssistTip('选择空格部署水果营', '把待部署水果营放到空格里', 'info');
     return;
   }
 
   if (state.overflowQueue.length > 0) {
-    setAssistTip('有待部署兵营', '点击底部宝箱，补到空位', 'info');
+    setAssistTip('有待部署水果营', '点击底部宝箱，补到空位', 'info');
     return;
   }
 
@@ -173,7 +173,7 @@ function updateGameplayAssist(dt) {
     if (counterType) {
       setAssistTip(`第${danger.lane + 1}路危险`, `优先补 ${TYPES[counterType].name}，克制 ${TYPES[enemyType].name}`, 'danger', danger.lane, counterType);
     } else {
-      setAssistTip(`第${danger.lane + 1}路危险`, '双击高等级兵营立即出兵', 'danger', danger.lane, '');
+      setAssistTip(`第${danger.lane + 1}路危险`, '双击高等级水果营立即出兵', 'danger', danger.lane, '');
     }
     return;
   }
@@ -185,17 +185,17 @@ function updateGameplayAssist(dt) {
   }
 
   if (enemyWallRatio < 0.28 && state.sp > 0) {
-    setAssistTip('敌城快破了', '双击高等级兵营补一波攻城兵', 'attack');
+    setAssistTip('敌方果堡快破了', '双击高等级水果营补一波攻城兵', 'attack');
     return;
   }
 
   if (state.sp >= getSpRecoverCap(meta) && wallRatio < 0.75) {
-    setAssistTip('士气已充足', '双击高等级兵营可以抢回节奏', 'info');
+    setAssistTip('果汁能量已充足', '双击高等级水果营可以抢回节奏', 'info');
     return;
   }
 
   if (state.time > 45 && state.merges < 2) {
-    setAssistTip('合成次数偏少', '高等级兵营产兵更快，战力更高', 'merge');
+    setAssistTip('合成次数偏少', '高等级水果营产兵更快，战力更高', 'merge');
     return;
   }
 }
@@ -213,7 +213,7 @@ function drawGameplayAssist() {
   const x = W / 2 - w / 2;
   const color = a.kind === 'danger' ? THEME.accent : a.kind === 'merge' ? THEME.gold : THEME.info;
 
-  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.fillStyle = 'rgba(255,255,255,0.82)';
   roundRect(x, y, w, a.sub ? 36 : 26, 12);
   ctx.fill();
   ctx.strokeStyle = color;
@@ -227,7 +227,7 @@ function drawGameplayAssist() {
   ctx.fillText(a.tip, W / 2, y + 16);
   if (a.sub) {
     ctx.font = '10px sans-serif';
-    ctx.fillStyle = '#e8d7b8';
+    ctx.fillStyle = '#5c7438';
     ctx.fillText(a.sub, W / 2, y + 29);
   }
   ctx.restore();
@@ -249,7 +249,7 @@ function drawAssistHighlights(a) {
       ctx.stroke();
     } else if (h.kind === 'slot') {
       const rct = slotRect(h.r, h.c, false);
-      ctx.strokeStyle = `rgba(255,228,90,${0.35 + pulse * 0.42})`;
+      ctx.strokeStyle = `rgba(255,201,60,${0.35 + pulse * 0.42})`;
       ctx.lineWidth = 3;
       roundRect(rct.x + 3, rct.y + 3, rct.w - 6, rct.h - 6, 10);
       ctx.stroke();
