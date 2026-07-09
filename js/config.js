@@ -62,6 +62,7 @@ const BASE_WALL_HP = 60; // 原20
 /* ——— 时序 ——— */
 const BALL_SPAWN_INTERVAL = 5;    // 每5秒产1个球
 const SOLDIER_SPAWN_INTERVAL = 5; // 每5秒产1个兵
+const SPAWN_COOLDOWNS = [0, 6.0, 5.2, 4.5, 3.8, 3.2, 2.7, 2.2]; // Lv1=6s → Lv7=2.2s
 const OVERFLOW_MAX = 10;          // 溢出队列上限
 const MAX_SOLDIERS = 18;          // 每方战场兵上限
 

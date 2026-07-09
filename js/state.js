@@ -4,7 +4,8 @@
 
 /* ——— 球对象 ——— */
 function createBall(typeId, level = 1) {
-  return { type: typeId, level: Math.min(level, MAX_LEVEL), bounce: 0 };
+  const cd = SPAWN_COOLDOWNS[Math.min(level, MAX_LEVEL)] || SPAWN_COOLDOWNS[1];
+  return { type: typeId, level: Math.min(level, MAX_LEVEL), bounce: 0, spawnTimer: cd * Math.random() };
 }
 
 /* ——— 兵对象 ——— */

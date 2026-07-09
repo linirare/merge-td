@@ -158,13 +158,14 @@ function drawBall(ball, cx, cy, radius, extraY = 0) {
   ctx.fillText(t.icon, cx + r * 0.6, drawY + r * 0.6);
   ctx.textBaseline = 'alphabetic';
 
-  // 产兵倒计时环（仅在 playing 状态下显示）
+  // 产兵倒计时环（每球独立）
   if (state.phase === 'playing') {
-    const progress = state.playerSpawnTimer / SOLDIER_SPAWN_INTERVAL;
+    const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
+    const progress = ball.spawnTimer / cd;
     ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(cx, drawY, r + 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+    ctx.arc(cx, drawY, r + 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - progress));
     ctx.stroke();
   }
 }

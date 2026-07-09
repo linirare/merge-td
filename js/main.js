@@ -78,18 +78,38 @@ function update(dt) {
   // AI 决策
   updateAI(dt);
 
-  // 产兵计时
-  state.playerSpawnTimer += dt;
-  if (state.playerSpawnTimer >= SOLDIER_SPAWN_INTERVAL) {
-    state.playerSpawnTimer -= SOLDIER_SPAWN_INTERVAL;
-    spawnPlayerSoldiers();
-  }
-
-  state.enemySpawnTimer += dt;
-  const eInterval = state.levelConfig ? state.levelConfig.enemySpawnInterval : SOLDIER_SPAWN_INTERVAL;
-  if (state.enemySpawnTimer >= eInterval) {
-    state.enemySpawnTimer -= eInterval;
-    spawnEnemySoldiers();
+  // 产兵计时（每球独立）
+  const slotsArr = [{ slots: state.playerSlots, soldiers: state.playerSoldiers, side: 'player' },
+                    { slots: state.enemySlots, soldiers: state.enemySoldiers, side: 'enemy' }];
+  for (const grp of slotsArr) {
+    const alive = grp.soldiers.filter(s => s.alive).length;
+    const remaining = MAX_SOLDIERS - alive;
+    if (remaining <= 0) continue;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const ball = grp.slots[r][c];
+        if (!ball) continue;
+        ball.spawnTimer -= dt;
+        if (ball.spawnTimer <= 0) {
+          const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
+          ball.spawnTimer += cd;
+          // 产1个兵（高等级概率多产但累计冷却）
+          const center = slotCenter(r, c, grp.side === 'enemy');
+          const s = grp.side === 'player'
+            ? createSoldier(ball.type, ball.level, getAtkMul(meta, ball.type), getHpMul(meta, ball.type))
+            : createSoldier(ball.type, ball.level);
+          s.x = center.x + (Math.random() - 0.5) * 10;
+          s.y = center.y;
+          s.side = grp.side;
+          const fy = LAYOUT.fieldY + LAYOUT.fieldH / 2;
+          s.targetX = 40 + Math.random() * (W - 80);
+          s.targetY = grp.side === 'player'
+            ? LAYOUT.fieldY + LAYOUT.fieldH * 0.7 + Math.random() * LAYOUT.fieldH * 0.25
+            : LAYOUT.fieldY + LAYOUT.fieldH * 0.05 + Math.random() * LAYOUT.fieldH * 0.25;
+          grp.soldiers.push(s);
+        }
+      }
+    }
   }
 
   // 兵战斗系统
@@ -142,65 +162,6 @@ function update(dt) {
       d.y += d.vy * dt;
       if (d.y < LAYOUT.fieldY) { d.y = LAYOUT.fieldY + LAYOUT.fieldH; d.x = Math.random() * W; }
       if (d.x < 0 || d.x > W) d.x = Math.random() * W;
-    }
-  }
-}
-
-/* ——— 产兵（暂为 Phase 3 占位，先做简单行走） ——— */
-function spawnPlayerSoldiers() {
-  // 上限检测
-  const alive = state.playerSoldiers.filter(s => s.alive).length;
-  if (alive >= MAX_SOLDIERS) return;
-
-  const fy = LAYOUT.fieldY + LAYOUT.fieldH / 2;
-  const remaining = MAX_SOLDIERS - alive;
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const ball = state.playerSlots[r][c];
-      if (!ball) continue;
-
-      const extra = ball.level >= 5 ? 2 : ball.level >= 3 ? 1 : 0;
-      const count = Math.min(1 + (Math.random() < ball.level * 0.1 ? extra : 0), remaining);
-
-      for (let i = 0; i < count; i++) {
-        const center = slotCenter(r, c, false);
-        const s = createSoldier(ball.type, ball.level,
-          getAtkMul(meta, ball.type), getHpMul(meta, ball.type));
-        s.x = center.x + (Math.random() - 0.5) * 10;
-        s.y = center.y;
-        s.side = 'player';
-        s.targetY = LAYOUT.fieldY + LAYOUT.fieldH * 0.7 + Math.random() * LAYOUT.fieldH * 0.25;
-        s.targetX = 40 + Math.random() * (W - 80);
-        state.playerSoldiers.push(s);
-      }
-    }
-  }
-}
-
-function spawnEnemySoldiers() {
-  const alive = state.enemySoldiers.filter(s => s.alive).length;
-  if (alive >= MAX_SOLDIERS) return;
-
-  const fy = LAYOUT.fieldY + LAYOUT.fieldH / 2;
-  const remaining = MAX_SOLDIERS - alive;
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const ball = state.enemySlots[r][c];
-      if (!ball) continue;
-
-      const extra = ball.level >= 5 ? 2 : ball.level >= 3 ? 1 : 0;
-      const count = Math.min(1 + (Math.random() < ball.level * 0.1 ? extra : 0), remaining);
-
-      for (let i = 0; i < count; i++) {
-        const center = slotCenter(r, c, true);
-        const s = createSoldier(ball.type, ball.level);
-        s.x = center.x + (Math.random() - 0.5) * 10;
-        s.y = center.y;
-        s.side = 'enemy';
-        s.targetY = LAYOUT.fieldY + LAYOUT.fieldH * 0.05 + Math.random() * LAYOUT.fieldH * 0.25;
-        s.targetX = 40 + Math.random() * (W - 80);
-        state.enemySoldiers.push(s);
-      }
     }
   }
 }

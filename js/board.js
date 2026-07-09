@@ -98,7 +98,10 @@ function tryMerge(slots, fromR, fromC, toR, toC) {
   if (src.type === dst.type && src.level === dst.level && src.level < MAX_LEVEL) {
     slots[fromR][fromC] = null;
     dst.level++;
-    dst.bounce = 1; // 弹跳动画
+    dst.bounce = 1;
+    // 合并后按新等级重设冷却
+    const newCd = SPAWN_COOLDOWNS[dst.level] || SPAWN_COOLDOWNS[1];
+    dst.spawnTimer = newCd * 0.3; // 合并后快速产出一个兵
     return { merged: true, newLevel: dst.level, type: src.type, fromR, fromC, toR, toC };
   }
 
