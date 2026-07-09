@@ -27,6 +27,7 @@ const BOARD_H = ROWS * CELL + (ROWS - 1) * GAP;
 const BOARD_X = (W - BOARD_W) / 2;
 
 /* ——— Y 坐标布局 ——— */
+const PLAYER_BOARD_SHIFT = 54; // 利用底部空白，把我方棋盘下移，拉开战场/城墙/棋盘层级。
 const LAYOUT = {
   enemyInfoY:  6,
   enemyBoardY: 24,
@@ -35,8 +36,8 @@ const LAYOUT = {
   fieldY:      24 + BOARD_H + 10 + 22 + 8,
   fieldH: 222,
   playerWallY: 24 + BOARD_H + 10 + 22 + 8 + 222 + 8,
-  playerBoardY:24 + BOARD_H + 10 + 22 + 8 + 222 + 8 + 22 + 10,
-  bottomY:     24 + BOARD_H + 10 + 22 + 8 + 222 + 8 + 22 + 10 + BOARD_H + 4,
+  playerBoardY:24 + BOARD_H + 10 + 22 + 8 + 222 + 8 + 22 + 10 + PLAYER_BOARD_SHIFT,
+  bottomY:     24 + BOARD_H + 10 + 22 + 8 + 222 + 8 + 22 + 10 + PLAYER_BOARD_SHIFT + BOARD_H + 4,
 };
 
 /* ——— 12 个水果球：像球球英雄一样，单位是“卡组组件”而不是纯兵种 ——— */
