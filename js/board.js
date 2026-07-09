@@ -50,7 +50,6 @@ function placeBall(slots, r, c, type, level = 1) {
   slots[r][c] = createBall(type, level);
 }
 
-// 初始放 N 个兵营
 function initBalls(slots, n, level = 1) {
   const empties = shuffleSlots(emptySlots(slots));
   for (let i = 0; i < Math.min(n, empties.length); i++) {
@@ -59,7 +58,7 @@ function initBalls(slots, n, level = 1) {
   }
 }
 
-// 前几关给玩家可合成对子，降低冷启动挫败
+// 前几关给玩家可合成对子，降低冷启动挫败。
 function initPlayerOpening(k) {
   const starter = k === 1 ? 'bow' : k === 2 ? 'spear' : k === 3 ? 'shield' : randomType();
   placeBall(state.playerSlots, 1, 1, starter, 1);
@@ -83,7 +82,6 @@ function initEnemyOpening(k, level) {
   }
 }
 
-// 自动产兵营：找空闲位放一个随机兵营
 function autoSpawnBall(slots, level = 1) {
   const empties = emptySlots(slots);
   if (empties.length === 0) return null;
@@ -92,7 +90,6 @@ function autoSpawnBall(slots, level = 1) {
   return [r, c];
 }
 
-// 溢出队列处理：有空位就补
 function drainOverflow(slots, queue) {
   while (queue.length > 0) {
     const empties = emptySlots(slots);
@@ -172,13 +169,22 @@ function initLevel(k) {
   state.merges = 0;
   state.maxSoldierAtk = 0;
   state.maxSoldierType = '';
+  state.laneStats = emptyLaneStats();
+  state.laneAlertCd = 0;
+  state.laneAlerts = [];
+  state.enemyWallDamageDealt = 0;
+  state.playerWallDamageTaken = 0;
+  state.damageByType = {};
+  state.wallDamageByLane = Array(COLS).fill(0);
+  state.breachLane = -1;
+  state.lastBattleReport = null;
   state.drag = null;
   state.pendingPlace = null;
   state.fx = [];
   state.attackFx = [];
   state.projectiles = [];
   state.rings = [];
-  state.sp = 8;
+  state.sp = getSpStart(meta);
   state._spTimer = 0;
   state.shake = 0;
   state.time = 0;
