@@ -83,6 +83,7 @@ function createState() {
     enemyBallTimer: 0,
     playerSpawnTimer: 0,
     enemySpawnTimer: 0,
+    summonCount: 0,
     currentLevel: 1,
     levelConfig: null,
     kills: 0,
@@ -109,7 +110,7 @@ function createState() {
     rollings: [],
     time: 0,
     speed: 1,
-    sp: 5,
+    sp: 6,
     shake: 0,
   };
 }
@@ -145,13 +146,13 @@ function getWallBonus(meta) {
   return meta.wallLv * WALL_PER_LV;
 }
 function getSpStart(meta) {
-  return 8 + Math.floor((meta.spLv || 0) / 2);
+  return 6 + Math.floor((meta.spLv || 0) / 2);
 }
 function getSpMax(meta) {
   return SP_MAX + (meta.spLv || 0);
 }
 function getSpRecoverCap(meta) {
-  return 6 + Math.floor((meta.spLv || 0) / 2);
+  return 8 + Math.floor((meta.spLv || 0) / 2);
 }
 
 /* ——— init ——— */
