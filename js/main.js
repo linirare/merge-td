@@ -30,13 +30,13 @@ function spawnSoldierFromBall(ball, r, c, side, forced = false) {
     ? createSoldier(ball.type, ball.level, getAtkMul(meta, ball.type), getHpMul(meta, ball.type))
     : createSoldier(ball.type, ball.level);
 
-  soldier.x = center.x + (Math.random() - 0.5) * 10;
+  soldier.x = center.x + (Math.random() - 0.5) * 8;
   soldier.y = center.y;
   soldier.side = side;
-  soldier.targetX = 40 + Math.random() * (W - 80);
-  soldier.targetY = side === 'player'
-    ? LAYOUT.fieldY + LAYOUT.fieldH * 0.66 + Math.random() * LAYOUT.fieldH * 0.27
-    : LAYOUT.fieldY + LAYOUT.fieldH * 0.07 + Math.random() * LAYOUT.fieldH * 0.25;
+  soldier.laneIndex = c;
+  soldier.laneX = BOARD_X + c * (CELL + GAP) + CELL / 2 + (Math.random() - 0.5) * 10;
+  soldier.mode = 'march';
+  soldier.target = null;
 
   group.push(soldier);
 
@@ -68,7 +68,6 @@ function update(dt) {
 
   state.time += dt;
 
-  // 被动士气恢复，避免无兵可出死锁
   if (!state._spTimer) state._spTimer = 0;
   state._spTimer += dt;
   if (state._spTimer >= SP_PASSIVE && state.sp < 4) {
@@ -139,7 +138,6 @@ function update(dt) {
 
   updateCombat();
 
-  // 兵营弹跳衰减
   for (const slots of [state.playerSlots, state.enemySlots]) {
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -182,11 +180,9 @@ function update(dt) {
   }
 }
 
-/* ——— 游戏循环 ——— */
 let dt_global = 0;
 let last = 0;
 
-/* ——— 游戏结束 ——— */
 function onGameOver(win) {
   const panel = document.getElementById('resultPanel');
   const title = document.getElementById('resultTitle');
@@ -244,7 +240,6 @@ function loop(t) {
   requestAnimationFrame(loop);
 }
 
-/* ——— 启动：加载存档，显示菜单 ——— */
 loadMeta();
 state.phase = 'menu';
 requestAnimationFrame(loop);
