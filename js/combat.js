@@ -91,6 +91,10 @@ function moveToTarget(s, target) {
   const step = SOLDIER_SPEED * dt_global;
   s.x += (dx / dist) * Math.min(step, dist);
   s.y += (dy / dist) * Math.min(step, dist);
+  // 边界夹紧，不越墙
+  const fy = LAYOUT.fieldY, fh = LAYOUT.fieldH;
+  if (s.side === 'player') s.y = Math.max(s.y, fy + 4);
+  else s.y = Math.min(s.y, fy + fh - 4);
 }
 
 /* ——— 战斗 ——— */

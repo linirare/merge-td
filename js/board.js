@@ -108,6 +108,17 @@ function tryMerge(slots, fromR, fromC, toR, toC) {
   return { merged: false, swap: true };
 }
 
+// 移动到空格
+function tryMove(slots, fromR, fromC, toR, toC) {
+  const src = slots[fromR][fromC];
+  const dst = slots[toR][toC];
+  if (!src) return null;
+  if (dst) return null; // 目标不是空格，不处理
+  slots[fromR][fromC] = null;
+  slots[toR][toC] = src;
+  return { moved: true };
+}
+
 /* ——— 关卡初始化 ——— */
 function initLevel(k) {
   const lv = generateLevel(k);

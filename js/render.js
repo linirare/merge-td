@@ -132,18 +132,18 @@ function drawBall(ball, cx, cy, radius, extraY = 0) {
   ctx.arc(cx - r * 0.2, drawY - r * 0.2, r * 0.4, 0, Math.PI * 2);
   ctx.fill();
 
-  // 等级数字（更大更粗）
-  const fontSize = Math.round(r * (0.8 + ball.level * 0.04));
-  ctx.font = `bold ${fontSize}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  // 等级数字（左上角小标）
+  const lvSize = Math.round(r * 0.45);
+  ctx.font = `bold ${lvSize}px sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
   ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-  ctx.lineWidth = 3;
-  ctx.strokeText(ball.level, cx, drawY);
+  ctx.lineWidth = 2;
+  ctx.strokeText(ball.level, cx - r * 0.7, drawY - r * 0.65);
   ctx.fillStyle = ball.level >= 5 ? '#ffe45a' : '#fff';
-  ctx.fillText(ball.level, cx, drawY);
+  ctx.fillText(ball.level, cx - r * 0.7, drawY - r * 0.65);
 
-  // 品类图标（右下小角标，也按等级缩放）
+  // 品类图标（右下小角标）
   const iconSize = Math.round(r * (0.5 + ball.level * 0.02));
   ctx.font = `${iconSize}px sans-serif`;
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -157,6 +157,16 @@ function drawBall(ball, cx, cy, radius, extraY = 0) {
   ctx.fillStyle = '#fff';
   ctx.fillText(t.icon, cx + r * 0.6, drawY + r * 0.6);
   ctx.textBaseline = 'alphabetic';
+
+  // 产兵倒计时环（仅在 playing 状态下显示）
+  if (state.phase === 'playing') {
+    const progress = state.playerSpawnTimer / SOLDIER_SPAWN_INTERVAL;
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, drawY, r + 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+    ctx.stroke();
+  }
 }
 
 /* ——— 城墙 ——— */
@@ -261,7 +271,6 @@ function drawField() {
 function drawSoldier(s) {
   const t = TYPES[s.type];
   const fy = LAYOUT.fieldY, fh = LAYOUT.fieldH;
-  // 深度缩放：越靠近敌方（Y越小）画越小
   const depthFactor = 0.7 + 0.3 * ((s.y - fy) / fh);
   const r = (8 + s.level * 1.5) * depthFactor;
 
@@ -281,18 +290,36 @@ function drawSoldier(s) {
     ctx.fill();
     ctx.shadowBlur = 0;
   } else {
-    ctx.fillStyle = s.side === 'enemy' ? t.color + '99' : t.color;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
-    ctx.fill();
+    // 敌我区分：敌方红边菱形，我方实心圆
+    if (s.side === 'enemy') {
+      ctx.fillStyle = t.color + '88';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ff3a2a';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#ff3a2a';
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r + 1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1.5;
+    } else {
+      ctx.fillStyle = t.color;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#6fd44e';
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = '#6fd44e';
+      ctx.shadowBlur = 2;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r + 1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
   }
-
-  // 边框
-  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
-  ctx.stroke();
 
   // 品类图标
   ctx.font = `${Math.round(r * 0.8)}px sans-serif`;
@@ -305,10 +332,8 @@ function drawSoldier(s) {
     const bw = r * 2.2, bh = 3;
     const segments = 5;
     const segW = bw / segments;
-
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(s.x - bw / 2, s.y - r - 6, bw, bh);
-
     for (let i = 0; i < segments; i++) {
       const segHp = (s.hp / s.maxHp) * segments;
       if (i >= segHp) break;

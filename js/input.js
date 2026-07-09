@@ -135,35 +135,30 @@ function onUp(ev) {
   // 拖到自己原来的格子
   if (toR === d.fromR && toC === d.fromC) return;
 
-  // 尝试合成/交换
-  const result = tryMerge(state.playerSlots, d.fromR, d.fromC, toR, toC);
-  if (result && result.merged) {
-    const ct = TYPES[result.type];
-    const center = slotCenter(toR, toC, false);
-    addFx(center.x, center.y - 20, `合成 ${ct.icon} Lv.${result.newLevel}`, '#ffe45a', 14);
-
-    // 爆炸环
-    state.rings.push({ x: center.x, y: center.y, r: 10, life: 0.5, maxLife: 0.5, color: '#ffe45a' });
-
-    // 粒子爆炸
-    for (let i = 0; i < 12; i++) {
-      const angle = (Math.PI * 2 / 12) * i + Math.random() * 0.3;
-      const speed = 60 + Math.random() * 80;
-      state.fx.push({
-        x: center.x, y: center.y,
-        text: '●', color: ct.color,
-        size: 4 + Math.random() * 4,
-        life: 0.8, maxLife: 0.8,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-      });
+  // 尝试合成/交换/移动
+  const targetBall = state.playerSlots[toR][toC];
+  if (!targetBall) {
+    tryMove(state.playerSlots, d.fromR, d.fromC, toR, toC);
+  } else {
+    const result = tryMerge(state.playerSlots, d.fromR, d.fromC, toR, toC);
+    if (result && result.merged) {
+      const ct = TYPES[result.type];
+      const center = slotCenter(toR, toC, false);
+      addFx(center.x, center.y - 20, `合成 ${ct.icon} Lv.${result.newLevel}`, '#ffe45a', 14);
+      state.rings.push({ x: center.x, y: center.y, r: 10, life: 0.5, maxLife: 0.5, color: '#ffe45a' });
+      for (let i = 0; i < 12; i++) {
+        const angle = (Math.PI * 2 / 12) * i + Math.random() * 0.3;
+        const speed = 60 + Math.random() * 80;
+        state.fx.push({
+          x: center.x, y: center.y, text: '●', color: ct.color,
+          size: 4 + Math.random() * 4, life: 0.8, maxLife: 0.8,
+          vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        });
+      }
+      const shakeIntensity = 0.3 + result.newLevel * 0.15;
+      state.shake = Math.min(shakeIntensity, 2.0);
+      drainOverflow(state.playerSlots, state.overflowQueue);
     }
-
-    // 合成震动按等级增强
-    const shakeIntensity = 0.3 + result.newLevel * 0.15;
-    state.shake = Math.min(shakeIntensity, 2.0);
-
-    drainOverflow(state.playerSlots, state.overflowQueue);
   }
 }
 

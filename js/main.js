@@ -169,7 +169,7 @@ function spawnPlayerSoldiers() {
         s.x = center.x + (Math.random() - 0.5) * 10;
         s.y = center.y;
         s.side = 'player';
-        s.targetY = fy + (Math.random() - 0.5) * LAYOUT.fieldH * 0.5;
+        s.targetY = LAYOUT.fieldY + LAYOUT.fieldH * 0.7 + Math.random() * LAYOUT.fieldH * 0.25;
         s.targetX = 40 + Math.random() * (W - 80);
         state.playerSoldiers.push(s);
       }
@@ -197,7 +197,7 @@ function spawnEnemySoldiers() {
         s.x = center.x + (Math.random() - 0.5) * 10;
         s.y = center.y;
         s.side = 'enemy';
-        s.targetY = fy + (Math.random() - 0.5) * LAYOUT.fieldH * 0.5;
+        s.targetY = LAYOUT.fieldY + LAYOUT.fieldH * 0.05 + Math.random() * LAYOUT.fieldH * 0.25;
         s.targetX = 40 + Math.random() * (W - 80);
         state.enemySoldiers.push(s);
       }
