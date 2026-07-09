@@ -14,10 +14,10 @@ const BUILD_VERSION = 'fruit-v15-economy-role-balance';
     let saved = raw ? JSON.parse(raw) : null;
     const deck = saved?.deck || [];
     const sig = deck.map(normalizeTypeId).join('|');
-    const badDeck = deck.some(id => ['bow','sword','spear','shield'].includes(id))
-      || sig === 'watermelon_guard|grape_archer|orange_cannon|peach_medic|kiwi_wildcard'
-      || sig === 'watermelon_guard|grape_archer|banana_raider|pineapple_lancer|orange_cannon';
-    if (last !== BUILD_VERSION || badDeck) {
+    const hasLegacyIds = deck.some(id => ['bow','sword','spear','shield'].includes(id));
+    const hadOldKiwiDefault = sig === 'watermelon_guard|grape_archer|orange_cannon|peach_medic|kiwi_wildcard';
+    const hadOldLegacyDeck = sig === 'grape_archer|banana_raider|pineapple_lancer|watermelon_guard';
+    if (last !== BUILD_VERSION || hasLegacyIds || hadOldKiwiDefault || hadOldLegacyDeck) {
       if (!saved) saved = {};
       saved.deck = DEFAULT_DECK.slice();
       saved.unlocked = BASIC_UNLOCKED.slice();
