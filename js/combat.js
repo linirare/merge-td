@@ -214,11 +214,8 @@ function applySeparation(soldiers) {
       const speed = 60 * dt_global;
       a.x += fx * speed;
       a.y += fy * speed;
-      // 边界夹紧
-      const fy0 = LAYOUT.fieldY, fh = LAYOUT.fieldH;
+      // X边界夹紧
       a.x = Math.max(24, Math.min(W - 24, a.x));
-      if (a.side === 'player') a.y = Math.max(fy0 + 4, Math.min(fy0 + fh - 4, a.y));
-      else a.y = Math.max(fy0 + 4, Math.min(fy0 + fh - 4, a.y));
     }
   }
 }
