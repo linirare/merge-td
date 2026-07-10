@@ -1,8 +1,4 @@
 const crypto = require('crypto');
-const http = require('http');
-
-const HOST = process.env.PVP_HOST || '127.0.0.1';
-const PORT = Number(process.env.PVP_PORT || 8787);
 const rooms = new Map();
 
 function makeRoomId() {
@@ -176,12 +172,8 @@ function handleMessage(client, raw) {
   else sendError(client, '未知消息类型');
 }
 
-const server = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-  res.end('Fruit Assault PVP server is running.\n');
-});
-
-server.on('upgrade', (req, socket) => {
+function attachPvp(httpServer) {
+httpServer.on('upgrade', (req, socket) => {
   const key = req.headers['sec-websocket-key'];
   if (!key) return socket.destroy();
   socket.write([
@@ -206,7 +198,6 @@ server.on('upgrade', (req, socket) => {
   socket.on('close', () => leaveRoom(client));
   socket.on('error', () => leaveRoom(client));
 });
+}
 
-server.listen(PORT, HOST, () => {
-  console.log(`Fruit Assault PVP server listening on ws://${HOST}:${PORT}`);
-});
+module.exports = { attachPvp };

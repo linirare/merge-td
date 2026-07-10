@@ -12,6 +12,9 @@ app.use(express.static(path.join(__dirname, '..'), {
   lastModified: false,
 }));
 
+const { attachPvp } = require('./pvp-server');
+attachPvp(server);
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[server] 水果突击运行在端口 ${PORT}`);

@@ -3,7 +3,8 @@
    房间码对战 / 指令同步 / 本地战斗模拟。
    ============================================================ */
 (function installPvpV1() {
-  const PVP_SERVER_URL = 'ws://127.0.0.1:8787';
+  const loc = window.location;
+  const PVP_SERVER_URL = `${loc.protocol === 'https:' ? 'wss:' : 'ws:'}//${loc.host}`;
 
   const pvp = {
     ws: null,
