@@ -10,6 +10,11 @@ app.use(express.static(path.join(__dirname, '..'), {
   maxAge: 0,
   etag: false,
   lastModified: false,
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
 }));
 
 const { attachPvp } = require('./pvp-server');
