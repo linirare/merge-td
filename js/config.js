@@ -26,19 +26,20 @@ const BOARD_W = COLS * CELL + (COLS - 1) * GAP;
 const BOARD_H = ROWS * CELL + (ROWS - 1) * GAP;
 const BOARD_X = (W - BOARD_W) / 2;
 
-/* ——— Y 坐标布局 ——— */
-const FIELD_H = 260;
-const PLAYER_BOARD_SHIFT = 40;
+/* ——— Y 坐标布局：v51 五段式网格 ——— */
+const TOP_H = 42;
+const FIELD_H = 254;
 const LAYOUT = {
   enemyInfoY:  6,
-  enemyBoardY: 24,
-  enemyWallY:  24 + BOARD_H + 10,
-  wallH: 22,
-  fieldY:      24 + BOARD_H + 10 + 22 + 8,
+  enemyBoardY: TOP_H,
+  enemyWallY:  TOP_H + BOARD_H + 8,
+  wallH: 20,
+  fieldY:      TOP_H + BOARD_H + 8 + 20 + 10,
   fieldH: FIELD_H,
-  playerWallY: 24 + BOARD_H + 10 + 22 + 8 + FIELD_H + 8,
-  playerBoardY:24 + BOARD_H + 10 + 22 + 8 + FIELD_H + 8 + 22 + 10 + PLAYER_BOARD_SHIFT,
-  bottomY:     24 + BOARD_H + 10 + 22 + 8 + FIELD_H + 8 + 22 + 10 + PLAYER_BOARD_SHIFT + BOARD_H + 4,
+  playerWallY: TOP_H + BOARD_H + 8 + 20 + 10 + FIELD_H + 12,
+  operationY:  TOP_H + BOARD_H + 8 + 20 + 10 + FIELD_H + 12 + 28,
+  playerBoardY:TOP_H + BOARD_H + 8 + 20 + 10 + FIELD_H + 12 + 20 + 50,
+  bottomY:     TOP_H + BOARD_H + 8 + 20 + 10 + FIELD_H + 12 + 20 + 50 + BOARD_H + 8,
 };
 
 /* ——— 13 个水果球：局内只从5个上阵水果中随机召唤 ——— */
