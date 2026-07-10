@@ -1,6 +1,6 @@
 /* ============================================================
-   水果突击 · Fruit Assault —— Final HUD Skin v48
-   职责：关卡信息、HUD、阶段提示、速度/帮助/暂停按钮。这里是最终视觉源。
+   水果突击 · Fruit Assault —— Final HUD Skin v49
+   职责：关卡信息、基础 HUD、速度/帮助/暂停按钮。战场内不再显示阶段提示/读秒覆盖。
    ============================================================ */
 
 function drawInfo() {
@@ -21,11 +21,10 @@ function drawHUD() {
   const pCount = state.playerSoldiers.filter(s => s.alive).length;
   const eCount = state.enemySoldiers.filter(s => s.alive).length;
   const total = pCount + eCount || 1;
-  const elapsed = Math.floor(state.time || 0);
   const spMax = typeof getSpMax === 'function' ? getSpMax(meta) : SP_MAX;
   const recoverCap = typeof getSpRecoverCap === 'function' ? getSpRecoverCap(meta) : 6;
 
-  // 果汁信息放左下，不压中场。
+  // 果汁信息放左下，作为操作资源提示；不再放战斗阶段/读秒提示。
   drawPanel(10, LAYOUT.fieldY + LAYOUT.fieldH - 40, 132, 32, 13, 'rgba(255,255,255,0.72)', 'rgba(83,201,106,0.20)');
   ctx.font = 'bold 12px sans-serif';
   ctx.textAlign = 'left';
@@ -35,14 +34,7 @@ function drawHUD() {
   ctx.fillStyle = THEME.textDim;
   ctx.fillText(`自动回复至 ${recoverCap}`, 20, LAYOUT.fieldY + LAYOUT.fieldH - 10);
 
-  // 时间放右下。
-  drawPanel(W - 112, LAYOUT.fieldY + LAYOUT.fieldH - 36, 102, 28, 13, 'rgba(255,255,255,0.68)', 'rgba(77,182,255,0.18)');
-  ctx.font = 'bold 12px sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#4f6a31';
-  ctx.fillText(`⏱ ${elapsed}s`, W - 20, LAYOUT.fieldY + LAYOUT.fieldH - 17);
-
-  // 兵数对比底部中间。
+  // 兵数对比保留为底部极简比例条，不展示“交战期/攻城期”等阶段文字。
   const barW = 116, barH = 8;
   const bx = W / 2 - barW / 2, by = LAYOUT.fieldY + LAYOUT.fieldH - 28;
   ctx.fillStyle = 'rgba(255,255,255,0.62)';
@@ -61,42 +53,6 @@ function drawHUD() {
   ctx.textAlign = 'right';
   ctx.fillStyle = THEME.accent;
   ctx.fillText(`${eCount} 腐坏`, bx + barW, by - 4);
-
-  drawBattlePhaseStripV48();
-}
-
-function battlePhaseMetaV48() {
-  if (typeof battlePhaseV20 === 'function') {
-    const ph = battlePhaseV20();
-    if (ph?.key === 'prep') return { main:'#69b8ff', bg:'#eef9ff', label: ph.label || '合成期' };
-    if (ph?.key === 'fight') return { main:'#d7a351', bg:'#fff3d7', label: ph.label || '交战期' };
-    if (ph?.key === 'wall') return { main:'#65cb7b', bg:'#eaffea', label: ph.label || '攻墙期' };
-    if (ph?.key === 'danger') return { main:'#ea737f', bg:'#ffe8eb', label: ph.label || '危险' };
-  }
-  return { main:'#d7a351', bg:'#fff3d7', label:'交战期' };
-}
-
-function drawBattlePhaseStripV48() {
-  const meta = battlePhaseMetaV48();
-  const w = 118;
-  const h = 16;
-  const x = W / 2 - w / 2;
-  const y = LAYOUT.fieldY + 4;
-  ctx.save();
-  ctx.globalAlpha = 0.86;
-  ctx.fillStyle = meta.bg;
-  roundRect(x, y, w, h, 8);
-  ctx.fill();
-  ctx.strokeStyle = meta.main;
-  ctx.lineWidth = 1.1;
-  roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 8);
-  ctx.stroke();
-  ctx.font = '900 9px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#3e4d29';
-  ctx.fillText(meta.label, x + w / 2, y + h / 2 + 0.5);
-  ctx.restore();
 }
 
 function drawSpeedBtn() {
