@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>火柴人预览 · 13种水果兵</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#2b3240;font-family:sans-serif;padding:16px}
+h1{color:#eee;text-align:center;margin-bottom:6px;font-size:19px}
+p.sub{color:#9aa4b2;text-align:center;margin-bottom:14px;font-size:12px}
+canvas{display:block;margin:0 auto;border-radius:8px;background:#ede8d5}
+</style></head>
+<body>
+<h1>水果突击 · 火柴人渲染器 v60 预览</h1>
+<p class="sub">每种水果三个等级(Lv1/2/3,越高越大)。红边=敌方朝向,绿边=我方朝向;Lv3 展示攻击姿态。直接双击本文件即可在浏览器打开。</p>
+<canvas id="c" width="1040" height="760"></canvas>
+<!-- 真渲染器:定义 drawStickmanShape / stickWeaponForRole,IIFE 因无 drawSoldier 自动空转 -->
+<script src="../js/stickman_render_v60.js"></script>
+<script>
+// 与 config.js 同步的 13 种水果(仅取渲染所需字段)
+const FRUITS = [
+  { icon:'🍉', name:'西瓜盾卫', color:'#34c96b', role:'tank' },
+  { icon:'🥥', name:'椰子守卫', color:'#9f7a4c', role:'tank' },
+  { icon:'🍍', name:'菠萝枪兵', color:'#ffb337', role:'front' },
+  { icon:'🍇', name:'葡萄射手', color:'#9b5cff', role:'back' },
+  { icon:'🫐', name:'蓝莓狙手', color:'#4d7dff', role:'back' },
+  { icon:'🍌', name:'香蕉突击', color:'#ffd447', role:'rush' },
+  { icon:'🍋', name:'柠檬刺客', color:'#ffe76a', role:'rush' },
+  { icon:'🍊', name:'橙子炮手', color:'#ff9838', role:'siege' },
+  { icon:'🎃', name:'南瓜滚轮', color:'#ff7d35', role:'siege' },
+  { icon:'🍐', name:'冰梨术士', color:'#9be7ff', role:'control' },
+  { icon:'🍑', name:'蜜桃医师', color:'#ff9fbd', role:'support' },
+  { icon:'🥝', name:'奇异果',   color:'#8bd34e', role:'merge' },
+  { icon:'🟣', name:'百香果',   color:'#b85cff', role:'merge' },
+];
+
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const colW = 172, rowH = 250, startX = 70, startY = 60;
+
+const draws = [];
+FRUITS.forEach((f, i) => {
+  const col = i % 6, row = Math.floor(i / 6);
+  const cellX = startX + col * colW, cellY = startY + row * rowH;
+  ctx; // noop
+  [1, 2, 3].forEach((lv, j) => {
+    const cx = cellX + (j - 1) * 44;
+    const gy = cellY + 150;
+    draws.push({
+      cx, groundY: gy, scale: (0.6 + lv * 0.3) * 1.25,
+      phase: (i * 0.13 + j * 0.33) % 1, dir: j === 1 ? -1 : 1,
+      headColor: f.color, emoji: f.icon, weapon: stickWeaponForRole(f.role),
+      atk: lv === 3, atkT: lv === 3 ? 0.6 : 0, ink: '#1b1b1b',
+      sideColor: j === 1 ? '#ff4a5f' : '#22c55e', hitFlash: 0,
+    });
+    if (lv === 2) draws[draws.length - 1]._label = `${f.icon} ${f.name}`;
+  });
+});
+
+function loop(ts) {
+  const dt = Math.min(0.05, (ts - (loop._p || ts)) / 1000); loop._p = ts;
+  ctx.fillStyle = '#ede8d5'; ctx.fillRect(0, 0, W, H);
+  for (const d of draws) d.phase += dt * 0.42;
+  for (const d of draws) drawStickmanShape(ctx, d);
+  ctx.fillStyle = '#333'; ctx.textAlign = 'center'; ctx.font = '11px sans-serif';
+  for (const d of draws) if (d._label) ctx.fillText(d._label, d.cx, d.groundY + 26);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
