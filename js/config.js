@@ -151,29 +151,29 @@ const COUNTER = {
   kiwi_wildcard: '',
   passion_copy: '',
 };
+// 完整 7×7 职责克制矩阵(设计档 fruit-assault-final.md §2.3),幅度 ±50%(0.7~1.5)。
+// 行=攻击方职责,列=防御方职责。merge(奇异果/百香果)不参与克制,返回 1。
+const ROLE_COUNTER_MATRIX = {
+  //          tank front rush  back siege control support
+  tank:    { tank:1.0, front:0.8, rush:1.2, back:0.9, siege:1.1, control:1.0, support:1.0 },
+  front:   { tank:1.2, front:1.0, rush:0.8, back:1.1, siege:1.0, control:1.1, support:1.0 },
+  rush:    { tank:0.8, front:1.1, rush:1.0, back:1.5, siege:1.0, control:1.2, support:1.3 },
+  back:    { tank:1.1, front:1.2, rush:0.7, back:1.0, siege:0.9, control:1.0, support:1.1 },
+  siege:   { tank:1.3, front:1.0, rush:0.9, back:0.8, siege:1.0, control:0.9, support:1.0 },
+  control: { tank:1.0, front:0.9, rush:1.1, back:1.0, siege:1.0, control:1.0, support:1.0 },
+  support: { tank:0.9, front:0.9, rush:0.8, back:1.0, siege:1.0, control:1.0, support:1.0 },
+};
 function roleCounterMultiplier(sourceType, targetType) {
-  const source = TYPES[sourceType] || {};
-  const target = TYPES[targetType] || {};
-  const sr = source.role;
-  const tr = target.role;
-  if (!sr || !tr || sr === 'merge') return 1;
-  if (sr === 'rush' && ['back','support','siege','control'].includes(tr)) return ROLE_COUNTER_DMG;
-  if (sr === 'rush' && ['tank','front'].includes(tr)) return ROLE_WEAK_DMG;
-  if (sr === 'front' && tr === 'rush') return 1.40;
-  if (sr === 'control' && (tr === 'rush' || (target.move || 0) >= 112)) return ROLE_COUNTER_DMG;
-  if (sr === 'siege' && tr === 'tank') return ROLE_SOFT_COUNTER_DMG;
-  if (sr === 'siege' && tr === 'rush') return ROLE_WEAK_DMG;
-  if (sr === 'back' && tr === 'front') return ROLE_SOFT_COUNTER_DMG;
-  if (sr === 'back' && tr === 'tank') return 0.92;
-  if (sr === 'back' && tr === 'rush') return ROLE_WEAK_DMG;
-  if (sr === 'tank' && tr === 'back') return 1.12;
-  if (sr === 'tank' && ['siege','control'].includes(tr)) return 0.90;
-  return 1;
+  const sr = (TYPES[sourceType] || {}).role;
+  const tr = (TYPES[targetType] || {}).role;
+  if (!sr || !tr || sr === 'merge' || tr === 'merge') return 1;
+  const row = ROLE_COUNTER_MATRIX[sr];
+  return (row && row[tr] != null) ? row[tr] : 1;
 }
 function roleCounterText(sourceType, targetType) {
   const mul = roleCounterMultiplier(sourceType, targetType);
-  if (mul >= 1.32) return '克制';
-  if (mul >= 1.15) return '优势';
+  if (mul >= 1.25) return '克制';
+  if (mul >= 1.08) return '优势';
   if (mul <= 0.9) return '受制';
   return '';
 }
@@ -188,7 +188,7 @@ function bestCounterForEnemy(enemyType, pool = null) {
   return best;
 }
 
-const LEVEL_MUL = [0, 1.0, 1.45, 2.05, 2.8, 3.75, 4.9, 6.2];
+const LEVEL_MUL = [0, 1.0, 1.4, 1.9, 2.5, 3.2, 4.0, 5.0];
 const MAX_LEVEL = 7;
 const BASE_WALL_HP = 72;
 const SIEGE_SLOTS_PER_LANE = 3;

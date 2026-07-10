@@ -34,7 +34,7 @@ function applyFruitDamage(target, raw, source) {
   if (source?.type === 'orange_cannon') dmg = Math.round(dmg * 0.72); // 橙子强在攻城，不强在清兵
   if (source?.type === 'lemon_assassin' && source.firstHit) dmg = Math.round(dmg * (1.8 + source.level * 0.08));
   if (source?.type === 'banana_raider' && source.firstHit && fruitIsBackline(target)) dmg = Math.round(dmg * 1.45);
-  dmg = Math.max(1, Math.round(dmg * (100 / (100 + armor * 4))));
+  dmg = Math.max(1, Math.round(dmg * (1 - (armor / (armor + 50)))));
 
   if (target.shield > 0) {
     const used = Math.min(target.shield, dmg);
