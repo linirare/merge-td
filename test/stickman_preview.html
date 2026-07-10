@@ -11,7 +11,7 @@ canvas{display:block;margin:0 auto;border-radius:8px;background:#ede8d5}
 <body>
 <h1>水果突击 · 火柴人渲染器 v60 预览</h1>
 <p class="sub">每种水果三个等级(Lv1/2/3,越高越大)。红边=敌方朝向,绿边=我方朝向;Lv3 展示攻击姿态。直接双击本文件即可在浏览器打开。</p>
-<canvas id="c" width="1040" height="760"></canvas>
+<canvas id="c" width="1040" height="1060"></canvas>
 <!-- 真渲染器:定义 drawStickmanShape / stickWeaponForRole,IIFE 因无 drawSoldier 自动空转 -->
 <script src="../js/stickman_render_v60.js"></script>
 <script>
@@ -55,13 +55,46 @@ FRUITS.forEach((f, i) => {
   });
 });
 
+// 状态效果 FX 演示行(底部)
+const STATUS_DEMO = [
+  { name: '冰冻', se: { frozen: { timer: 1 } } },
+  { name: '点燃', se: { burning: { timer: 1 } } },
+  { name: '减速', se: { slowed: { timer: 1 } } },
+  { name: '眩晕', se: { stunned: { timer: 1 } } },
+  { name: '破甲', se: { armorBreak: { timer: 1, value: 5 } } },
+  { name: '隐身', se: null, invisible: true },
+];
+const demoY = startY + Math.ceil(FRUITS.length / 6) * rowH + 40;
+STATUS_DEMO.forEach((d, i) => {
+  draws.push({
+    cx: startX + i * colW * 1.0, groundY: demoY + 120, scale: 2.4,
+    phase: (i * 0.2) % 1, dir: 1, headColor: '#34c96b', emoji: '🍉',
+    weapon: 'sword', atk: false, atkT: 0, ink: '#1b1b1b',
+    sideColor: '#22c55e', hitFlash: 0,
+    _se: d.se, _invisible: d.invisible, _demoLabel: d.name,
+  });
+});
+
+let clock = 0;
 function loop(ts) {
-  const dt = Math.min(0.05, (ts - (loop._p || ts)) / 1000); loop._p = ts;
+  const dt = Math.min(0.05, (ts - (loop._p || ts)) / 1000); loop._p = ts; clock += dt;
   ctx.fillStyle = '#ede8d5'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#556'; ctx.textAlign = 'left'; ctx.font = 'bold 13px sans-serif';
+  ctx.fillText('▼ 状态效果 FX', startX - 20, demoY - 10);
   for (const d of draws) d.phase += dt * 0.42;
-  for (const d of draws) drawStickmanShape(ctx, d);
+  for (const d of draws) {
+    ctx.save();
+    if (d._invisible) ctx.globalAlpha = 0.4;
+    const geom = drawStickmanShape(ctx, d);
+    ctx.globalAlpha = 1;
+    if (d._se && typeof drawStatusFX === 'function') drawStatusFX(ctx, geom, d._se, d.scale, clock);
+    ctx.restore();
+  }
   ctx.fillStyle = '#333'; ctx.textAlign = 'center'; ctx.font = '11px sans-serif';
-  for (const d of draws) if (d._label) ctx.fillText(d._label, d.cx, d.groundY + 26);
+  for (const d of draws) {
+    if (d._label) ctx.fillText(d._label, d.cx, d.groundY + 26);
+    if (d._demoLabel) ctx.fillText(d._demoLabel, d.cx, d.groundY + 26);
+  }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

@@ -216,6 +216,16 @@ function migrateOldStatus(s) {
     const result = oldApplyDamage(target, raw, source);
     // restore armor (old function already used the reduced value)
     if (penalty > 0) target.armor += penalty;
+
+    // on-hit status application — design skills for the current roster
+    // (source.firstHit is still true here; v15/skill layer clears it after applyFruitDamage)
+    if (source && source.firstHit && target.alive) {
+      if (source.type === 'banana_raider' && (source.level || 1) >= 3) {
+        applyStatus(target, source, 'stunned', 0.5); // 香蕉 Lv3+ 首击眩晕
+      } else if (source.type === 'lemon_assassin') {
+        applyStatus(target, source, 'burning', 2.0); // 柠檬 首击暴击附带点燃
+      }
+    }
     return result;
   };
   applyFruitDamage._statusV61 = true;

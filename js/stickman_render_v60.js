@@ -153,6 +153,67 @@ function drawStickWeapon(ctx, weapon, s, dir, hands, atk, atkT, tint) {
   // 'none' -> 空手
 }
 
+/* 状态特效层(纯几何):g = drawStickmanShape 的返回, se = s.statusEffects, time 用于动画 */
+function drawStatusFX(ctx, g, se, s, time) {
+  if (!se || !g) return;
+  const t = time || 0;
+  // 冰冻:淡蓝覆盖 + 冰晶
+  if (se.frozen && se.frozen.timer > 0) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(150,220,255,0.9)'; ctx.lineWidth = s * 0.6;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      ctx.beginPath(); ctx.moveTo(g.hx + Math.cos(a) * g.headR * 1.4, g.hy + Math.sin(a) * g.headR * 1.4);
+      ctx.lineTo(g.hx + Math.cos(a) * g.headR * 2.1, g.hy + Math.sin(a) * g.headR * 2.1); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(160,225,255,0.28)';
+    ctx.beginPath(); ctx.arc(g.hx, (g.hy + g.shY) / 2, g.headR * 2.0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  // 点燃:向上飘的火焰粒子
+  if (se.burning && se.burning.timer > 0) {
+    ctx.save();
+    for (let i = 0; i < 3; i++) {
+      const ph = (t * 2 + i * 0.4) % 1;
+      const fy = g.shY - ph * s * 12, fx = g.shX + Math.sin((t * 6) + i) * s * 2;
+      const rad = s * (1.6 - ph);
+      ctx.globalAlpha = (1 - ph) * 0.85;
+      ctx.fillStyle = ph < 0.5 ? '#ff9b3a' : '#ff5a2a';
+      ctx.beginPath(); ctx.arc(fx, fy, Math.max(0.5, rad), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // 减速:脚下墨绿泥潭圈
+  if (se.slowed && se.slowed.timer > 0) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(90,150,70,0.8)'; ctx.lineWidth = s * 0.7;
+    ctx.beginPath(); ctx.ellipse(g.hx, g.hy + s * 15.5, g.headR * 1.6, g.headR * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  // 眩晕:头顶旋转的星星
+  if (se.stunned && se.stunned.timer > 0) {
+    ctx.save();
+    ctx.fillStyle = '#ffe04a';
+    for (let i = 0; i < 3; i++) {
+      const a = t * 6 + (i / 3) * Math.PI * 2;
+      const sx = g.hx + Math.cos(a) * g.headR * 1.5, sy = g.hy - g.headR * 1.6 + Math.sin(a) * g.headR * 0.5;
+      ctx.font = `${Math.round(s * 4)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('⭐', sx, sy);
+    }
+    ctx.restore();
+  }
+  // 破甲:身体白色闪烁碎片
+  if (se.armorBreak && se.armorBreak.timer > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(t * 12));
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = s * 0.5;
+    ctx.beginPath(); ctx.moveTo(g.shX - s * 2, g.shY + s * 3); ctx.lineTo(g.shX + s * 2, g.shY + s * 6); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  ctx.textBaseline = 'alphabetic';
+}
+
 /* ---------- 2) 游戏集成:替换 drawSoldier ---------- */
 (function installStickmanRenderV60() {
   if (typeof drawSoldier !== 'function' || drawSoldier._stickmanV60) return;
@@ -200,14 +261,16 @@ function drawStickWeapon(ctx, weapon, s, dir, hands, atk, atkT, tint) {
     const atkT = fighting ? (((state.time || 0) * 1.7) % 1) : 0;
 
     ctx.save();
+    const invis = typeof isInvisible === 'function' && isInvisible(s);
+    if (invis) ctx.globalAlpha = 0.4;
     // 地面阴影 + 敌我地纹
     ctx.fillStyle = 'rgba(0,0,0,0.22)';
     ctx.beginPath(); ctx.ellipse(vis.x, groundY + 1, r * 0.7, 3.4 + r * 0.05, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = st.main; ctx.globalAlpha = 0.55; ctx.lineWidth = 1.6;
+    ctx.strokeStyle = st.main; ctx.globalAlpha = invis ? 0.25 : 0.55; ctx.lineWidth = 1.6;
     ctx.beginPath(); ctx.ellipse(vis.x, groundY + 1, r * 0.72, 3.6 + r * 0.05, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = invis ? 0.4 : 1;
 
-    drawStickmanShape(ctx, {
+    const geom = drawStickmanShape(ctx, {
       cx: vis.x, groundY, scale, phase, dir,
       headColor: t.color || st.main, emoji: t.icon,
       weapon: stickWeaponForRole(t.role),
@@ -215,6 +278,10 @@ function drawStickWeapon(ctx, weapon, s, dir, hands, atk, atkT, tint) {
       sideColor: s.side === 'enemy' ? '#ff4a5f' : '#22c55e',
       hitFlash: s.hitFlash || 0,
     });
+    ctx.globalAlpha = 1;
+
+    // 状态特效层(冰冻/点燃/减速/眩晕/破甲);隐身已经用整体半透明表达
+    if (s.statusEffects) drawStatusFX(ctx, geom, s.statusEffects, scale, state.time || 0);
 
     if (typeof drawBattleUnitHpV59 === 'function') {
       drawBattleUnitHpV59(s, vis.x, groundY - scale * 29 - 8, Math.max(24, r * 1.7));
