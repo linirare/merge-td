@@ -1,30 +1,29 @@
 /* ============================================================
-   水果突击 · Gameplay Readability v20
-   1) 三段局内节奏提示；2) 出兵冷却前端感知；3) 编队下阵彻底修复；
-   4) 编队卡显示T级、Lv1~7攻防成长、技能解锁/强化信息。
-   Loaded after combat_pacing_v19.js.
+   水果突击 · Gameplay Readability v20 CLEAN
+   职责：编队可少于5个、编队面板信息增强。
+   注意：不再绘制棋盘读秒、不再绘制合成期/交战期/攻城期提示条。
    ============================================================ */
-
 (function installGameplayReadabilityV20() {
   patchDeckCoreNoAutoFillV20();
   patchDeckPanelInfoV20();
-  patchSpawnCooldownVisualV20();
-  patchBattlePhaseHudV20();
 })();
 
-const GAMEPLAY_READABILITY_BUILD = 'gameplay-readability-v20';
+const GAMEPLAY_READABILITY_BUILD = 'gameplay-readability-v20-clean';
 
 /* ------------------------------------------------------------
-   A. 彻底修复编队：允许少于5个上阵，不再被 normalize/sync 自动补满
+   A. 编队：允许少于5个上阵，不再被 normalize/sync 自动补满
    ------------------------------------------------------------ */
 function unlockedListV20() {
   const highest = Math.max(1, meta?.highestLevel || 1);
   const list = BASIC_UNLOCKED.slice();
   for (const item of PROGRESS_UNLOCKS) {
-    if (highest >= item.level) for (const id of item.ids) if (!list.includes(id)) list.push(id);
+    if (highest >= item.level) {
+      for (const id of item.ids) if (!list.includes(id)) list.push(id);
+    }
   }
   return list.filter(id => TYPES[id]);
 }
+
 function sanitizeDeckLooseV20(deck, allowEmpty = false) {
   const unlocked = unlockedListV20();
   const result = [];
@@ -35,6 +34,7 @@ function sanitizeDeckLooseV20(deck, allowEmpty = false) {
   if (!allowEmpty && result.length === 0) result.push(DEFAULT_DECK[0]);
   return result.slice(0, DECK_SIZE);
 }
+
 function patchDeckCoreNoAutoFillV20() {
   normalizeDeck = function normalizeDeckLooseV20(deck) {
     return sanitizeDeckLooseV20(deck, false);
@@ -52,13 +52,14 @@ function patchDeckCoreNoAutoFillV20() {
 }
 
 /* ------------------------------------------------------------
-   B. 编队信息重做：T级、Lv1~7攻防、技能信息直观
+   B. 编队信息：T级、Lv1~7成长、技能信息
    ------------------------------------------------------------ */
 const FRUIT_TIER_V20 = {
   watermelon_guard:'T1', grape_archer:'T1', banana_raider:'T1', pineapple_lancer:'T1', orange_cannon:'T1',
   coconut_guard:'T2', peach_medic:'T2', pear_frost:'T2', blueberry_sniper:'T2', lemon_assassin:'T2', pumpkin_roller:'T2',
   kiwi_wildcard:'T3', passion_copy:'T3'
 };
+
 const SKILL_INFO_V20 = {
   watermelon_guard: { name:'果盾壁垒', unlock:'Lv4护盾', grow:'Lv6克突击 / Lv7友方小盾' },
   grape_archer: { name:'葡萄连射', unlock:'Lv4连射', grow:'Lv6克突击 / Lv7散射' },
@@ -74,12 +75,12 @@ const SKILL_INFO_V20 = {
   kiwi_wildcard: { name:'万能嫁接', unlock:'合成辅助', grow:'帮助做出克制高星' },
   passion_copy: { name:'百香复制', unlock:'复制辅助', grow:'复制核心克制单位' },
 };
+
 function roleLabelV20(role) {
   return ({ tank:'前排', back:'远程', rush:'突击', front:'枪线', siege:'攻城', control:'控制', support:'辅助', merge:'合成' })[role] || role;
 }
 function skillStateLabelV20(id) {
-  const implemented = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'].includes(id);
-  return implemented ? '已实装' : '待接入';
+  return ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'].includes(id) ? '已实装' : '待接入';
 }
 function statPreviewV20(t) {
   const atk1 = Math.round(t.atk * LEVEL_MUL[1]);
@@ -90,11 +91,10 @@ function statPreviewV20(t) {
 }
 function levelPathV20(id) {
   const implemented = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'].includes(id);
-  const skill = SKILL_INFO_V20[id];
   return `
     <div class="lvpath-v20">
       <span>1 数值</span><span>2 数值</span><span>3 体型</span>
-      <span class="skill ${implemented ? 'on' : ''}">4 ${skill?.name ? '技能' : '成长'}</span>
+      <span class="skill ${implemented ? 'on' : ''}">4 ${implemented ? '技能' : '成长'}</span>
       <span>5 强化</span><span>6 克制</span><span>7 质变</span>
     </div>`;
 }
@@ -118,11 +118,15 @@ function deckCardHtmlV20(id, on, locked, full) {
     <div class="skillbox-v20"><b>${skill.name}</b><span>${skill.unlock}</span><em>${skill.grow}</em></div>
     <div class="desc">${t.desc}</div>`;
 }
+
 function patchDeckPanelInfoV20() {
-  const style = document.createElement('style');
-  style.textContent = `
-  .deck-card{padding:9px!important}.deck-head-v20{display:flex;align-items:center;gap:8px}.tier-v20{min-width:28px;height:22px;border-radius:8px;background:#263b19;color:#fff7b0;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 0 rgba(0,0,0,.16)}.deck-title-v20{flex:1;text-align:left}.statgrid-v20{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:4px;margin:6px 0;font-size:10px;color:#31551f}.statgrid-v20 span{background:rgba(255,255,255,.58);border:1px solid rgba(90,130,54,.18);border-radius:7px;padding:3px 4px}.lvpath-v20{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:6px 0}.lvpath-v20 span{font-size:8px;background:#e8f6c2;color:#5a7831;border-radius:5px;padding:2px 1px;text-align:center}.lvpath-v20 .skill{background:#d6dfb6}.lvpath-v20 .skill.on{background:#ffe37a;color:#684200;font-weight:900}.skillbox-v20{display:flex;flex-direction:column;gap:2px;text-align:left;background:rgba(255,244,184,.72);border:1px solid rgba(255,192,58,.35);border-radius:9px;padding:5px 7px;margin:5px 0}.skillbox-v20 b{font-size:11px;color:#4b3b13}.skillbox-v20 span{font-size:10px;color:#74551c}.skillbox-v20 em{font-style:normal;font-size:9px;color:#8c6b24}.deck-chip.removeable{position:relative;cursor:pointer}.deck-chip.removeable:after{content:'×';position:absolute;right:4px;top:2px;background:#ff6078;color:white;width:15px;height:15px;border-radius:50%;font-size:11px;line-height:15px}.deck-empty{opacity:.68}.deck-card.fullhint{opacity:.70}.deck-card .offtag{background:#9ab678;color:#fff}`;
-  document.head.appendChild(style);
+  if (!document.getElementById('deck-info-style-v20')) {
+    const style = document.createElement('style');
+    style.id = 'deck-info-style-v20';
+    style.textContent = `
+    .deck-card{padding:9px!important}.deck-head-v20{display:flex;align-items:center;gap:8px}.tier-v20{min-width:28px;height:22px;border-radius:8px;background:#263b19;color:#fff7b0;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 0 rgba(0,0,0,.16)}.deck-title-v20{flex:1;text-align:left}.statgrid-v20{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:4px;margin:6px 0;font-size:10px;color:#31551f}.statgrid-v20 span{background:rgba(255,255,255,.58);border:1px solid rgba(90,130,54,.18);border-radius:7px;padding:3px 4px}.lvpath-v20{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:6px 0}.lvpath-v20 span{font-size:8px;background:#e8f6c2;color:#5a7831;border-radius:5px;padding:2px 1px;text-align:center}.lvpath-v20 .skill{background:#d6dfb6}.lvpath-v20 .skill.on{background:#ffe37a;color:#684200;font-weight:900}.skillbox-v20{display:flex;flex-direction:column;gap:2px;text-align:left;background:rgba(255,244,184,.72);border:1px solid rgba(255,192,58,.35);border-radius:9px;padding:5px 7px;margin:5px 0}.skillbox-v20 b{font-size:11px;color:#4b3b13}.skillbox-v20 span{font-size:10px;color:#74551c}.skillbox-v20 em{font-style:normal;font-size:9px;color:#8c6b24}.deck-chip.removeable{position:relative;cursor:pointer}.deck-chip.removeable:after{content:'×';position:absolute;right:4px;top:2px;background:#ff6078;color:white;width:15px;height:15px;border-radius:50%;font-size:11px;line-height:15px}.deck-empty{opacity:.68}.deck-card.fullhint{opacity:.70}.deck-card .offtag{background:#9ab678;color:#fff}`;
+    document.head.appendChild(style);
+  }
 
   renderDeckPanel = function renderDeckPanelReadableV20() {
     const unlocked = unlockedListV20();
@@ -182,114 +186,29 @@ function patchDeckPanelInfoV20() {
 }
 
 /* ------------------------------------------------------------
-   C. 出兵冷却前端感知：棋盘上每个水果营有进度弧、进度条、剩余秒数
+   C. 兼容函数：保留给其它文件调用，但不绘制遮挡性 HUD
    ------------------------------------------------------------ */
 function ballSpawnProgressV20(ball) {
   if (!ball) return 0;
   const full = SPAWN_COOLDOWNS[ball.level || 1] || SPAWN_COOLDOWNS[1];
   return 1 - clamp01((ball.spawnTimer || 0) / full);
 }
-function drawOneCooldownV20(ball, r, c, isEnemy) {
-  if (!ball) return;
-  const rect = slotRect(r, c, isEnemy);
-  const center = slotCenter(r, c, isEnemy);
-  const progress = ballSpawnProgressV20(ball);
-  const color = TYPES[ball.type]?.color || THEME.gold;
-  const remain = Math.max(0, ball.spawnTimer || 0);
+function drawOneCooldownV20() {}
+function patchSpawnCooldownVisualV20() {}
 
-  ctx.save();
-  ctx.globalAlpha = isEnemy ? 0.42 : 0.88;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = isEnemy ? 2 : 3;
-  ctx.beginPath();
-  ctx.arc(center.x, center.y, CELL * 0.43, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
-  ctx.stroke();
-
-  ctx.globalAlpha = isEnemy ? 0.35 : 0.82;
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
-  roundRect(rect.x + 7, rect.y + CELL - 10, CELL - 14, 5, 3);
-  ctx.fill();
-  ctx.fillStyle = color;
-  roundRect(rect.x + 7, rect.y + CELL - 10, Math.max(3, (CELL - 14) * progress), 5, 3);
-  ctx.fill();
-
-  if (!isEnemy && remain > 0.25) {
-    ctx.font = '900 10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(0,0,0,.62)';
-    ctx.strokeText(`${remain.toFixed(1)}s`, center.x, rect.y + CELL - 17);
-    ctx.fillStyle = '#fffde0';
-    ctx.fillText(`${remain.toFixed(1)}s`, center.x, rect.y + CELL - 17);
-  }
-  if (!isEnemy && progress >= 0.96) {
-    ctx.globalAlpha = 0.50 + Math.sin(performance.now() / 90) * 0.22;
-    ctx.strokeStyle = '#fff176';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(center.x, center.y, CELL * 0.50, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-function patchSpawnCooldownVisualV20() {
-  if (typeof draw !== 'function' || draw._cooldownV20) return;
-  const oldDraw = draw;
-  draw = function drawCooldownV20() {
-    oldDraw();
-    if (!state || state.phase !== 'playing') return;
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) drawOneCooldownV20(state.enemySlots?.[r]?.[c], r, c, true);
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) drawOneCooldownV20(state.playerSlots?.[r]?.[c], r, c, false);
-  };
-  draw._cooldownV20 = true;
-}
-
-/* ------------------------------------------------------------
-   D. 三段局内节奏：合成期/交战期/破墙期/反扑期，给玩家明确看战场窗口
-   ------------------------------------------------------------ */
 function combatantsBySideV20(side) {
   const arr = side === 'enemy' ? state.enemySoldiers : state.playerSoldiers;
   return (arr || []).filter(s => s && s.alive && typeof isCombatant === 'function' && isCombatant(s));
 }
 function battlePhaseV20() {
-  if ((state._enemyReinforcePause || 0) > 0 && combatantsBySideV20('enemy').length === 0) return { key:'wall', label:'破墙期', hint:'看战场，集中拆果堡' };
   const e = combatantsBySideV20('enemy').length;
   const p = combatantsBySideV20('player').length;
-  if (e > 0 && p > 0) return { key:'fight', label:'交战期', hint:'观察克制和站位' };
-  if (e > 0 && p === 0) return { key:'danger', label:'反扑期', hint:'补前排或急派救线' };
-  return { key:'prep', label:'合成期', hint:'整理棋盘，等下一波' };
+  if (e > 0 && p > 0) return { key:'fight', label:'', hint:'' };
+  if (e > 0 && p === 0) return { key:'danger', label:'', hint:'' };
+  if (p > 0) return { key:'wall', label:'', hint:'' };
+  return { key:'prep', label:'', hint:'' };
 }
 function phaseColorsV20(key) {
   return ({ prep:['#4db6ff','#dff4ff'], fight:['#ffb547','#fff1c2'], wall:['#53e77b','#e3ffd8'], danger:['#ff5d6c','#ffe0e5'] })[key] || ['#ffc93c','#fff4c0'];
 }
-function patchBattlePhaseHudV20() {
-  if (typeof draw !== 'function' || draw._phaseV20) return;
-  const oldDraw = draw;
-  draw = function drawPhaseHudV20() {
-    oldDraw();
-    if (!state || state.phase !== 'playing') return;
-    const ph = battlePhaseV20();
-    const [main, bg] = phaseColorsV20(ph.key);
-    const x = 156, y = LAYOUT.fieldY + 6, w = 168, h = 23;
-    ctx.save();
-    ctx.globalAlpha = 0.92;
-    ctx.fillStyle = 'rgba(24,34,20,0.68)';
-    roundRect(x - 5, y - 3, w + 10, h + 6, 13);
-    ctx.fill();
-    ctx.fillStyle = bg;
-    roundRect(x, y, w, h, 11);
-    ctx.fill();
-    ctx.strokeStyle = main;
-    ctx.lineWidth = 2;
-    roundRect(x, y, w, h, 11);
-    ctx.stroke();
-    ctx.font = '900 12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#23471f';
-    ctx.fillText(`${ph.label} · ${ph.hint}`, x + w / 2, y + h / 2);
-    ctx.restore();
-  };
-  draw._phaseV20 = true;
-}
+function patchBattlePhaseHudV20() {}
