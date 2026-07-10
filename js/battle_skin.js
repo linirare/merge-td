@@ -1,271 +1,281 @@
 /* ============================================================
-   合成攻城 · 战斗表现补丁
-   五路推进 / 路线状态 / 攻城位 / 拖拽意图提示。
+   水果突击 · Fruit Assault —— Final Battle Skin v48
+   职责：战场、城墙、战斗单位。这里是最终视觉源，不再依赖 v27/v34/v37 覆盖。
    ============================================================ */
-
-function drawBoard(slots, isEnemy, dragHint = null) {
-  const by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
-
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const x = BOARD_X + c * (CELL + GAP);
-      const y = by + r * (CELL + GAP);
-      const ball = slots[r][c];
-      const isSnap = !isEnemy && state.drag?.nearestSnap && state.drag.nearestSnap.r === r && state.drag.nearestSnap.c === c;
-      const action = isSnap ? state.drag.snapAction : '';
-      const canMerge = state.drag && ball && !isEnemy && state.drag.unit.type === ball.type && state.drag.unit.level === ball.level && ball.level < MAX_LEVEL;
-      const isEmptyTarget = state.drag && !ball && !isEnemy;
-
-      let bg = (r + c) % 2 === 0 ? 'rgba(255,235,180,0.05)' : 'rgba(255,235,180,0.09)';
-      if (canMerge) bg = 'rgba(255,228,90,0.12)';
-      if (isEmptyTarget) bg = 'rgba(105,236,118,0.07)';
-      if (isSnap && action === 'swap') bg = 'rgba(91,185,255,0.11)';
-      if (isSnap && action === 'merge') bg = 'rgba(255,228,90,0.20)';
-      if (state.pendingPlace && !ball && !isEnemy) bg = 'rgba(255,228,90,0.08)';
-
-      ctx.fillStyle = bg;
-      roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 8);
-      ctx.fill();
-
-      ctx.strokeStyle = 'rgba(255,228,90,0.10)';
-      ctx.lineWidth = 1;
-      roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 8);
-      ctx.stroke();
-
-      if (canMerge) {
-        ctx.strokeStyle = 'rgba(255,228,90,0.52)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
-        roundRect(x + 4, y + 4, CELL - 8, CELL - 8, 8);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-
-      if (ball) {
-        ctx.save();
-        if (isEnemy) ctx.globalAlpha = 0.72;
-        drawBall(ball, x + CELL / 2, y + CELL / 2, CELL * 0.38);
-        ctx.restore();
-      }
-
-      if (state.pendingPlace && !ball && !isEnemy) {
-        ctx.strokeStyle = 'rgba(255,228,90,0.42)';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([3, 3]);
-        roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 8);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-
-      if (isSnap && !isEnemy) {
-        const color = action === 'merge' ? THEME.gold : action === 'move' ? THEME.safe : THEME.info;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 18;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
-        roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 8);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        ctx.font = 'bold 11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = color;
-        const label = action === 'merge' ? '合成' : action === 'move' ? '移动' : '交换';
-        ctx.fillText(label, x + CELL / 2, y + CELL - 6);
-      }
-    }
-  }
-}
 
 function drawField() {
   const fy = LAYOUT.fieldY;
   const fh = LAYOUT.fieldH;
-  const x = 22;
-  const w = W - 44;
+  const x = 24;
+  const w = W - 48;
+
   const g = ctx.createLinearGradient(0, fy, 0, fy + fh);
-  g.addColorStop(0, 'rgba(102,52,34,0.44)');
-  g.addColorStop(0.48, 'rgba(54,40,28,0.38)');
-  g.addColorStop(1, 'rgba(42,80,44,0.40)');
-  drawPanel(x, fy, w, fh, 16, g, 'rgba(255,228,125,0.14)');
+  g.addColorStop(0, 'rgba(247,232,190,0.92)');
+  g.addColorStop(0.50, 'rgba(244,230,185,0.88)');
+  g.addColorStop(1, 'rgba(237,222,174,0.90)');
+  drawPanel(x, fy, w, fh, 18, g, 'rgba(221,200,147,0.76)');
+
+  // 墙前安全区：让单位不会视觉上挤到城墙底下。
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  roundRect(x + 10, fy + 8, w - 20, 24, 12);
+  ctx.fill();
+  roundRect(x + 10, fy + fh - 32, w - 20, 24, 12);
+  ctx.fill();
+  ctx.restore();
 
   for (let c = 0; c < COLS; c++) {
     const lx = BOARD_X + c * (CELL + GAP) + CELL / 2;
     const st = state.laneStats?.[c];
-    let laneColor = 'rgba(255,225,150,0.16)';
-    if (st?.status === 'enemy_adv' || st?.status === 'wall_danger') laneColor = 'rgba(255,94,70,0.42)';
-    else if (st?.status === 'player_adv' || st?.status === 'siege_ready') laneColor = 'rgba(105,236,118,0.36)';
-    else if (st?.status === 'clash') laneColor = 'rgba(255,228,90,0.30)';
+    let laneColor = 'rgba(92,160,98,0.22)';
+    if (st?.status === 'enemy_adv' || st?.status === 'wall_danger') laneColor = 'rgba(230,110,120,0.28)';
+    else if (st?.status === 'player_adv' || st?.status === 'siege_ready') laneColor = 'rgba(90,190,100,0.26)';
+    else if (st?.status === 'clash') laneColor = 'rgba(220,170,70,0.28)';
 
     if (st?.danger > 38) {
-      ctx.fillStyle = 'rgba(255,75,55,0.08)';
-      roundRect(lx - 26, fy + 10, 52, fh - 20, 12);
+      ctx.save();
+      ctx.fillStyle = 'rgba(230,110,120,0.10)';
+      roundRect(lx - 25, fy + 34, 50, fh - 68, 12);
       ctx.fill();
+      ctx.restore();
     }
 
+    ctx.save();
     ctx.strokeStyle = laneColor;
-    ctx.lineWidth = c === 2 ? 2.2 : 1.5;
+    ctx.lineWidth = c === 2 ? 1.8 : 1.2;
     ctx.beginPath();
-    ctx.moveTo(lx, fy + 14);
-    ctx.lineTo(lx, fy + fh - 14);
+    ctx.moveTo(lx, fy + 34);
+    ctx.lineTo(lx, fy + fh - 34);
     ctx.stroke();
-
-    // 攻城位：每路最多 3 个同时打墙。
-    const slotN = typeof SIEGE_SLOTS_PER_LANE === 'number' ? SIEGE_SLOTS_PER_LANE : 3;
-    for (let i = 0; i < slotN; i++) {
-      const off = (i - (slotN - 1) / 2) * 13;
-      ctx.strokeStyle = 'rgba(255,228,90,0.20)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(lx + off, LAYOUT.enemyWallY + LAYOUT.wallH + 4, 4, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(lx + off, LAYOUT.playerWallY - 4, 4, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    if (st && st.pressureText) {
-      ctx.font = 'bold 9px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = laneColor;
-      ctx.fillText(st.pressureText, lx, fy + fh / 2 - 8);
-    }
+    ctx.restore();
   }
 
-  ctx.strokeStyle = 'rgba(255,228,90,0.32)';
-  ctx.setLineDash([8, 7]);
-  ctx.lineWidth = 2;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(224,178,88,0.28)';
+  ctx.setLineDash([7, 8]);
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(x + 18, fy + fh / 2);
   ctx.lineTo(x + w - 18, fy + fh / 2);
   ctx.stroke();
   ctx.setLineDash([]);
-
-  ctx.font = 'bold 11px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255,116,92,0.90)';
-  ctx.fillText('敌军向下推进', W / 2, fy + 18);
-  ctx.fillStyle = 'rgba(105,236,118,0.90)';
-  ctx.fillText('我方向上攻城', W / 2, fy + fh - 8);
+  ctx.restore();
 
   for (const alert of state.laneAlerts || []) {
     const lx = BOARD_X + alert.lane * (CELL + GAP) + CELL / 2;
     const a = Math.max(0, alert.life / alert.maxLife);
     ctx.save();
-    ctx.globalAlpha = a;
-    ctx.fillStyle = 'rgba(255,80,55,0.16)';
-    roundRect(lx - 29, fy + 6, 58, fh - 12, 14);
+    ctx.globalAlpha = Math.min(0.74, a);
+    ctx.fillStyle = 'rgba(230,110,120,0.75)';
+    roundRect(lx - 28, LAYOUT.playerWallY - 36, 56, 17, 9);
     ctx.fill();
-    ctx.font = 'bold 12px sans-serif';
+    ctx.font = '900 10px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#ff8a68';
-    ctx.fillText(alert.text, lx, LAYOUT.playerWallY - 20);
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fffde8';
+    ctx.fillText(alert.text || '危险', lx, LAYOUT.playerWallY - 27);
     ctx.restore();
   }
 }
 
+function drawWall(hp, maxHp, isEnemy) {
+  const ratio = clamp01(hp / Math.max(1, maxHp));
+  const x = 58;
+  const y = isEnemy ? LAYOUT.enemyWallY - 4 : LAYOUT.playerWallY + 2;
+  const w = W - 116;
+  const h = 21;
+  const cfg = isEnemy
+    ? { body:'#C97984', dark:'#A95663', trim:'#F4D7DC', hp:'#F06B79', hpBg:'rgba(116,37,48,0.46)', text:'#fffdf1', label:'敌方果堡' }
+    : { body:'#78C783', dark:'#4E9A59', trim:'#E7F8D9', hp:'#8AE78F', hpBg:'rgba(34,89,45,0.40)', text:'#fffdf1', label:'水果果堡' };
+
+  ctx.save();
+  ctx.globalAlpha = 0.14;
+  ctx.fillStyle = '#000';
+  roundRect(x + 2, y + 4, w, h, 8);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = cfg.dark;
+  roundRect(x, y, w, h, 8);
+  ctx.fill();
+  ctx.fillStyle = cfg.body;
+  roundRect(x + 2, y + 2, w - 4, h - 5, 7);
+  ctx.fill();
+  ctx.fillStyle = cfg.trim;
+  roundRect(x + 5, y + 3, w - 10, 3.5, 3);
+  ctx.fill();
+
+  const segW = 20, gap = 6;
+  const count = Math.floor((w - 18) / (segW + gap));
+  for (let i = 0; i < count; i++) {
+    const sx = x + 9 + i * (segW + gap);
+    ctx.fillStyle = cfg.dark;
+    roundRect(sx, y - 4, segW, 6, 3);
+    ctx.fill();
+    ctx.fillStyle = cfg.trim;
+    roundRect(sx + 1.5, y - 3, segW - 3, 3, 2);
+    ctx.fill();
+  }
+
+  // 内嵌血条，不再作为独立悬浮 UI。
+  const bx = x + 28, by = y + 8, bw = w - 56, bh = 7;
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  roundRect(bx - 2, by - 2, bw + 4, bh + 4, 5);
+  ctx.fill();
+  ctx.fillStyle = cfg.hpBg;
+  roundRect(bx, by, bw, bh, 4);
+  ctx.fill();
+  ctx.fillStyle = cfg.hp;
+  roundRect(bx + 1.5, by + 1.5, Math.max(4, (bw - 3) * ratio), bh - 3, 3);
+  ctx.fill();
+
+  if (ratio <= 0.60) drawWallDamageV48(x, y, w, h, ratio, isEnemy);
+
+  ctx.font = '900 9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+  ctx.fillStyle = cfg.text;
+  const text = `${cfg.label} ${Math.round(ratio * 100)}%`;
+  ctx.strokeText(text, x + w / 2, y + h / 2 + 0.5);
+  ctx.fillText(text, x + w / 2, y + h / 2 + 0.5);
+  ctx.restore();
+}
+
+function drawWallDamageV48(x, y, w, h, ratio, isEnemy) {
+  ctx.save();
+  ctx.strokeStyle = isEnemy ? 'rgba(112,48,58,0.58)' : 'rgba(48,108,55,0.52)';
+  ctx.lineWidth = 1.25;
+  drawCrackV48(x + w * 0.22, y + 5, 11);
+  drawCrackV48(x + w * 0.72, y + 7, 9);
+  if (ratio <= 0.30) {
+    drawCrackV48(x + w * 0.42, y + 5, 13);
+    drawCrackV48(x + w * 0.56, y + 8, 11);
+  }
+  ctx.restore();
+}
+function drawCrackV48(x, y, len) {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + len * 0.25, y + 3);
+  ctx.lineTo(x + len * 0.48, y + 1);
+  ctx.lineTo(x + len * 0.72, y + 6);
+  ctx.lineTo(x + len, y + 4);
+  ctx.stroke();
+}
+
+function battleUnitTierKeyV48(s) {
+  const lv = s.level || 1;
+  if (lv <= 2) return 'small';
+  if (lv <= 4) return 'large';
+  if (lv === 5) return 'elite';
+  if (lv === 6) return 'advanced';
+  return 'legendary';
+}
+function battleUnitTierScaleV48(tier) {
+  return ({ small:0.88, large:1.08, elite:1.32, advanced:1.56, legendary:1.86 })[tier] || 1;
+}
+function battleUnitRoleScaleV48(type) {
+  const role = TYPES[type]?.role;
+  if (role === 'tank') return 1.10;
+  if (role === 'front') return 1.06;
+  if (role === 'siege') return 1.08;
+  if (role === 'rush') return 0.98;
+  if (role === 'back') return 0.94;
+  if (role === 'support' || role === 'control') return 0.92;
+  return 1;
+}
+function battleUnitStyleV48(side) {
+  return side === 'enemy'
+    ? { main:'#ff4f64', dark:'#7c1529', hp:'#ff506a', glow:'rgba(255,70,92,0.52)' }
+    : { main:'#35e66f', dark:'#116b35', hp:'#42f58a', glow:'rgba(83,255,130,0.48)' };
+}
+function battleVisualYV48(s) {
+  const topSafe = LAYOUT.enemyWallY + LAYOUT.wallH + 16;
+  const bottomSafe = LAYOUT.playerWallY - 18;
+  if (s.side === 'enemy') return Math.max(s.y, topSafe);
+  return Math.min(s.y, bottomSafe);
+}
 function drawSoldier(s) {
-  const t = TYPES[s.type];
-  const fy = LAYOUT.fieldY, fh = LAYOUT.fieldH;
-  const depthFactor = 0.78 + 0.25 * ((s.y - fy) / fh);
-  const r = (9 + s.level * 1.6) * depthFactor;
-  const body = s.side === 'enemy' ? '#a53c33' : '#2f9b55';
-  const facing = s.side === 'player' ? -1 : 1;
+  if (!s || !s.alive) return;
+  const t = TYPES[s.type] || TYPES[DEFAULT_DECK[0]];
+  const tier = battleUnitTierKeyV48(s);
+  const st = battleUnitStyleV48(s.side);
+  const drawY = battleVisualYV48(s);
+  const depth = 0.78 + 0.25 * ((drawY - LAYOUT.fieldY) / LAYOUT.fieldH);
+  const r = (15 + (s.level || 1) * 1.45) * depth * battleUnitTierScaleV48(tier) * battleUnitRoleScaleV48(s.type);
+  const isEnemy = s.side === 'enemy';
 
   ctx.save();
 
-  if (s.protected || s.mode === 'deploy') {
-    ctx.strokeStyle = s.side === 'player' ? 'rgba(105,236,118,0.42)' : 'rgba(255,116,92,0.42)';
-    ctx.setLineDash([3, 3]);
-    ctx.lineWidth = 1.5;
+  // 阵营底座。
+  ctx.shadowColor = st.glow;
+  ctx.shadowBlur = tier === 'legendary' ? 14 : tier === 'advanced' ? 11 : tier === 'elite' ? 8 : 5;
+  ctx.strokeStyle = st.main;
+  ctx.lineWidth = tier === 'legendary' ? 4.2 : tier === 'advanced' ? 3.6 : 2.8;
+  if (isEnemy) {
     ctx.beginPath();
-    ctx.arc(s.x, s.y + r * 0.10, r + 6, 0, Math.PI * 2);
+    ctx.moveTo(s.x, drawY - r * 1.02);
+    ctx.lineTo(s.x + r * 1.22, drawY + r * 0.12);
+    ctx.lineTo(s.x, drawY + r * 1.08);
+    ctx.lineTo(s.x - r * 1.22, drawY + r * 0.12);
+    ctx.closePath();
     ctx.stroke();
-    ctx.setLineDash([]);
-  } else if (s.mode === 'fight') {
-    ctx.strokeStyle = s.side === 'player' ? 'rgba(105,236,118,0.65)' : 'rgba(255,116,92,0.65)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y + r * 0.12, r + 5, 0, Math.PI * 2);
-    ctx.stroke();
-  } else if (s.mode === 'backline') {
-    ctx.strokeStyle = 'rgba(91,185,255,0.58)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y + r * 0.12, r + 5, 0, Math.PI * 2);
-    ctx.stroke();
-  } else if (s.mode === 'siege') {
-    ctx.strokeStyle = 'rgba(255,228,90,0.78)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y + r * 0.12, r + 5, 0, Math.PI * 2);
-    ctx.stroke();
-  } else if (s.mode === 'siege_queue') {
-    ctx.strokeStyle = 'rgba(255,228,90,0.34)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath();
-    ctx.arc(s.x, s.y + r * 0.12, r + 5, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
-  ctx.beginPath();
-  ctx.ellipse(s.x, s.y + r + 4, r * 0.9, 4.2, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  if (s.hitFlash > 0) {
-    ctx.fillStyle = '#ff2f1f';
-    ctx.shadowColor = '#ff2f1f';
-    ctx.shadowBlur = 8;
   } else {
-    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(s.x, drawY + r * 0.25, r * 1.16, r * 0.58, 0, 0, Math.PI * 2);
+    ctx.stroke();
   }
-  roundRect(s.x - r * 0.62, s.y - r * 0.10, r * 1.24, r * 1.25, 6);
-  ctx.fill();
   ctx.shadowBlur = 0;
 
-  ctx.fillStyle = t.color;
+  ctx.fillStyle = 'rgba(0,0,0,0.24)';
   ctx.beginPath();
-  ctx.arc(s.x, s.y - r * 0.35, r * 0.72, 0, Math.PI * 2);
+  ctx.ellipse(s.x, drawY + r + 8, r * 0.96, 5 + r * 0.055, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = s.side === 'enemy' ? '#ff8a75' : '#98ff9f';
-  ctx.lineWidth = 1.5;
+
+  const bodyW = r * 1.10;
+  const bodyH = r * 1.16;
+  ctx.fillStyle = s.hitFlash > 0 ? '#ffffff' : st.main;
+  ctx.strokeStyle = isEnemy ? '#fff0f2' : '#ecfff1';
+  ctx.lineWidth = Math.max(2, r * 0.10);
+  roundRect(s.x - bodyW / 2, drawY - r * 0.02, bodyW, bodyH, Math.max(6, r * 0.22));
+  ctx.fill();
   ctx.stroke();
 
-  ctx.font = `${Math.round(r * 0.86)}px sans-serif`;
+  ctx.fillStyle = t.color || st.main;
+  ctx.beginPath();
+  ctx.arc(s.x, drawY - r * 0.38, r * 0.72, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = st.main;
+  ctx.lineWidth = Math.max(2.5, r * 0.12);
+  ctx.stroke();
+
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  ctx.font = `${Math.round(r * 0.82)}px sans-serif`;
   ctx.fillStyle = '#fff';
-  ctx.fillText(t.icon, s.x, s.y - r * 0.36);
+  ctx.fillText(t.icon, s.x, drawY - r * 0.38);
 
-  ctx.fillStyle = s.side === 'player' ? 'rgba(130,255,140,0.85)' : 'rgba(255,140,112,0.85)';
-  ctx.beginPath();
-  ctx.moveTo(s.x, s.y + facing * r * 1.35);
-  ctx.lineTo(s.x - 4, s.y + facing * r * 0.95);
-  ctx.lineTo(s.x + 4, s.y + facing * r * 0.95);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = 'rgba(0,0,0,0.48)';
-  ctx.beginPath();
-  ctx.arc(s.x + r * 0.72, s.y + r * 0.20, r * 0.36, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.font = `bold ${Math.round(r * 0.48)}px sans-serif`;
-  ctx.fillStyle = THEME.gold;
-  ctx.fillText(s.level, s.x + r * 0.72, s.y + r * 0.21);
-
-  if (s.hp < s.maxHp) {
-    const bw = r * 2.25, bh = 4;
-    const bx = s.x - bw / 2, by = s.y - r - 9;
-    ctx.fillStyle = 'rgba(0,0,0,0.58)';
-    roundRect(bx, by, bw, bh, 2);
-    ctx.fill();
-    ctx.fillStyle = s.hp / s.maxHp > 0.5 ? THEME.safe : s.hp / s.maxHp > 0.25 ? '#ffd24a' : '#ff5a3a';
-    roundRect(bx, by, bw * clamp01(s.hp / s.maxHp), bh, 2);
-    ctx.fill();
-  }
+  drawBattleUnitHpV48(s, s.x, drawY - r - 12, Math.max(28, r * 1.95));
 
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
+}
+
+function drawBattleUnitHpV48(s, x, y, w) {
+  const st = battleUnitStyleV48(s.side);
+  const ratio = clamp01(s.hp / Math.max(1, s.maxHp));
+  ctx.fillStyle = 'rgba(0,0,0,0.56)';
+  roundRect(x - w / 2, y, w, 5, 3);
+  ctx.fill();
+  ctx.fillStyle = st.hp;
+  roundRect(x - w / 2 + 1, y + 1, Math.max(2, (w - 2) * ratio), 3, 2);
+  ctx.fill();
+  if ((s.shield || 0) > 0) {
+    const sr = clamp01(s.shield / Math.max(1, s.maxShield || s.maxHp * 0.45));
+    ctx.fillStyle = '#72c4ff';
+    roundRect(x - w / 2, y - 4, w * sr, 3, 2);
+    ctx.fill();
+  }
 }
