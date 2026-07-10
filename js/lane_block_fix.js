@@ -29,6 +29,7 @@
     let bestScore = Infinity;
     for (const e of enemies) {
       if (!isCombatant(e)) continue;
+      if (typeof isInvisible === 'function' && isInvisible(e)) continue; // 隐身单位不被锁定
       ensureLane(e);
       const laneDiff = Math.abs(e.laneIndex - s.laneIndex);
       if (laneDiff > 1) continue;

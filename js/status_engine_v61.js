@@ -35,6 +35,7 @@ function ensureStatusEffects(s) {
     stunned:    { timer: 0 },
     armorBreak: { timer: 0, value: 0 },
     invisible:  { timer: 0 },
+    weakened:   { timer: 0, atkFull: 0 }, // 哈密瓜:降低目标 ATK
   };
 }
 
@@ -74,6 +75,15 @@ function tickStatus(s, dt) {
   // --- armor break timer ---
   if (se.armorBreak.timer > 0) se.armorBreak.timer = Math.max(0, se.armorBreak.timer - dt);
 
+  // --- weakened timer ---
+  if (se.weakened.timer > 0) {
+    se.weakened.timer = Math.max(0, se.weakened.timer - dt);
+    if (se.weakened.timer <= 0 && se.weakened.atkFull > 0) {
+      s.atk = se.weakened.atkFull;
+      se.weakened.atkFull = 0;
+    }
+  }
+
   // --- invisible timer ---
   if (se.invisible.timer > 0) se.invisible.timer = Math.max(0, se.invisible.timer - dt);
 }
@@ -103,6 +113,11 @@ function applyStatus(target, source, type, duration, opts = {}) {
       break;
     case 'stunned':
       se.stunned.timer = Math.max(se.stunned.timer || 0, duration);
+      break;
+    case 'weakened':
+      if (se.weakened.timer <= 0) se.weakened.atkFull = target.atk; // snapshot
+      se.weakened.timer = Math.max(se.weakened.timer || 0, duration);
+      target.atk = Math.round((se.weakened.atkFull || target.atk) * 0.85);
       break;
     case 'invisible':
       se.invisible.timer = Math.max(se.invisible.timer || 0, duration);
@@ -163,7 +178,15 @@ function migrateOldStatus(s) {
     if (state.phase === 'playing') {
       // migrate old fields for any soldier that hasn't been touched yet
       const all = [...state.playerSoldiers, ...state.enemySoldiers];
-      for (const s of all) { migrateOldStatus(s); tickStatus(s, dt_global); }
+      for (const s of all) {
+        migrateOldStatus(s);
+        // 橄榄刺客 Lv4+:出场进入战场后 3s 隐身(只触发一次)
+        if (s.type === 'olive_assassin' && (s.level || 1) >= 4 && s.battleReady && !s._stealthApplied) {
+          s._stealthApplied = true;
+          applyStatus(s, s, 'invisible', 3.0);
+        }
+        tickStatus(s, dt_global);
+      }
     }
     return oldUpdateCombat();
   };
@@ -210,6 +233,11 @@ function migrateOldStatus(s) {
   const oldApplyDamage = applyFruitDamage;
   applyFruitDamage = function applyFruitDamageV61(target, raw, source) {
     migrateOldStatus(target);
+    // 牛油果力士 Lv4+:受击 30% 概率免疫本次伤害
+    if (target.type === 'avocado_brawler' && (target.level || 1) >= 4 && Math.random() < 0.3) {
+      if (typeof addFx === 'function') addFx(target.x, target.y - 18, '免疫', '#dfe7ff', 11);
+      return 0;
+    }
     // add status armor penalty before old function runs
     const penalty = statusArmorPenalty(target);
     if (penalty > 0) target.armor = Math.max(0, (target.armor || 0) - penalty);
@@ -217,13 +245,16 @@ function migrateOldStatus(s) {
     // restore armor (old function already used the reduced value)
     if (penalty > 0) target.armor += penalty;
 
-    // on-hit status application — design skills for the current roster
-    // (source.firstHit is still true here; v15/skill layer clears it after applyFruitDamage)
-    if (source && source.firstHit && target.alive) {
-      if (source.type === 'banana_raider' && (source.level || 1) >= 3) {
-        applyStatus(target, source, 'stunned', 0.5); // 香蕉 Lv3+ 首击眩晕
-      } else if (source.type === 'lemon_assassin') {
-        applyStatus(target, source, 'burning', 2.0); // 柠檬 首击暴击附带点燃
+    if (source && target.alive) {
+      const lv = source.level || 1;
+      // 每次攻击都触发的
+      if (source.type === 'dragonfruit_warrior' && lv >= 4) applyStatus(target, source, 'burning', 2.0);          // 火龙果:点燃
+      else if (source.type === 'melon_shaman' && Math.random() < 0.5) applyStatus(target, source, 'weakened', 2.0); // 哈密瓜:削弱ATK
+      // 仅首击触发的
+      if (source.firstHit) {
+        if (source.type === 'banana_raider' && lv >= 3) applyStatus(target, source, 'stunned', 0.5);              // 香蕉:首击眩晕
+        else if (source.type === 'lemon_assassin') applyStatus(target, source, 'burning', 2.0);                   // 柠檬:首击点燃
+        else if (source.type === 'strawberry_knight' && lv >= 4) applyStatus(target, source, 'knockback', 0, { distance: 60 }); // 草莓:冲锋击退
       }
     }
     return result;
@@ -231,14 +262,15 @@ function migrateOldStatus(s) {
   applyFruitDamage._statusV61 = true;
 })();
 
-/* hook E: invisible blocks targeting (Phase 0 concept) */
+/* hook E: invisible blocks being targeted (only targeting, NOT the unit's own agency).
+   Wrap canSeeTarget (used by findTarget/sticky) — invisible enemies are unseeable.
+   isCombatant is intentionally NOT wrapped, so an invisible unit still acts/attacks. */
 (function installStatusInvisTarget() {
-  if (typeof isCombatant !== 'function' || isCombatant._statusV61) return;
-  const oldIsCombatant = isCombatant;
-  isCombatant = function isCombatantV61(s) {
-    if (!oldIsCombatant(s)) return false;
-    if (isInvisible(s)) return false; // invisible units are not valid targets
-    return true;
+  if (typeof canSeeTarget !== 'function' || canSeeTarget._statusV61) return;
+  const oldCanSee = canSeeTarget;
+  canSeeTarget = function canSeeTargetV61(s, e) {
+    if (isInvisible(e)) return false;
+    return oldCanSee(s, e);
   };
-  isCombatant._statusV61 = true;
+  canSeeTarget._statusV61 = true;
 })();

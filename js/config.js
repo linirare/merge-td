@@ -57,6 +57,22 @@ const TYPES = {
   peach_medic:      { id:'peach_medic',      name:'蜜桃医师', icon:'🍑', color:'#ff9fbd', rarity:'rare',   role:'support', range:'support', atk:4,  hp:32, speed:1.65, move:70,  siege:0.40, armor:1,  tags:['support','heal'], desc:'周期治疗同路前排。怕突击切入。', skill:'heal' },
   kiwi_wildcard:    { id:'kiwi_wildcard',    name:'奇异果万能', icon:'🥝', color:'#8bd34e', rarity:'epic',   role:'merge',   range:'support', atk:2,  hp:24, speed:1.80, move:62,  siege:0.20, armor:0,  tags:['merge','wildcard'], desc:'同星万能合成材料。合成辅助，不派兵。', skill:'wildcard' },
   passion_copy:     { id:'passion_copy',     name:'百香果复制', icon:'🟣', color:'#b85cff', rarity:'epic',   role:'merge',   range:'support', atk:2,  hp:24, speed:1.80, move:62,  siege:0.20, armor:0,  tags:['merge','copy'], desc:'拖到同星目标上复制成目标水果。合成辅助，不派兵。', skill:'copy' },
+
+  /* ——— Phase 4: 7 个新增战斗英雄 ——— */
+  strawberry_knight:{ id:'strawberry_knight',name:'草莓骑士', icon:'🍓', color:'#ff4d5a', rarity:'rare',   role:'tank',    range:'melee', atk:9,  hp:74, speed:1.40, move:80,  siege:0.85, armor:14, tags:['tank','charge'], desc:'Lv4+ 首次接战冲锋60px+击退。', skill:'charge' },
+  avocado_brawler:  { id:'avocado_brawler',  name:'牛油果力士', icon:'🥑', color:'#8fa64a', rarity:'rare',   role:'tank',    range:'melee', atk:5,  hp:96, speed:1.65, move:68,  siege:0.70, armor:18, tags:['tank','immune'], desc:'Lv4+ 受击30%概率免疫伤害。', skill:'immune' },
+  dragonfruit_warrior:{id:'dragonfruit_warrior',name:'火龙果战士',icon:'🐉',color:'#ff3b6e',rarity:'rare', role:'front',   range:'mid',   atk:13, hp:44, speed:1.10, move:88,  siege:0.90, armor:5,  tags:['front','burn'], desc:'Lv4+ 攻击附带点燃(3伤害/s,2s)。', skill:'burn' },
+  olive_assassin:   { id:'olive_assassin',   name:'橄榄刺客', icon:'🫒', color:'#8a9a5b', rarity:'epic',   role:'rush',    range:'melee', atk:19, hp:22, speed:0.96, move:125, siege:0.78, armor:0,  tags:['rush','stealth'], desc:'Lv4+ 出场3s隐身，首击暴击×2.5。', skill:'stealth' },
+  mango_arbalest:   { id:'mango_arbalest',   name:'芒果弩手', icon:'🥭', color:'#ffbd43', rarity:'rare',   role:'back',    range:'long',  atk:8,  hp:30, speed:0.55, move:68,  siege:0.92, armor:1,  tags:['back','rapid'], desc:'攻速0.55s，全游戏最快。', skill:'rapid' },
+  cherry_bomber:    { id:'cherry_bomber',    name:'樱桃炸弹', icon:'🍒', color:'#d44155', rarity:'rare',   role:'back',    range:'far',   atk:14, hp:26, speed:1.55, move:74,  siege:0.88, armor:1,  tags:['back','aoe'], desc:'Lv4+ 每5次攻击投掷范围炸弹。', skill:'aoe' },
+  melon_shaman:     { id:'melon_shaman',     name:'哈密瓜萨满', icon:'🍈', color:'#c8e670', rarity:'rare',   role:'control', range:'far',   atk:6,  hp:29, speed:1.40, move:68,  siege:0.65, armor:1,  tags:['control','weaken'], desc:'攻击概率减敌ATK×0.85,2s。', skill:'weaken' },
+
+  /* ——— Phase 4: 5 个辅助球(经济型,role=support+econ) ——— */
+  mint_supply:      { id:'mint_supply',      name:'薄荷补给球', icon:'🌿', color:'#7ed6a0', rarity:'rare',   role:'support',range:'support',atk:3,  hp:28, speed:1.55, move:60,  siege:0.12, armor:2,  tags:['econ','sp_regen'], desc:'在场时自然回复提速→4s, Lv4→3.5s, Lv7→3s。', skill:'sp_regen' },
+  shock_lemon:      { id:'shock_lemon',      name:'电击柠檬球', icon:'⚡', color:'#ffe76a', rarity:'rare',   role:'support',range:'support',atk:5,  hp:24, speed:1.45, move:58,  siege:0.10, armor:1,  tags:['econ','kill_sp'], desc:'击杀敌方额外+SP: Lv1+1, Lv4+2, Lv7+3+攻速。', skill:'kill_sp' },
+  honey_save:       { id:'honey_save',       name:'蜂蜜储蓄球', icon:'🍯', color:'#f5b642', rarity:'rare',   role:'support',range:'support',atk:4,  hp:30, speed:1.50, move:60,  siege:0.10, armor:2,  tags:['econ','sp_refund'], desc:'操作后返还SP: Lv1+1, Lv4+2, Lv7+3(8s CD)。', skill:'sp_refund' },
+  ferment_grape:    { id:'ferment_grape',    name:'发酵葡萄球', icon:'🍷', color:'#b86bce', rarity:'epic',   role:'support',range:'support',atk:0,  hp:22, speed:1.35, move:55,  siege:0.05, armor:0,  tags:['econ','sp_bank'], desc:'每15s产1SP,死亡吐出累计值(上限15), Lv4 12s, Lv7+额外5。', skill:'sp_bank' },
+  chill_juice:      { id:'chill_juice',      name:'冰镇果汁球', icon:'🧊', color:'#9be7ff', rarity:'epic',   role:'support',range:'support',atk:3,  hp:26, speed:1.50, move:56,  siege:0.05, armor:1,  tags:['econ','sp_discount'], desc:'每20s下一次操作消耗减半, Lv4 15s, Lv7 免费。', skill:'sp_discount' },
 };
 
 const UNIT_POOL = Object.keys(TYPES);
@@ -67,11 +83,16 @@ const TYPE_IDS = UNIT_POOL;
 const BASIC_UNLOCKED = DEFAULT_DECK.slice();
 const PROGRESS_UNLOCKS = [
   { level: 2, ids: ['coconut_guard'] },
-  { level: 3, ids: ['peach_medic','pear_frost'] },
+  { level: 3, ids: ['peach_medic','pear_frost','mint_supply'] },
   { level: 4, ids: ['blueberry_sniper','lemon_assassin'] },
-  { level: 5, ids: ['pumpkin_roller'] },
-  { level: 6, ids: ['kiwi_wildcard'] },
-  { level: 8, ids: ['passion_copy'] },
+  { level: 5, ids: ['pumpkin_roller','shock_lemon'] },
+  { level: 6, ids: ['kiwi_wildcard','mango_arbalest'] },
+  { level: 7, ids: ['dragonfruit_warrior','cherry_bomber'] },
+  { level: 8, ids: ['passion_copy','olive_assassin','melon_shaman'] },
+  { level: 9, ids: ['strawberry_knight','honey_save'] },
+  { level: 10, ids: ['avocado_brawler'] },
+  { level: 12, ids: ['ferment_grape'] },
+  { level: 14, ids: ['chill_juice'] },
 ];
 function unlockLevelFor(id) {
   if (BASIC_UNLOCKED.includes(id)) return 1;

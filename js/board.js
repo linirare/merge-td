@@ -24,7 +24,7 @@ function emptySlots(slots) {
 }
 
 /* ——— 随机池：玩家只从5个上阵水果中刷；敌人用战斗池，不用合成辅助球 ——— */
-const ENEMY_POOL = ['watermelon_guard','coconut_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon','pumpkin_roller','pear_frost'];
+const ENEMY_POOL = ['watermelon_guard','coconut_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon','pumpkin_roller','pear_frost','strawberry_knight','avocado_brawler','dragonfruit_warrior','olive_assassin','mango_arbalest','cherry_bomber','melon_shaman'];
 function randomType(pool = null) {
   const list = pool || activeDeck();
   return list[Math.floor(Math.random() * list.length)] || DEFAULT_DECK[0];

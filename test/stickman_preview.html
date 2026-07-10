@@ -11,7 +11,7 @@ canvas{display:block;margin:0 auto;border-radius:8px;background:#ede8d5}
 <body>
 <h1>水果突击 · 火柴人渲染器 v60 预览</h1>
 <p class="sub">每种水果三个等级(Lv1/2/3,越高越大)。红边=敌方朝向,绿边=我方朝向;Lv3 展示攻击姿态。直接双击本文件即可在浏览器打开。</p>
-<canvas id="c" width="1040" height="1060"></canvas>
+<canvas id="c" width="1040" height="1560"></canvas>
 <!-- 真渲染器:定义 drawStickmanShape / stickWeaponForRole,IIFE 因无 drawSoldier 自动空转 -->
 <script src="../js/stickman_render_v60.js"></script>
 <script>
@@ -30,6 +30,19 @@ const FRUITS = [
   { icon:'🍑', name:'蜜桃医师', color:'#ff9fbd', role:'support' },
   { icon:'🥝', name:'奇异果',   color:'#8bd34e', role:'merge' },
   { icon:'🟣', name:'百香果',   color:'#b85cff', role:'merge' },
+  // Phase 4 新增
+  { icon:'🍓', name:'草莓骑士', color:'#ff4d5a', role:'tank' },
+  { icon:'🥑', name:'牛油果力士', color:'#8fa64a', role:'tank' },
+  { icon:'🐉', name:'火龙果战士', color:'#ff3b6e', role:'front' },
+  { icon:'🫒', name:'橄榄刺客', color:'#8a9a5b', role:'rush' },
+  { icon:'🥭', name:'芒果弩手', color:'#ffbd43', role:'back' },
+  { icon:'🍒', name:'樱桃炸弹', color:'#d44155', role:'back' },
+  { icon:'🍈', name:'哈密瓜萨满', color:'#c8e670', role:'control' },
+  { icon:'🌿', name:'薄荷补给球', color:'#7ed6a0', role:'support' },
+  { icon:'⚡', name:'电击柠檬球', color:'#ffe76a', role:'support' },
+  { icon:'🍯', name:'蜂蜜储蓄球', color:'#f5b642', role:'support' },
+  { icon:'🍷', name:'发酵葡萄球', color:'#b86bce', role:'support' },
+  { icon:'🧊', name:'冰镇果汁球', color:'#9be7ff', role:'support' },
 ];
 
 const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
