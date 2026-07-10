@@ -1,6 +1,6 @@
 /* ============================================================
-   水果突击 · Fruit Assault —— Final HUD Skin v49
-   职责：关卡信息、基础 HUD、速度/帮助/暂停按钮。战场内不再显示阶段提示/读秒覆盖。
+   水果突击 · Fruit Assault —— Final HUD Skin v51
+   职责：顶部状态、操作资源条、速度/帮助/暂停按钮。战场内保持干净。
    ============================================================ */
 
 function drawInfo() {
@@ -18,41 +18,57 @@ function drawInfo() {
 
 function drawHUD() {
   if (state.phase !== 'playing' && state.phase !== 'paused') return;
-  const pCount = state.playerSoldiers.filter(s => s.alive).length;
-  const eCount = state.enemySoldiers.filter(s => s.alive).length;
-  const total = pCount + eCount || 1;
   const spMax = typeof getSpMax === 'function' ? getSpMax(meta) : SP_MAX;
   const recoverCap = typeof getSpRecoverCap === 'function' ? getSpRecoverCap(meta) : 6;
+  drawOperationResourceStripV51(spMax, recoverCap);
+}
 
-  // 果汁信息放左下，作为操作资源提示；不再放战斗阶段/读秒提示。
-  drawPanel(10, LAYOUT.fieldY + LAYOUT.fieldH - 40, 132, 32, 13, 'rgba(255,255,255,0.72)', 'rgba(83,201,106,0.20)');
-  ctx.font = 'bold 12px sans-serif';
+function drawOperationResourceStripV51(spMax, recoverCap) {
+  const y = LAYOUT.operationY || (LAYOUT.playerWallY + LAYOUT.wallH + 16);
+  const x = BOARD_X;
+  const h = 30;
+  const w = BOARD_W;
+
+  ctx.save();
+  ctx.globalAlpha = 0.96;
+  drawPanel(x, y, w, h, 14, 'rgba(255,253,238,0.76)', 'rgba(255,201,60,0.42)');
+
   ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = '900 12px sans-serif';
   ctx.fillStyle = state.sp > 0 ? '#f39200' : '#a1b786';
-  ctx.fillText(`果汁 ⚡ ${state.sp}/${spMax}`, 20, LAYOUT.fieldY + LAYOUT.fieldH - 21);
+  ctx.fillText(`果汁 ⚡ ${state.sp}/${spMax}`, x + 14, y + 12);
+
   ctx.font = '9px sans-serif';
   ctx.fillStyle = THEME.textDim;
-  ctx.fillText(`自动回复至 ${recoverCap}`, 20, LAYOUT.fieldY + LAYOUT.fieldH - 10);
+  ctx.fillText(`自动回复至 ${recoverCap}`, x + 14, y + 23);
 
-  // 兵数对比保留为底部极简比例条，不展示“交战期/攻城期”等阶段文字。
-  const barW = 116, barH = 8;
-  const bx = W / 2 - barW / 2, by = LAYOUT.fieldY + LAYOUT.fieldH - 28;
-  ctx.fillStyle = 'rgba(255,255,255,0.62)';
-  roundRect(bx, by, barW, barH, 4);
-  ctx.fill();
-  ctx.fillStyle = THEME.safe;
-  roundRect(bx, by, barW * (pCount / total), barH, 4);
-  ctx.fill();
-  ctx.fillStyle = THEME.accent;
-  roundRect(bx + barW * (pCount / total), by, barW * (eCount / total), barH, 4);
-  ctx.fill();
-  ctx.font = '10px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillStyle = THEME.safe;
-  ctx.fillText(`水果 ${pCount}`, bx, by - 4);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = THEME.accent;
-  ctx.fillText(`${eCount} 腐坏`, bx + barW, by - 4);
+  const mergeHint = findMergeHintV51();
+  if (mergeHint) {
+    ctx.textAlign = 'center';
+    ctx.font = '900 12px sans-serif';
+    ctx.fillStyle = '#e6a600';
+    ctx.fillText('可以合成升级', x + w * 0.62, y + 11);
+    ctx.font = '9px sans-serif';
+    ctx.fillStyle = '#7e874e';
+    ctx.fillText(`拖拽两个 Lv.${mergeHint.level} ${TYPES[mergeHint.type]?.name || '水果营'}合成`, x + w * 0.62, y + 23);
+  }
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+}
+
+function findMergeHintV51() {
+  const seen = {};
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const b = state.playerSlots?.[r]?.[c];
+      if (!b || b.level >= MAX_LEVEL) continue;
+      const key = `${b.type}|${b.level}`;
+      seen[key] = (seen[key] || 0) + 1;
+      if (seen[key] >= 2) return { type: b.type, level: b.level };
+    }
+  }
+  return null;
 }
 
 function drawSpeedBtn() {
