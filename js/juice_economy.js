@@ -1,11 +1,11 @@
 /* ============================================================
-   水果突击 · Juice Economy v54
+   水果突击 · Juice Economy v59
    果汁闭环：无上限 / 开局10点 / 每5秒+1 / 击杀返还等级 / 主动行动递增成本。
-   只接管局内经济与输入成本，不覆盖战场视觉。
+   v59：只做轻反馈，不再制造战场遮挡；果汁栏闪烁由 state._juicePulse 驱动。
    ============================================================ */
-(function installJuiceEconomyV54() {
-  if (window.__juiceEconomyV54Installed) return;
-  window.__juiceEconomyV54Installed = true;
+(function installJuiceEconomyV59() {
+  if (window.__juiceEconomyV59Installed) return;
+  window.__juiceEconomyV59Installed = true;
 
   const JUICE_PASSIVE_INTERVAL = 5.0;
   const ENEMY_ACTION_INTERVAL = 4.0;
@@ -22,23 +22,30 @@
     return state.enemySummonCostCounter;
   }
 
+  function pulseJuice(delta = 0, kind = 'info') {
+    if (!state) return;
+    state._juicePulse = 0.50;
+    state._juiceDelta = delta;
+    state._juicePulseKind = kind;
+  }
+
   window.nextJuiceActionCost = actionCost;
 
-  if (typeof getSpStart === 'function' && !getSpStart._juiceV54) {
-    getSpStart = function getJuiceStartV54(m) {
+  if (typeof getSpStart === 'function' && !getSpStart._juiceV59) {
+    getSpStart = function getJuiceStartV59(m) {
       return 10 + Math.floor(((m && m.spLv) || 0) / 2);
     };
-    getSpStart._juiceV54 = true;
+    getSpStart._juiceV59 = true;
   }
 
-  if (typeof getSpMax === 'function' && !getSpMax._juiceV54) {
-    getSpMax = function getJuiceMaxV54() { return Infinity; };
-    getSpMax._juiceV54 = true;
+  if (typeof getSpMax === 'function' && !getSpMax._juiceV59) {
+    getSpMax = function getJuiceMaxV59() { return Infinity; };
+    getSpMax._juiceV59 = true;
   }
 
-  if (typeof getSpRecoverCap === 'function' && !getSpRecoverCap._juiceV54) {
-    getSpRecoverCap = function getJuiceRecoverCapV54() { return Infinity; };
-    getSpRecoverCap._juiceV54 = true;
+  if (typeof getSpRecoverCap === 'function' && !getSpRecoverCap._juiceV59) {
+    getSpRecoverCap = function getJuiceRecoverCapV59() { return Infinity; };
+    getSpRecoverCap._juiceV59 = true;
   }
 
   function resetJuiceEconomyForLevel() {
@@ -51,21 +58,24 @@
     state.enemySpCheckTimer = 0;
     state._spTimer = 0;
     state.enemyBallTimer = 0;
+    state._juicePulse = 0;
+    state._juiceDelta = 0;
+    state._juicePulseKind = 'info';
   }
 
-  if (typeof initLevel === 'function' && !initLevel._juiceV54) {
+  if (typeof initLevel === 'function' && !initLevel._juiceV59) {
     const oldInitLevel = initLevel;
-    initLevel = function initLevelWithJuiceEconomyV54(k) {
+    initLevel = function initLevelWithJuiceEconomyV59(k) {
       const result = oldInitLevel(k);
       resetJuiceEconomyForLevel();
       return result;
     };
-    initLevel._juiceV54 = true;
+    initLevel._juiceV59 = true;
   }
 
-  if (typeof killSoldier === 'function' && !killSoldier._juiceV54) {
+  if (typeof killSoldier === 'function' && !killSoldier._juiceV59) {
     const oldKillSoldier = killSoldier;
-    killSoldier = function killSoldierWithJuiceRewardV54(target, killerSide, killerAtk, killerType) {
+    killSoldier = function killSoldierWithJuiceRewardV59(target, killerSide, killerAtk, killerType) {
       const wasAlive = !!(target && target.alive);
       const reward = Math.max(1, Math.min(MAX_LEVEL || 7, Number(target && target.level) || 1));
       const oldPlayerSp = state.sp || 0;
@@ -74,14 +84,15 @@
       if (wasAlive && target && !target.alive) {
         if (killerSide === 'player') {
           state.sp = oldPlayerSp + reward;
-          addFx(target.x, target.y - 20, `+${reward}果汁`, THEME.gold, 11);
+          pulseJuice(reward, 'gain');
+          addFx(target.x, target.y - 18, `+${reward}果汁`, THEME.gold, 10);
         } else if (killerSide === 'enemy') {
           state.enemySp = oldEnemySp + reward;
         }
       }
       return result;
     };
-    killSoldier._juiceV54 = true;
+    killSoldier._juiceV59 = true;
   }
 
   function enemySpawnLevel() {
@@ -103,12 +114,14 @@
 
   function updateJuiceTimers(dt) {
     if (!state || state.phase !== 'playing') return;
+    state._juicePulse = Math.max(0, Number(state._juicePulse || 0) - dt);
 
     state._juicePlayerTimer = (state._juicePlayerTimer || 0) + dt;
     while (state._juicePlayerTimer >= JUICE_PASSIVE_INTERVAL) {
       state._juicePlayerTimer -= JUICE_PASSIVE_INTERVAL;
       state.sp = (state.sp || 0) + 1;
-      addFx(42, LAYOUT.fieldY + LAYOUT.fieldH - 46, '+1果汁', THEME.gold, 11);
+      pulseJuice(1, 'gain');
+      addFx(BOARD_X + 38, (LAYOUT.operationY || 570) - 6, '+1果汁', THEME.gold, 10);
     }
 
     state._juiceEnemyTimer = (state._juiceEnemyTimer || 0) + dt;
@@ -124,9 +137,9 @@
     }
   }
 
-  if (typeof update === 'function' && !update._juiceV54) {
+  if (typeof update === 'function' && !update._juiceV59) {
     const oldUpdate = update;
-    update = function updateWithJuiceEconomyV54(dt) {
+    update = function updateWithJuiceEconomyV59(dt) {
       if (state && state.phase === 'playing') {
         const oldSpTimer = state._spTimer;
         const oldEnemyBallTimer = state.enemyBallTimer;
@@ -141,15 +154,16 @@
         oldUpdate(dt);
       }
     };
-    update._juiceV54 = true;
+    update._juiceV59 = true;
   }
 
-  function summonFruitAtV54(r, c) {
+  function summonFruitAtV59(r, c) {
     if (!state || !state.playerSlots || state.playerSlots[r][c]) return false;
     const center = slotCenter(r, c, false);
     const cost = actionCost();
     if ((state.sp || 0) < cost) {
-      addFx(center.x, center.y - 22, `果汁不足 · 需要${cost}`, THEME.accent, 13);
+      pulseJuice(0, 'lack');
+      addFx(center.x, center.y - 22, `果汁不足 · 需${cost}`, THEME.accent, 11);
       return false;
     }
 
@@ -164,15 +178,16 @@
     state.sp -= cost;
     state.summonCount = (state.summonCount || 0) + 1;
     state.summonCostCounter = cost + 1;
+    pulseJuice(-cost, 'spend');
 
     const t = TYPES[type];
     state.rings.push({ x: center.x, y: center.y, r: 9, life: 0.36, maxLife: 0.36, color: t.color || THEME.gold });
-    addFx(center.x, center.y - 24, `果汁 -${cost} · 召唤${t.icon}`, THEME.gold, 13);
+    addFx(center.x, center.y - 24, `-${cost} 果汁`, THEME.gold, 11);
     playSfx('merge');
     return true;
   }
 
-  summonFruitAt = summonFruitAtV54;
+  summonFruitAt = summonFruitAtV59;
 
   let juiceLastTap = { time: 0, r: -1, c: -1 };
 
@@ -209,7 +224,7 @@
 
     if (!ball) {
       juiceLastTap.time = 0;
-      summonFruitAtV54(r, c);
+      summonFruitAtV59(r, c);
       return;
     }
 
@@ -219,19 +234,21 @@
       const center = slotCenter(r, c, false);
       const cost = actionCost();
       if ((state.sp || 0) < cost) {
-        addFx(center.x, center.y - 24, `果汁不足 · 需要${cost}`, THEME.accent, 13);
+        pulseJuice(0, 'lack');
+        addFx(center.x, center.y - 24, `果汁不足 · 需${cost}`, THEME.accent, 11);
       } else if (alive >= MAX_SOLDIERS) {
-        addFx(center.x, center.y - 24, '兵数已满', THEME.accent, 13);
+        addFx(center.x, center.y - 24, '兵数已满', THEME.accent, 11);
       } else {
         const soldier = spawnSoldierFromBall(ball, r, c, 'player', true);
         if (soldier) {
           state.sp -= cost;
           state.summonCostCounter = cost + 1;
           ball.spawnTimer = Math.max(ball.spawnTimer || 0, 1.2);
+          pulseJuice(-cost, 'spend');
           state.rings.push({ x: center.x, y: center.y, r: 8, life: 0.34, maxLife: 0.34, color: THEME.gold });
-          addFx(center.x, center.y - 24, `果汁 -${cost} · 急派兵!`, THEME.gold, 13);
+          addFx(center.x, center.y - 24, `-${cost} 果汁 · 急派`, THEME.gold, 11);
         } else {
-          addFx(center.x, center.y - 24, '无法派兵', THEME.accent, 13);
+          addFx(center.x, center.y - 24, '无法派兵', THEME.accent, 11);
         }
       }
       juiceLastTap.time = 0;
