@@ -1,14 +1,16 @@
 /* ============================================================
-   水果突击 · Product Shell v52
-   干净产品外壳：关卡选择 / 底部导航 / 商城抽卡 / 天梯。
-   只做 DOM 产品层，不覆盖 Canvas 战场绘制，不引入旧视觉补丁。
+   水果突击 · Product Shell v53
+   产品闭环：关卡选择 / 底部导航 / 商城抽卡 / 碎片初始等级 / 天梯。
+   只做 DOM 产品层和成长系统，不覆盖 Canvas 战场视觉。
    ============================================================ */
-(function installProductShellV52() {
+(function installProductShellV53() {
   const SHELL_KEY = 'merge_td_product_shell_v1';
   const DAILY_GOLD = 50;
   const DAILY_GEMS = 5;
   const GACHA_COST_1 = 5;
   const GACHA_COST_10 = 45;
+  const INIT_MAX = 4;
+  const INIT_COST = { 1: 3, 2: 10, 3: 25 };
 
   const tabs = [
     { id: 'battle', icon: '⚔️', label: '战斗' },
@@ -27,7 +29,7 @@
   }
 
   function loadShell() {
-    const base = { gems: 0, fragments: {}, ladderBest: 0, lastDaily: '' };
+    const base = { gems: 0, fragments: {}, fruitLv: {}, ladderBest: 0, lastDaily: '' };
     try {
       const raw = localStorage.getItem(SHELL_KEY);
       if (raw) return Object.assign(base, JSON.parse(raw));
@@ -37,6 +39,40 @@
 
   function saveShell() {
     try { localStorage.setItem(SHELL_KEY, JSON.stringify(shell)); } catch (e) {}
+  }
+
+  function ensureShellData() {
+    shell.gems = Number(shell.gems || 0);
+    shell.fragments = shell.fragments || {};
+    shell.fruitLv = shell.fruitLv || {};
+    for (const id of UNIT_POOL) {
+      if (!shell.fragments[id]) shell.fragments[id] = 0;
+      if (!shell.fruitLv[id]) shell.fruitLv[id] = 1;
+    }
+    saveShell();
+  }
+
+  function saveAll() {
+    saveShell();
+    if (typeof saveMeta === 'function') saveMeta();
+  }
+
+  function initLv(id) {
+    id = normalizeTypeId(id);
+    return Math.max(1, Math.min(INIT_MAX, Number(shell.fruitLv?.[id] || 1)));
+  }
+
+  function initUpgradeCost(id) {
+    const lv = initLv(id);
+    return lv >= INIT_MAX ? Infinity : INIT_COST[lv] || Infinity;
+  }
+
+  function applyInitLevel(id, level) {
+    return Math.max(level || 1, initLv(id));
+  }
+
+  function isUnlocked(id) {
+    return Array.isArray(meta.unlocked) && meta.unlocked.includes(id);
   }
 
   function injectStyle() {
@@ -52,8 +88,77 @@
       .stage-grid{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 8px;max-height:236px;overflow:auto;padding:2px 2px 4px}
       .stage-card{border:1px solid rgba(92,180,82,.22);background:rgba(255,255,255,.56);border-radius:14px;min-height:58px;color:#416329;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;box-shadow:inset 0 -2px 0 rgba(87,166,72,.12)}
       .stage-card small{font-size:10px;color:#83a061;font-weight:800}.stage-card.current{border-color:#ffcf52;background:linear-gradient(180deg,#fff6be,#e9ffc7)}.stage-card.locked{opacity:.42;filter:grayscale(.35);cursor:not-allowed}.stage-card.boss{border-color:rgba(255,92,108,.42)}
-      .shell-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(255,255,255,.52);border:1px solid rgba(92,180,82,.18);border-radius:14px;padding:10px 12px;margin:8px 0;color:#416329}.shell-row b{color:#2f5f26}.shell-row small{display:block;color:#82a060;font-size:11px;margin-top:2px}.shell-price{font-weight:900;color:#e89518;white-space:nowrap}.shell-btn{border:0;border-radius:12px;background:#53c96a;color:#fff;font-weight:900;padding:8px 12px;cursor:pointer}.shell-btn:disabled,.shell-row.disabled{opacity:.46;cursor:not-allowed}.shop-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.shop-tabs button{border:0;border-radius:12px;padding:9px 0;font-weight:900;background:rgba(255,255,255,.62);color:#6e8c4e}.shop-tabs button.active{background:linear-gradient(180deg,#fff0a3,#96e98b);color:#315c25}.shell-currency{display:flex;gap:8px;justify-content:center;margin:6px 0 8px}.shell-chip{border-radius:999px;background:rgba(255,255,255,.62);padding:5px 10px;color:#416329;font-weight:900}.ladder-hero{text-align:center;background:linear-gradient(180deg,rgba(255,246,190,.82),rgba(224,255,194,.78));border:1px solid rgba(92,180,82,.22);border-radius:18px;padding:14px 12px;margin:10px 0;color:#416329}.ladder-hero b{font-size:28px;color:#e89518}.gacha-overlay{position:fixed;inset:0;background:rgba(38,62,25,.58);z-index:120;display:flex;align-items:center;justify-content:center}.gacha-box{width:min(390px,90vw);max-height:78vh;overflow:auto;background:linear-gradient(180deg,#fffbe4,#eaffc3);border-radius:22px;padding:18px;box-shadow:0 18px 45px rgba(32,70,25,.28);text-align:center}.gacha-result{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.68);border-radius:14px;padding:9px 10px;margin:7px 0;text-align:left}.gacha-result .ico{font-size:28px}.gacha-result .frag{margin-left:auto;font-weight:900}`;
+      .shell-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(255,255,255,.52);border:1px solid rgba(92,180,82,.18);border-radius:14px;padding:10px 12px;margin:8px 0;color:#416329}.shell-row b{color:#2f5f26}.shell-row small{display:block;color:#82a060;font-size:11px;margin-top:2px}.shell-btn{border:0;border-radius:12px;background:#53c96a;color:#fff;font-weight:900;padding:8px 12px;cursor:pointer;white-space:nowrap}.shell-btn:disabled,.shell-row.disabled{opacity:.46;cursor:not-allowed}.shop-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.shop-tabs button{border:0;border-radius:12px;padding:9px 0;font-weight:900;background:rgba(255,255,255,.62);color:#6e8c4e}.shop-tabs button.active{background:linear-gradient(180deg,#fff0a3,#96e98b);color:#315c25}.shell-currency{display:flex;gap:8px;justify-content:center;margin:6px 0 8px}.shell-chip{border-radius:999px;background:rgba(255,255,255,.62);padding:5px 10px;color:#416329;font-weight:900}.ladder-hero{text-align:center;background:linear-gradient(180deg,rgba(255,246,190,.82),rgba(224,255,194,.78));border:1px solid rgba(92,180,82,.22);border-radius:18px;padding:14px 12px;margin:10px 0;color:#416329}.ladder-hero b{font-size:28px;color:#e89518}.gacha-overlay{position:fixed;inset:0;background:rgba(38,62,25,.58);z-index:120;display:flex;align-items:center;justify-content:center}.gacha-box{width:min(390px,90vw);max-height:78vh;overflow:auto;background:linear-gradient(180deg,#fffbe4,#eaffc3);border-radius:22px;padding:18px;box-shadow:0 18px 45px rgba(32,70,25,.28);text-align:center}.gacha-result{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.68);border-radius:14px;padding:9px 10px;margin:7px 0;text-align:left}.gacha-result .ico{font-size:28px}.gacha-result .frag{margin-left:auto;font-weight:900}.lab-list{max-height:58vh;overflow:auto;padding-right:2px}.lab-row{align-items:flex-start}.lab-main{display:flex;gap:8px;align-items:flex-start}.lab-icon{font-size:30px;line-height:32px}.lab-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end}.deck-badge{font-size:10px;border-radius:999px;padding:2px 6px;background:rgba(255,207,82,.36);color:#8a5a09;font-weight:900}.locked-note{color:#a08060!important}`;
     document.head.appendChild(st);
+  }
+
+  function fixedStage(k) {
+    const boss = k % 5 === 0;
+    const enemyLv = Number((1 + (k - 1) * 0.18 + (boss ? 0.20 : 0)).toFixed(2));
+    const wallBase = boss ? 96 : 58;
+    const wallGrow = boss ? 1.125 : 1.088;
+    return {
+      id: k,
+      isBoss: boss,
+      enemyInitLevel: enemyLv,
+      enemyWallHp: Math.round(wallBase * Math.pow(wallGrow, k - 1)),
+      enemySpawnInterval: Math.max(4.15, 6.05 - k * 0.12),
+      reward: stageReward(k) + (boss ? 28 : 0),
+      desc: boss ? `第 ${k} 关 · 腐坏果堡Boss · 星级奖励更高` : `第 ${k} 关 · 腐坏水果 Lv${enemyLv.toFixed(1)} · 推倒果堡`,
+    };
+  }
+
+  function installSystemHooks() {
+    if (typeof generateLevel === 'function' && !generateLevel._shellStagesV53) {
+      const oldGenerate = generateLevel;
+      generateLevel = function generateLevelV53(k) {
+        if (k >= 1 && k <= 20) return fixedStage(k);
+        return oldGenerate(k);
+      };
+      generateLevel._shellStagesV53 = true;
+    }
+
+    if (typeof createBall === 'function' && !createBall._shellInitLvV53) {
+      const oldCreateBall = createBall;
+      createBall = function createBallWithInitialLevel(typeId, level = 1) {
+        const finalLevel = state && state._shellCreatingPlayerBall ? applyInitLevel(typeId, level) : level;
+        return oldCreateBall(typeId, finalLevel);
+      };
+      createBall._shellInitLvV53 = true;
+    }
+
+    if (typeof initPlayerOpening === 'function' && !initPlayerOpening._shellInitLvV53) {
+      const oldInitPlayerOpening = initPlayerOpening;
+      initPlayerOpening = function initPlayerOpeningV53(k) {
+        state._shellCreatingPlayerBall = true;
+        try { return oldInitPlayerOpening(k); }
+        finally { state._shellCreatingPlayerBall = false; }
+      };
+      initPlayerOpening._shellInitLvV53 = true;
+    }
+
+    if (typeof summonFruitAt === 'function' && !summonFruitAt._shellInitLvV53) {
+      const oldSummon = summonFruitAt;
+      summonFruitAt = function summonFruitAtV53(r, c) {
+        state._shellCreatingPlayerBall = true;
+        try { return oldSummon(r, c); }
+        finally { state._shellCreatingPlayerBall = false; }
+      };
+      summonFruitAt._shellInitLvV53 = true;
+    }
+
+    if (typeof autoSpawnBall === 'function' && !autoSpawnBall._shellInitLvV53) {
+      const oldAutoSpawn = autoSpawnBall;
+      autoSpawnBall = function autoSpawnBallV53(slots, level = 1, enemy = false) {
+        if (!enemy && slots === state.playerSlots) {
+          state._shellCreatingPlayerBall = true;
+          try { return oldAutoSpawn(slots, level, enemy); }
+          finally { state._shellCreatingPlayerBall = false; }
+        }
+        return oldAutoSpawn(slots, level, enemy);
+      };
+      autoSpawnBall._shellInitLvV53 = true;
+    }
   }
 
   function ensureStageGrid() {
@@ -97,6 +202,15 @@
     document.getElementById('shopTabPack')?.addEventListener('click', () => renderShop('pack'));
   }
 
+  function ensureLabPanel() {
+    panelHtml('shellLabPanel', 'wide', `
+      <h2>🍉 水果实验室</h2>
+      <p class="sub">抽卡碎片提升初始等级；召唤时直接以更高等级入场。</p>
+      <div class="shell-currency"><span class="shell-chip">上阵 <b id="labDeckCount">0/5</b></span><span class="shell-chip">💎 <b id="labGems">0</b></span></div>
+      <div id="shellLabList" class="lab-list"></div>
+    `);
+  }
+
   function ensureLadderPanel() {
     panelHtml('ladderPanel', '', `
       <h2>🏆 无尽天梯</h2>
@@ -109,7 +223,7 @@
   }
 
   function hidePanels() {
-    ['menuPanel', 'upgradePanel', 'shopPanel', 'ladderPanel', 'resultPanel', 'overflowPopup', 'helpPanel', 'simPanel', 'fruitLabPanel'].forEach(id => {
+    ['menuPanel', 'upgradePanel', 'shopPanel', 'ladderPanel', 'resultPanel', 'overflowPopup', 'helpPanel', 'simPanel', 'fruitLabPanel', 'shellLabPanel'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.add('hide');
     });
@@ -127,11 +241,8 @@
       renderStages(false);
       refreshAllShellNumbers();
     } else if (activeTab === 'upgrade') {
-      if (typeof openFruitLabV21 === 'function') openFruitLabV21();
-      else {
-        document.getElementById('upgradePanel')?.classList.remove('hide');
-        if (typeof renderUpgrades === 'function') renderUpgrades();
-      }
+      document.getElementById('shellLabPanel')?.classList.remove('hide');
+      renderLab();
     } else if (activeTab === 'shop') {
       document.getElementById('shopPanel')?.classList.remove('hide');
       renderShop('gacha');
@@ -173,7 +284,7 @@
     if (!expand) { grid.classList.add('hide'); return; }
     grid.classList.remove('hide');
     const highest = Math.max(1, meta.highestLevel || 1);
-    const maxShow = Math.max(12, highest + 3);
+    const maxShow = Math.max(20, highest + 3);
     grid.innerHTML = '';
     for (let lv = 1; lv <= maxShow; lv++) {
       const open = lv <= highest;
@@ -199,10 +310,10 @@
 
   function refreshAllShellNumbers() {
     if (typeof refreshGold === 'function') refreshGold();
-    const g = document.getElementById('shellGold');
-    const gem = document.getElementById('shellGems');
-    if (g) g.textContent = meta.gold || 0;
-    if (gem) gem.textContent = shell.gems || 0;
+    const gold = meta.gold || 0;
+    const gems = shell.gems || 0;
+    ['shellGold'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = gold; });
+    ['shellGems','labGems'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = gems; });
   }
 
   function shopRow(name, desc, action, enabled, onClick) {
@@ -222,11 +333,11 @@
     refreshAllShellNumbers();
     list.innerHTML = '';
     if (tab === 'gacha') {
-      list.appendChild(shopRow('🎴 单抽', '随机获得水果碎片，少量概率直接解锁新水果。', GACHA_COST_1 + '💎', shell.gems >= GACHA_COST_1, () => doGacha(1)));
-      list.appendChild(shopRow('🌈 十连抽', '十次连续抽取，更适合测试碎片成长。', GACHA_COST_10 + '💎', shell.gems >= GACHA_COST_10, () => doGacha(10)));
+      list.appendChild(shopRow('🎴 单抽', '随机获得水果碎片，概率解锁新水果。', GACHA_COST_1 + '💎', shell.gems >= GACHA_COST_1, () => doGacha(1)));
+      list.appendChild(shopRow('🌈 十连抽', '十次连续抽取，九折。', GACHA_COST_10 + '💎', shell.gems >= GACHA_COST_10, () => doGacha(10)));
       const hint = document.createElement('div');
       hint.className = 'shell-row';
-      hint.innerHTML = '<div><b>概率</b><small>普通40% · 稀有30% · 史诗20% · 传说10%；重复获得转为碎片。</small></div>';
+      hint.innerHTML = '<div><b>碎片用途</b><small>抽到重复水果会获得碎片；碎片在“养成”页提升初始等级。</small></div>';
       list.appendChild(hint);
     } else {
       const claimed = shell.lastDaily === todayKey();
@@ -241,8 +352,7 @@
     shell.lastDaily = todayKey();
     shell.gems = (shell.gems || 0) + DAILY_GEMS;
     meta.gold = (meta.gold || 0) + DAILY_GOLD;
-    saveShell();
-    if (typeof saveMeta === 'function') saveMeta();
+    saveAll();
     renderShop('pack');
   }
 
@@ -258,15 +368,15 @@
       meta.wallLv = Math.min(WALL_UPGRADE_MAX, (meta.wallLv || 0) + 1);
       meta.spLv = Math.min(SP_UPGRADE_MAX, (meta.spLv || 0) + 1);
     }
-    if (typeof saveMeta === 'function') saveMeta();
+    saveAll();
     renderShop('pack');
   }
 
   const tiers = [
-    { label:'普通', weight:40, frag:1, color:'#8aad6a' },
-    { label:'稀有', weight:30, frag:2, color:'#4db6ff' },
-    { label:'史诗', weight:20, frag:3, color:'#b85cff' },
-    { label:'传说', weight:10, frag:5, color:'#ffc93c' },
+    { label:'普通', weight:40, frag:1, color:'#8aad6a', ids:['watermelon_guard','grape_archer','banana_raider','pineapple_lancer'] },
+    { label:'稀有', weight:30, frag:2, color:'#4db6ff', ids:['coconut_guard','orange_cannon','pear_frost','peach_medic'] },
+    { label:'史诗', weight:20, frag:3, color:'#b85cff', ids:['blueberry_sniper','lemon_assassin','pumpkin_roller'] },
+    { label:'传说', weight:10, frag:5, color:'#ffc93c', ids:['kiwi_wildcard','passion_copy'] },
   ];
 
   function pickTier() {
@@ -281,19 +391,18 @@
     if ((shell.gems || 0) < cost) return;
     shell.gems -= cost;
     const results = [];
-    shell.fragments = shell.fragments || {};
     meta.unlocked = Array.isArray(meta.unlocked) ? meta.unlocked : [];
     for (let i = 0; i < count; i++) {
       const tier = pickTier();
-      const id = UNIT_POOL[Math.floor(Math.random() * UNIT_POOL.length)];
+      const pool = tier.ids.filter(id => TYPES[id]) || UNIT_POOL;
+      const id = pool[Math.floor(Math.random() * pool.length)] || UNIT_POOL[0];
       const t = TYPES[id] || {};
       const isNew = !meta.unlocked.includes(id);
       if (isNew) meta.unlocked.push(id);
       shell.fragments[id] = (shell.fragments[id] || 0) + tier.frag;
       results.push({ id, icon:t.icon || '?', name:t.name || id, tier, isNew, total:shell.fragments[id] });
     }
-    saveShell();
-    if (typeof saveMeta === 'function') saveMeta();
+    saveAll();
     renderShop('gacha');
     showGachaResults(results);
   }
@@ -308,10 +417,56 @@
       const item = document.createElement('div');
       item.className = 'gacha-result';
       item.style.border = '2px solid ' + r.tier.color;
-      item.innerHTML = `<span class="ico">${r.icon}</span><div><b>${r.name}</b><small style="color:${r.tier.color};display:block;font-weight:900;">${r.tier.label}${r.isNew ? ' · 新解锁' : ''}</small></div><span class="frag">+${r.tier.frag}碎片</span>`;
+      item.innerHTML = `<span class="ico">${r.icon}</span><div><b>${r.name}</b><small style="color:${r.tier.color};display:block;font-weight:900;">${r.tier.label}${r.isNew ? ' · 新解锁' : ''}</small><small style="display:block;color:#7d9b5d;">累计 ${r.total} 碎片</small></div><span class="frag">+${r.tier.frag}</span>`;
       box.appendChild(item);
     }
     overlay.querySelector('#closeGacha').addEventListener('click', () => overlay.remove());
+  }
+
+  function renderLab() {
+    ensureShellData();
+    refreshAllShellNumbers();
+    const list = document.getElementById('shellLabList');
+    const count = document.getElementById('labDeckCount');
+    if (!list) return;
+    const deck = typeof normalizeDeck === 'function' ? normalizeDeck(meta.deck) : (meta.deck || []);
+    if (count) count.textContent = deck.length + '/5';
+    list.innerHTML = '';
+    for (const id of UNIT_POOL) {
+      const t = TYPES[id];
+      const unlocked = isUnlocked(id);
+      const lv = initLv(id);
+      const frags = shell.fragments[id] || 0;
+      const cost = initUpgradeCost(id);
+      const inDeck = deck.includes(id);
+      const row = document.createElement('div');
+      row.className = 'shell-row lab-row' + (unlocked ? '' : ' disabled');
+      const canUpgrade = unlocked && lv < INIT_MAX && frags >= cost;
+      const canDeck = unlocked && (inDeck || deck.length < DECK_SIZE);
+      row.innerHTML = `
+        <div class="lab-main"><span class="lab-icon">${t.icon}</span><div><b>${t.name} <span class="deck-badge">初始Lv.${lv}</span>${inDeck ? ' <span class="deck-badge">上阵</span>' : ''}</b><small>${roleLabel(t.role)} · ${t.desc}</small><small class="${unlocked ? '' : 'locked-note'}">${unlocked ? `碎片 ${frags}/${lv < INIT_MAX ? cost : 'MAX'} · 召唤直接 Lv.${lv}` : `第${unlockLevelFor(id)}关或抽卡解锁`}</small></div></div>
+        <div class="lab-actions"><button class="shell-btn lab-up" ${canUpgrade ? '' : 'disabled'}>${lv >= INIT_MAX ? 'MAX' : cost + '碎片升级'}</button><button class="shell-btn lab-deck" ${canDeck ? '' : 'disabled'}>${inDeck ? '下阵' : '上阵'}</button></div>`;
+      row.querySelector('.lab-up').addEventListener('click', () => {
+        if (!canUpgrade) return;
+        shell.fragments[id] -= cost;
+        shell.fruitLv[id] = Math.min(INIT_MAX, lv + 1);
+        saveAll();
+        renderLab();
+      });
+      row.querySelector('.lab-deck').addEventListener('click', () => {
+        if (!canDeck) return;
+        let next = deck.slice();
+        if (inDeck) {
+          if (next.length <= 1) return;
+          next = next.filter(x => x !== id);
+        } else if (next.length < DECK_SIZE) next.push(id);
+        meta.deck = next;
+        saveAll();
+        renderLab();
+        refreshAllShellNumbers();
+      });
+      list.appendChild(row);
+    }
   }
 
   function renderLadder() {
@@ -330,7 +485,7 @@
 
   function advanceLadderWave() {
     const nextWave = (state.endlessWave || 1) + 1;
-    const level = Math.min(50, 1 + nextWave * 2);
+    const level = Math.min(80, 20 + nextWave * 2);
     state.endless = true;
     state.endlessWave = nextWave;
     if (typeof initLevel === 'function') initLevel(level);
@@ -392,10 +547,13 @@
   }
 
   function init() {
+    ensureShellData();
+    installSystemHooks();
     injectStyle();
     ensureStageGrid();
     ensureBottomNav();
     ensureShopPanel();
+    ensureLabPanel();
     ensureLadderPanel();
     replaceStartButton();
     hookGameOver();
