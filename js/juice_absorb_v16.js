@@ -2,7 +2,6 @@
    水果突击 · Juice Absorb v16
    吸收 qiuqiu2 的爽感层：合成冲击 / 攻城冲击 / 命中顿帧 / 连击反馈。
    只增强表现，不改 SP 经济、不改星级倍率、不改伤害数值。
-   Loaded after side_identity_fix.js.
    ============================================================ */
 
 (function installJuiceAbsorbV16() {
