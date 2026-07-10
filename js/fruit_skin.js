@@ -1,6 +1,7 @@
 /* ============================================================
-   水果突击 · Fruit Assault —— Final Fruit Board Skin v48
+   水果突击 · Fruit Assault —— Final Fruit Board Skin v58
    职责：背景、棋盘、水果营。这里是最终视觉源，不再依赖 v23~v37 后置补丁。
+   v58：删除棋盘标题，避免顶部 HUD 与敌方棋盘抢层级。
    ============================================================ */
 
 function clampV48(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -70,16 +71,9 @@ function boardContainerStyleV48(isEnemy) {
 function drawBoard(slots, isEnemy, dragHint = null) {
   const by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
   const st = boardContainerStyleV48(isEnemy);
-  const title = isEnemy ? '敌方水果营' : '我方水果营';
 
-  drawPanel(BOARD_X - 10, by - 22, BOARD_W + 20, BOARD_H + 30, 17, st.fill, st.stroke);
-
-  ctx.save();
-  ctx.font = 'bold 11px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = st.title;
-  ctx.fillText(title, W / 2, by - 8);
-  ctx.restore();
+  // v58：棋盘不再画“敌方水果营 / 我方水果营”标题，避免与顶部 HUD 和操作区抢空间。
+  drawPanel(BOARD_X - 10, by - 14, BOARD_W + 20, BOARD_H + 22, 17, st.fill, st.stroke);
 
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
