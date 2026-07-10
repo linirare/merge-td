@@ -1,7 +1,7 @@
 /* ============================================================
-   水果突击 · Fruit Assault —— Final HUD Skin v54
+   水果突击 · Fruit Assault —— Final HUD Skin v55
    职责：顶部状态、操作资源条、速度/帮助/暂停按钮。战场内保持干净。
-   果汁为无上限主动资源，只显示当前值与下次行动成本。
+   果汁为无上限主动资源，只显示当前值与下次行动成本；不再显示合成提示。
    ============================================================ */
 
 function drawInfo() {
@@ -19,25 +19,25 @@ function drawInfo() {
 
 function drawHUD() {
   if (state.phase !== 'playing' && state.phase !== 'paused') return;
-  drawOperationResourceStripV54();
+  drawOperationResourceStripV55();
 }
 
-function nextActionCostV54() {
+function nextActionCostV55() {
   if (typeof nextJuiceActionCost === 'function') return nextJuiceActionCost();
   return Math.max(1, Number(state.summonCostCounter || 1));
 }
 
-function drawOperationResourceStripV54() {
+function drawOperationResourceStripV55() {
   const y = LAYOUT.operationY || (LAYOUT.playerWallY + LAYOUT.wallH + 16);
   const x = BOARD_X;
   const h = 30;
   const w = BOARD_W;
-  const cost = nextActionCostV54();
+  const cost = nextActionCostV55();
   const canAct = (state.sp || 0) >= cost;
 
   ctx.save();
   ctx.globalAlpha = 0.96;
-  drawPanel(x, y, w, h, 14, 'rgba(255,253,238,0.76)', canAct ? 'rgba(255,201,60,0.42)' : 'rgba(255,93,108,0.32)');
+  drawPanel(x, y, w, h, 14, 'rgba(255,253,238,0.78)', canAct ? 'rgba(255,201,60,0.46)' : 'rgba(255,93,108,0.34)');
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
@@ -49,32 +49,8 @@ function drawOperationResourceStripV54() {
   ctx.fillStyle = THEME.textDim;
   ctx.fillText(`下次行动 ${cost} · 每5秒+1 · 击杀返等级`, x + 14, y + 23);
 
-  const mergeHint = findMergeHintV51();
-  if (mergeHint) {
-    ctx.textAlign = 'center';
-    ctx.font = '900 12px sans-serif';
-    ctx.fillStyle = '#e6a600';
-    ctx.fillText('可以合成升级', x + w * 0.70, y + 11);
-    ctx.font = '9px sans-serif';
-    ctx.fillStyle = '#7e874e';
-    ctx.fillText(`Lv.${mergeHint.level} ${TYPES[mergeHint.type]?.name || '水果营'}`, x + w * 0.70, y + 23);
-  }
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
-}
-
-function findMergeHintV51() {
-  const seen = {};
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const b = state.playerSlots?.[r]?.[c];
-      if (!b || b.level >= MAX_LEVEL) continue;
-      const key = `${b.type}|${b.level}`;
-      seen[key] = (seen[key] || 0) + 1;
-      if (seen[key] >= 2) return { type: b.type, level: b.level };
-    }
-  }
-  return null;
 }
 
 function drawSpeedBtn() {
