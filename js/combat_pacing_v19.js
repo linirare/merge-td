@@ -130,6 +130,7 @@ function wallRoleDamageMulV19(s) {
 
 function patchFullSquadWallAttackV19() {
   if (typeof attackWall !== 'function' || attackWall._fullSquadV19) return;
+  const oldWall = attackWall; // = skillV17 → juice → fruit 链（含攻城倍率与橙子炮 Lv4-7 技能）
 
   attackWall = function attackWallFullSquadV19(s) {
     if (!isCombatant(s)) return;
@@ -137,40 +138,38 @@ function patchFullSquadWallAttackV19() {
     const list = siegeListFor(s);
     const idx = Math.max(0, list.findIndex(u => u.id === s.id));
     const slotCount = laneSlotCount();
-    const front = idx < slotCount;
     s.siegeSlot = idx;
 
-    if (front) {
-      s.mode = 'siege';
-      const offset = (idx - (slotCount - 1) / 2) * 13;
-      s.x += ((s.laneX + offset) - s.x) * Math.min(1, dt_global * 8);
-      s.y = wall.attackY;
-    } else {
-      s.mode = 'siege_support';
-      moveToSiegeQueue(s, idx, wall);
+    // 前排攻城位：走完整上游链，保留攻城倍率(orange_cannon siege:2.45)与橙子炮技能。
+    // 之前这里用 replace 覆盖整条链，导致橙子炮的攻城核心身份被静默吃掉。
+    if (idx < slotCount) {
+      oldWall(s);
+      return;
     }
+
+    // 后排支援位：v19 的新增能力——排队的兵也能输出，伤害衰减，但仍按攻城倍率计算。
+    s.mode = 'siege_support';
+    moveToSiegeQueue(s, idx, wall);
 
     s.atkTimer -= dt_global;
     if (s.atkTimer > 0) return;
 
-    const queueMul = front ? 1 : 0.48;
-    const roleMul = wallRoleDamageMulV19(s);
+    const siegeMul = Math.max(0.2, s.siege || TYPES[s.type]?.siege || 1);
+    const queueMul = 0.48;
     let dmg;
     if (s.side === 'player') {
-      const raw = s.level * 1.75 + s.atk * 0.11;
-      dmg = Math.max(1, Math.round(raw * queueMul * roleMul));
+      dmg = Math.max(1, Math.round((s.level * 1.45 + s.atk * 0.105) * siegeMul * queueMul));
       state.enemyWallHp = Math.max(0, state.enemyWallHp - dmg);
       state.enemyWallDamageDealt += dmg;
       state.wallDamageByLane[s.laneIndex] = (state.wallDamageByLane[s.laneIndex] || 0) + dmg;
       trackDamage(s, dmg, true);
-      if (front || Math.random() < 0.35) addFx(s.x, wall.wallY + wall.wallH + 4, `-${dmg}`, THEME.gold, front ? 12 : 10);
+      if (Math.random() < 0.35) addFx(s.x, wall.wallY + wall.wallH + 4, `-${dmg}`, THEME.gold, 10);
     } else {
-      const raw = s.level * 1.45 + s.atk * 0.08;
-      dmg = Math.max(1, Math.round(raw * queueMul * roleMul));
+      dmg = Math.max(1, Math.round((s.level * 1.25 + s.atk * 0.075) * siegeMul * queueMul));
       state.playerWallHp = Math.max(0, state.playerWallHp - dmg);
       state.playerWallDamageTaken += dmg;
       state.breachLane = s.laneIndex;
-      if (front || Math.random() < 0.30) addFx(s.x, wall.wallY - 8, `-${dmg}`, THEME.accent, front ? 12 : 10);
+      if (Math.random() < 0.30) addFx(s.x, wall.wallY - 8, `-${dmg}`, THEME.accent, 10);
     }
 
     state.attackFx.push({
@@ -181,9 +180,8 @@ function patchFullSquadWallAttackV19() {
       life: 0.18,
       maxLife: 0.18,
     });
-    if (front) state.rings.push({ x: s.x, y: wall.attackY, r: 5, life: 0.22, maxLife: 0.22, color: THEME.gold });
     s.atkTimer = WALL_ATTACK_INTERVAL;
-    state.shake = Math.max(state.shake || 0, front ? 0.26 : 0.12);
+    state.shake = Math.max(state.shake || 0, 0.12);
   };
   attackWall._fullSquadV19 = true;
 }
