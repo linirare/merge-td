@@ -1,0 +1,12 @@
+{
+  "name": "merge-td",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "pvp-server": "node server/pvp-server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
