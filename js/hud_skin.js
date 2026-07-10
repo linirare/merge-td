@@ -1,6 +1,7 @@
 /* ============================================================
-   水果突击 · Fruit Assault —— Final HUD Skin v51
+   水果突击 · Fruit Assault —— Final HUD Skin v54
    职责：顶部状态、操作资源条、速度/帮助/暂停按钮。战场内保持干净。
+   果汁为无上限主动资源，只显示当前值与下次行动成本。
    ============================================================ */
 
 function drawInfo() {
@@ -18,40 +19,45 @@ function drawInfo() {
 
 function drawHUD() {
   if (state.phase !== 'playing' && state.phase !== 'paused') return;
-  const spMax = typeof getSpMax === 'function' ? getSpMax(meta) : SP_MAX;
-  const recoverCap = typeof getSpRecoverCap === 'function' ? getSpRecoverCap(meta) : 6;
-  drawOperationResourceStripV51(spMax, recoverCap);
+  drawOperationResourceStripV54();
 }
 
-function drawOperationResourceStripV51(spMax, recoverCap) {
+function nextActionCostV54() {
+  if (typeof nextJuiceActionCost === 'function') return nextJuiceActionCost();
+  return Math.max(1, Number(state.summonCostCounter || 1));
+}
+
+function drawOperationResourceStripV54() {
   const y = LAYOUT.operationY || (LAYOUT.playerWallY + LAYOUT.wallH + 16);
   const x = BOARD_X;
   const h = 30;
   const w = BOARD_W;
+  const cost = nextActionCostV54();
+  const canAct = (state.sp || 0) >= cost;
 
   ctx.save();
   ctx.globalAlpha = 0.96;
-  drawPanel(x, y, w, h, 14, 'rgba(255,253,238,0.76)', 'rgba(255,201,60,0.42)');
+  drawPanel(x, y, w, h, 14, 'rgba(255,253,238,0.76)', canAct ? 'rgba(255,201,60,0.42)' : 'rgba(255,93,108,0.32)');
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.font = '900 12px sans-serif';
-  ctx.fillStyle = state.sp > 0 ? '#f39200' : '#a1b786';
-  ctx.fillText(`果汁 ⚡ ${state.sp}/${spMax}`, x + 14, y + 12);
+  ctx.fillStyle = canAct ? '#f39200' : '#ba5f5f';
+  ctx.fillText(`果汁 ⚡ ${state.sp || 0}`, x + 14, y + 11);
 
   ctx.font = '9px sans-serif';
   ctx.fillStyle = THEME.textDim;
-  ctx.fillText(`自动回复至 ${recoverCap}`, x + 14, y + 23);
+  ctx.fillText(`下次行动 ${cost} · 每5秒+1 · 击杀返等级`, x + 14, y + 23);
 
   const mergeHint = findMergeHintV51();
   if (mergeHint) {
     ctx.textAlign = 'center';
     ctx.font = '900 12px sans-serif';
     ctx.fillStyle = '#e6a600';
-    ctx.fillText('可以合成升级', x + w * 0.62, y + 11);
+    ctx.fillText('可以合成升级', x + w * 0.70, y + 11);
     ctx.font = '9px sans-serif';
     ctx.fillStyle = '#7e874e';
-    ctx.fillText(`拖拽两个 Lv.${mergeHint.level} ${TYPES[mergeHint.type]?.name || '水果营'}合成`, x + w * 0.62, y + 23);
+    ctx.fillText(`Lv.${mergeHint.level} ${TYPES[mergeHint.type]?.name || '水果营'}`, x + w * 0.70, y + 23);
   }
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
