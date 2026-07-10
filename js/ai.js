@@ -24,10 +24,8 @@ function aiAnalyzePlayer() {
 
   if (!maxType) return null;
 
-  // 返回克制品类（克制链：弓→枪→刀→盾→弓）
-  // 如果玩家最多是弓，AI优先合枪（弓→枪）
-  const counterMap = { bow: 'spear', spear: 'sword', sword: 'shield', shield: 'bow' };
-  return counterMap[maxType];
+  // 返回当前敌方池里最克制玩家主力的水果，避免旧兵种 id 影响 AI 判断。
+  return bestCounterForEnemy(maxType, ENEMY_POOL);
 }
 
 /* ——— AI 合成策略：优先克制品类，其次最高级对子 ——— */

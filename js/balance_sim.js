@@ -9,8 +9,10 @@ function estimatePlayerPower(k) {
   const opening = k >= 4 ? 7 : 6;
   const mergeFactor = 1 + Math.min(0.55, 0.07 * k);
   const moraleFactor = 1 + (meta.spLv || 0) * 0.025;
-  const baseAtk = (TYPES.bow.atk + TYPES.sword.atk + TYPES.spear.atk + TYPES.shield.atk) / 4;
-  const baseHp = (TYPES.bow.hp + TYPES.sword.hp + TYPES.spear.hp + TYPES.shield.hp) / 4;
+  const playerPool = activeDeck().filter(id => TYPES[id] && TYPES[id].role !== 'merge');
+  const base = averageStats(playerPool.length ? playerPool : DEFAULT_DECK);
+  const baseAtk = base.atk;
+  const baseHp = base.hp;
   return opening * (baseAtk * techAtk + baseHp * 0.22 * techHp) * mergeFactor * moraleFactor;
 }
 
@@ -18,8 +20,9 @@ function estimateEnemyPower(k) {
   const lv = generateLevel(k);
   const eLevel = Math.max(1, Math.round(lv.enemyInitLevel));
   const enemyCount = k === 1 ? 3 : k <= 3 ? 4 : 5;
-  const baseAtk = (TYPES.bow.atk + TYPES.sword.atk + TYPES.spear.atk + TYPES.shield.atk) / 4;
-  const baseHp = (TYPES.bow.hp + TYPES.sword.hp + TYPES.spear.hp + TYPES.shield.hp) / 4;
+  const base = averageStats(typeof ENEMY_POOL !== 'undefined' ? ENEMY_POOL : DEFAULT_DECK);
+  const baseAtk = base.atk;
+  const baseHp = base.hp;
   const spawnPressure = BALL_SPAWN_INTERVAL / lv.enemySpawnInterval;
   const aiPressure = Math.max(0.8, 1 + (k - 4) * 0.025);
   const boss = lv.isBoss ? 1.13 : 1;
@@ -29,6 +32,18 @@ function estimateEnemyPower(k) {
 function averageUpgradeLevel(stat) {
   const vals = TYPE_IDS.map(t => getUpgradeLv(meta, t, stat));
   return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+function averageStats(pool) {
+  const ids = (pool || []).filter(id => TYPES[id] && TYPES[id].role !== 'merge');
+  const safe = ids.length ? ids : DEFAULT_DECK;
+  const sum = safe.reduce((acc, id) => {
+    const t = TYPES[id] || TYPES[DEFAULT_DECK[0]];
+    acc.atk += t.atk || 0;
+    acc.hp += t.hp || 0;
+    return acc;
+  }, { atk: 0, hp: 0 });
+  return { atk: sum.atk / safe.length, hp: sum.hp / safe.length };
 }
 
 function estimateStage(k, runs = 80) {

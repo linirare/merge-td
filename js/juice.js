@@ -152,14 +152,16 @@ function patchAttackJuice() {
       const color = juiceColorForType(s.type);
       const mx = (s.x + target.x) / 2;
       const my = (s.y + target.y) / 2;
-      if (s.type === 'bow') {
+      const rangedHit = typeof fruitIsBackline === 'function' ? fruitIsBackline(s) : (TYPES[s.type]?.range !== 'melee');
+      if (rangedHit) {
         addBeam(s.x, s.y, target.x, target.y, color, 0.14);
         addSparkBurst(target.x, target.y, color, 5, 44, 2.2);
       } else {
         addSlash(s.x, s.y, target.x, target.y, color, 0.18, s.level >= 3 ? 7 : 5);
         addSparkBurst(mx, my, color, 7 + Math.min(8, s.level * 2), 62 + s.level * 8, 3);
       }
-      if (target.type === COUNTER[s.type]) {
+      const counterMul = typeof roleCounterMultiplier === 'function' ? roleCounterMultiplier(s.type, target.type) : 1;
+      if (counterMul > 1.05) {
         addShockwave(target.x, target.y, THEME.gold, 22 + s.level * 3, 0.28, 3);
         addJuiceText(target.x, target.y - 28, '克制!', THEME.gold, 15 + s.level, 0.55);
         punch(0.32 + s.level * 0.04, 0.026);

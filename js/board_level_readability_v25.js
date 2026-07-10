@@ -175,4 +175,4 @@ function patchBoardLevelReadabilityV25() {
       ctx.restore();
     };
   }
-})();
+}

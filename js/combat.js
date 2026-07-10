@@ -13,6 +13,8 @@ const SCAN_RANGE = 168;
 const TARGET_STICK_RANGE = 220;
 const WALL_ATTACK_INTERVAL = 1.05;
 const BOW_SAFE_MIN = 66;
+const CROSS_LANE_EMERGENCY_RANGE = 50;
+const FIGHT_X_LEASH = 18;
 
 const ATTACK_RANGES = {
   bow: 116,
@@ -20,6 +22,21 @@ const ATTACK_RANGES = {
   spear: 30,
   shield: 22,
 };
+
+function combatRange(s) {
+  if (typeof fruitRange === 'function') return fruitRange(s);
+  const t = TYPES[s.type] || {};
+  if (t.range === 'long') return 154;
+  if (t.range === 'far') return 118;
+  if (t.range === 'mid') return 42;
+  if (t.range === 'support') return 96;
+  return ATTACK_RANGES[s.type] || 24;
+}
+
+function combatIsBackline(s) {
+  const role = TYPES[s.type]?.role;
+  return s.type === 'bow' || role === 'back' || role === 'siege' || role === 'control' || role === 'support';
+}
 
 function fieldTop() { return LAYOUT.fieldY + FIELD_PAD; }
 function fieldBottom() { return LAYOUT.fieldY + LAYOUT.fieldH - FIELD_PAD; }
@@ -138,7 +155,9 @@ function canSeeTarget(s, e) {
   const laneGap = Math.abs(e.x - s.laneX);
   const sameLane = laneGap <= LANE_TOLERANCE;
   const forward = isForwardOf(s, e);
-  return dist <= SCAN_RANGE || (sameLane && forward && Math.abs(dy) <= 240) || dist <= 52;
+  if (sameLane && forward && Math.abs(dy) <= 250) return true;
+  if (sameLane && dist <= SCAN_RANGE) return true;
+  return dist <= CROSS_LANE_EMERGENCY_RANGE;
 }
 
 function findTarget(s, enemies) {
@@ -148,10 +167,9 @@ function findTarget(s, enemies) {
   const sticky = soldierById(enemies, s.target);
   if (sticky && canSeeTarget(s, sticky)) {
     const d = Math.sqrt(dist2(s, sticky));
-    if (d <= TARGET_STICK_RANGE || s.type === 'bow') return sticky;
+    if (d <= TARGET_STICK_RANGE || combatIsBackline(s)) return sticky;
   }
 
-  const counterType = COUNTER[s.type];
   let best = null;
   let bestScore = Infinity;
 
@@ -170,8 +188,11 @@ function findTarget(s, enemies) {
     let score = Math.abs(dy) + laneGap * 0.85 + dist * 0.22;
     if (!sameLane) score += 58;
     if (!forward && dist > 52) score += 180;
-    if (e.type === counterType) score -= 85;
-    if (s.type === 'bow' && sameLane) score -= 24;
+    const counterMul = typeof roleCounterMultiplier === 'function' ? roleCounterMultiplier(s.type, e.type) : 1;
+    if (counterMul >= 1.32) score -= 85;
+    else if (counterMul >= 1.15) score -= 40;
+    else if (counterMul <= 0.9) score += 36;
+    if (combatIsBackline(s) && sameLane) score -= 24;
     if (s.target && e.id === s.target) score -= 36;
 
     if (score < bestScore) {
@@ -186,13 +207,15 @@ function findTarget(s, enemies) {
 
 function moveTowardEnemy(s, target) {
   s.mode = 'fight';
-  const dx = target.x - s.x;
+  const desiredX = clamp(target.x, s.laneX - FIGHT_X_LEASH, s.laneX + FIGHT_X_LEASH);
+  const dx = desiredX - s.x;
   const dy = target.y - s.y;
-  const xStep = CHASE_SPEED * 0.58 * dt_global;
+  const xStep = CHASE_SPEED * 0.42 * dt_global;
   const yStep = CHASE_SPEED * dt_global;
 
   if (Math.abs(dx) > 3) s.x += Math.sign(dx) * Math.min(Math.abs(dx), xStep);
   if (Math.abs(dy) > 3) s.y += Math.sign(dy) * Math.min(Math.abs(dy), yStep);
+  if (Math.abs(target.x - s.laneX) > FIGHT_X_LEASH) steerToLane(s, 0.35);
   keepInsideBattlefield(s);
 }
 
@@ -205,10 +228,10 @@ function kiteAsBackline(s, target) {
 }
 
 function advanceTowardWall(s) {
-  s.mode = s.type === 'bow' ? 'backline' : 'march';
+  s.mode = combatIsBackline(s) ? 'backline' : 'march';
   s.target = null;
   steerToLane(s, 0.55);
-  const mod = s.type === 'bow' ? 0.72 : 1;
+  const mod = combatIsBackline(s) ? 0.72 : 1;
   if (s.side === 'player') s.y -= SIEGE_SPEED * mod * dt_global;
   else s.y += SIEGE_SPEED * mod * dt_global;
 }
@@ -320,9 +343,9 @@ function attackTarget(s, target) {
   const dx = s.x - target.x;
   const dy = s.y - target.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
-  const range = ATTACK_RANGES[s.type] || 24;
+  const range = combatRange(s);
 
-  if (s.type === 'bow' && dist < BOW_SAFE_MIN) {
+  if (combatIsBackline(s) && dist < BOW_SAFE_MIN) {
     kiteAsBackline(s, target);
   } else if (dist > range) {
     moveTowardEnemy(s, target);
@@ -331,16 +354,16 @@ function attackTarget(s, target) {
 
   if (dist > range + 6) return;
 
-  s.mode = s.type === 'bow' ? 'backline' : 'fight';
+  s.mode = combatIsBackline(s) ? 'backline' : 'fight';
   s.atkTimer -= dt_global;
   if (s.atkTimer > 0) return;
 
-  let dmg = s.atk;
-  const counterHit = target.type === COUNTER[s.type];
-  if (counterHit) dmg = Math.round(dmg * COUNTER_DMG);
+  const counterMul = typeof roleCounterMultiplier === 'function' ? roleCounterMultiplier(s.type, target.type) : 1;
+  let dmg = Math.round(s.atk * counterMul);
+  const counterHit = counterMul > 1.05;
   s.atkTimer = s.speed;
 
-  if (s.type === 'bow') {
+  if (combatIsBackline(s) && s.type !== 'peach_medic') {
     playSfx('arrow');
     state.projectiles.push({
       x: s.x,
@@ -399,18 +422,23 @@ function applySeparation(soldiers) {
       if (i === j) continue;
       const b = soldiers[j];
       if (!isCombatant(b)) continue;
+      if (a.laneIndex !== b.laneIndex) continue;
       const dx = a.x - b.x;
       const dy = a.y - b.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < sepDist && dist > 0.1) {
         const force = (sepDist - dist) / sepDist;
         fx += (dx / dist) * force;
-        fy += (dy / dist) * force * 0.22;
+        fy += (dy / dist) * force * 0.30;
+      } else if (dist <= 0.1) {
+        fx += (i % 2 === 0 ? 1 : -1) * 0.45;
+        fy += (i % 3 - 1) * 0.12;
       }
     }
     if (fx || fy) {
       const speed = 42 * dt_global;
-      a.x = clamp(a.x + fx * speed, 24, W - 24);
+      const nextX = a.x + fx * speed;
+      a.x = clamp(nextX, a.laneX - FIGHT_X_LEASH, a.laneX + FIGHT_X_LEASH);
       if (a.mode !== 'siege' && a.mode !== 'siege_queue') a.y = clamp(a.y + fy * speed, fieldTop(), fieldBottom());
     }
   }
@@ -541,8 +569,7 @@ function dominantEnemyType(lane) {
 }
 
 function counterForEnemy(enemyType) {
-  for (const [type, target] of Object.entries(COUNTER)) if (target === enemyType) return type;
-  return null;
+  return bestCounterForEnemy(enemyType, activeDeck()) || bestCounterForEnemy(enemyType, progressUnlocked(meta));
 }
 
 function buildBattleReport(win) {

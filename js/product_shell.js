@@ -13,10 +13,10 @@
   const INIT_COST = { 1: 3, 2: 10, 3: 25 };
 
   const tabs = [
-    { id: 'battle', icon: '⚔️', label: '战斗' },
+    { id: 'battle', icon: '🚩', label: '闯关' },
+    { id: 'arena', icon: '🏆', label: '竞技' },
     { id: 'upgrade', icon: '🍉', label: '养成' },
     { id: 'shop', icon: '🛒', label: '商城' },
-    { id: 'ladder', icon: '🏆', label: '天梯' },
   ];
 
   let shell = loadShell();
@@ -88,7 +88,7 @@
       .stage-grid{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 8px;max-height:236px;overflow:auto;padding:2px 2px 4px}
       .stage-card{border:1px solid rgba(92,180,82,.22);background:rgba(255,255,255,.56);border-radius:14px;min-height:58px;color:#416329;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;box-shadow:inset 0 -2px 0 rgba(87,166,72,.12)}
       .stage-card small{font-size:10px;color:#83a061;font-weight:800}.stage-card.current{border-color:#ffcf52;background:linear-gradient(180deg,#fff6be,#e9ffc7)}.stage-card.locked{opacity:.42;filter:grayscale(.35);cursor:not-allowed}.stage-card.boss{border-color:rgba(255,92,108,.42)}
-      .shell-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(255,255,255,.52);border:1px solid rgba(92,180,82,.18);border-radius:14px;padding:10px 12px;margin:8px 0;color:#416329}.shell-row b{color:#2f5f26}.shell-row small{display:block;color:#82a060;font-size:11px;margin-top:2px}.shell-btn{border:0;border-radius:12px;background:#53c96a;color:#fff;font-weight:900;padding:8px 12px;cursor:pointer;white-space:nowrap}.shell-btn:disabled,.shell-row.disabled{opacity:.46;cursor:not-allowed}.shop-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.shop-tabs button{border:0;border-radius:12px;padding:9px 0;font-weight:900;background:rgba(255,255,255,.62);color:#6e8c4e}.shop-tabs button.active{background:linear-gradient(180deg,#fff0a3,#96e98b);color:#315c25}.shell-currency{display:flex;gap:8px;justify-content:center;margin:6px 0 8px}.shell-chip{border-radius:999px;background:rgba(255,255,255,.62);padding:5px 10px;color:#416329;font-weight:900}.ladder-hero{text-align:center;background:linear-gradient(180deg,rgba(255,246,190,.82),rgba(224,255,194,.78));border:1px solid rgba(92,180,82,.22);border-radius:18px;padding:14px 12px;margin:10px 0;color:#416329}.ladder-hero b{font-size:28px;color:#e89518}.gacha-overlay{position:fixed;inset:0;background:rgba(38,62,25,.58);z-index:120;display:flex;align-items:center;justify-content:center}.gacha-box{width:min(390px,90vw);max-height:78vh;overflow:auto;background:linear-gradient(180deg,#fffbe4,#eaffc3);border-radius:22px;padding:18px;box-shadow:0 18px 45px rgba(32,70,25,.28);text-align:center}.gacha-result{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.68);border-radius:14px;padding:9px 10px;margin:7px 0;text-align:left}.gacha-result .ico{font-size:28px}.gacha-result .frag{margin-left:auto;font-weight:900}.lab-list{max-height:58vh;overflow:auto;padding-right:2px}.lab-row{align-items:flex-start}.lab-main{display:flex;gap:8px;align-items:flex-start}.lab-icon{font-size:30px;line-height:32px}.lab-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end}.deck-badge{font-size:10px;border-radius:999px;padding:2px 6px;background:rgba(255,207,82,.36);color:#8a5a09;font-weight:900}.locked-note{color:#a08060!important}`;
+      .shell-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(255,255,255,.52);border:1px solid rgba(92,180,82,.18);border-radius:14px;padding:10px 12px;margin:8px 0;color:#416329}.shell-row b{color:#2f5f26}.shell-row small{display:block;color:#82a060;font-size:11px;margin-top:2px}.shell-btn{border:0;border-radius:12px;background:#53c96a;color:#fff;font-weight:900;padding:8px 12px;cursor:pointer;white-space:nowrap}.shell-btn:disabled,.shell-row.disabled{opacity:.46;cursor:not-allowed}.shop-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.shop-tabs button{border:0;border-radius:12px;padding:9px 0;font-weight:900;background:rgba(255,255,255,.62);color:#6e8c4e}.shop-tabs button.active{background:linear-gradient(180deg,#fff0a3,#96e98b);color:#315c25}.shell-currency{display:flex;gap:8px;justify-content:center;margin:6px 0 8px}.shell-chip{border-radius:999px;background:rgba(255,255,255,.62);padding:5px 10px;color:#416329;font-weight:900}.arena-list{width:100%;display:flex;flex-direction:column;gap:10px}.arena-card{width:100%;background:rgba(255,255,255,.54);border:1px solid rgba(92,180,82,.20);border-radius:16px;padding:12px;color:#416329}.arena-card h3{color:#2c8d3f;font-size:15px;margin-bottom:4px}.arena-card small{display:block;color:#7d9b5d;font-size:11px;line-height:1.45}.pvp-code{width:100%;border:1px solid rgba(92,180,82,.22);border-radius:12px;background:rgba(255,255,255,.76);padding:10px;color:#315326;font-weight:900;text-align:center;margin:8px 0}.pvp-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.pvp-status{background:rgba(255,201,60,.16);border-radius:12px;padding:8px 10px;margin-top:8px;font-size:12px;font-weight:900;color:#8a6200;line-height:1.55}.ladder-hero{text-align:center;background:linear-gradient(180deg,rgba(255,246,190,.82),rgba(224,255,194,.78));border:1px solid rgba(92,180,82,.22);border-radius:18px;padding:14px 12px;margin:10px 0;color:#416329}.ladder-hero b{font-size:28px;color:#e89518}.gacha-overlay{position:fixed;inset:0;background:rgba(38,62,25,.58);z-index:120;display:flex;align-items:center;justify-content:center}.gacha-box{width:min(390px,90vw);max-height:78vh;overflow:auto;background:linear-gradient(180deg,#fffbe4,#eaffc3);border-radius:22px;padding:18px;box-shadow:0 18px 45px rgba(32,70,25,.28);text-align:center}.gacha-result{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.68);border-radius:14px;padding:9px 10px;margin:7px 0;text-align:left}.gacha-result .ico{font-size:28px}.gacha-result .frag{margin-left:auto;font-weight:900}.lab-list{max-height:58vh;overflow:auto;padding-right:2px}.lab-row{align-items:flex-start}.lab-main{display:flex;gap:8px;align-items:flex-start}.lab-icon{font-size:30px;line-height:32px}.lab-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end}.deck-badge{font-size:10px;border-radius:999px;padding:2px 6px;background:rgba(255,207,82,.36);color:#8a5a09;font-weight:900}.locked-note{color:#a08060!important}`;
     document.head.appendChild(st);
   }
 
@@ -211,19 +211,44 @@
     `);
   }
 
-  function ensureLadderPanel() {
-    panelHtml('ladderPanel', '', `
-      <h2>🏆 无尽天梯</h2>
-      <p class="sub">连续波次挑战 · 失败后按坚持波数结算</p>
-      <div class="ladder-hero"><span>历史最佳</span><br><b id="ladderBest">0</b><br><small>波</small></div>
-      <div class="shell-row"><div><b>规则</b><small>每通过一波，下一波敌方等级和果堡耐久提升。</small></div></div>
-      <button id="btnLadderStart" class="btn-primary">开始天梯挑战</button>
+  function ensureArenaPanel() {
+    panelHtml('arenaPanel', 'wide', `
+      <h2>🏆 竞技</h2>
+      <p class="sub">实时房间对战 · 无尽天梯</p>
+      <div class="arena-list">
+        <div class="arena-card">
+          <h3>⚔️ 实时对战</h3>
+          <small>创建房间或输入房间码加入。双方准备后进入同一局。</small>
+          <div class="pvp-status" id="pvpStatus">未连接</div>
+          <input id="pvpRoomInput" class="pvp-code" placeholder="输入房间码" maxlength="6">
+          <div class="pvp-actions">
+            <button class="shell-btn" id="btnPvpCreate">创建房间</button>
+            <button class="shell-btn" id="btnPvpJoin">加入房间</button>
+            <button class="shell-btn" id="btnPvpReady">准备</button>
+            <button class="shell-btn" id="btnPvpLeave">离开</button>
+          </div>
+        </div>
+        <div class="arena-card">
+          <h3>🏁 无尽天梯</h3>
+          <small>连续波次挑战，失败后按坚持波数结算。</small>
+          <div class="ladder-hero"><span>历史最佳</span><br><b id="ladderBest">0</b><br><small>波</small></div>
+          <button id="btnLadderStart" class="btn-primary">开始天梯挑战</button>
+        </div>
+      </div>
     `);
+    document.getElementById('btnPvpCreate')?.addEventListener('click', () => window.pvpClient?.createRoom());
+    document.getElementById('btnPvpJoin')?.addEventListener('click', () => window.pvpClient?.joinRoom(document.getElementById('pvpRoomInput')?.value || ''));
+    document.getElementById('btnPvpReady')?.addEventListener('click', () => {
+      const ready = !window.pvpClient?.getStatus().ready;
+      window.pvpClient?.setReady(ready);
+    });
+    document.getElementById('btnPvpLeave')?.addEventListener('click', () => window.pvpClient?.leaveRoom());
     document.getElementById('btnLadderStart')?.addEventListener('click', startLadder);
+    window.pvpClient?.onStatus(renderPvpStatus);
   }
 
   function hidePanels() {
-    ['menuPanel', 'upgradePanel', 'shopPanel', 'ladderPanel', 'resultPanel', 'overflowPopup', 'helpPanel', 'simPanel', 'fruitLabPanel', 'shellLabPanel'].forEach(id => {
+    ['menuPanel', 'upgradePanel', 'shopPanel', 'arenaPanel', 'ladderPanel', 'resultPanel', 'overflowPopup', 'helpPanel', 'simPanel', 'fruitLabPanel', 'shellLabPanel'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.add('hide');
     });
@@ -240,15 +265,15 @@
       document.getElementById('menuPanel')?.classList.remove('hide');
       renderStages(false);
       refreshAllShellNumbers();
+    } else if (activeTab === 'arena') {
+      document.getElementById('arenaPanel')?.classList.remove('hide');
+      renderArena();
     } else if (activeTab === 'upgrade') {
       document.getElementById('shellLabPanel')?.classList.remove('hide');
       renderLab();
     } else if (activeTab === 'shop') {
       document.getElementById('shopPanel')?.classList.remove('hide');
       renderShop('gacha');
-    } else if (activeTab === 'ladder') {
-      document.getElementById('ladderPanel')?.classList.remove('hide');
-      renderLadder();
     }
     updateNav();
   }
@@ -474,6 +499,24 @@
     if (el) el.textContent = shell.ladderBest || 0;
   }
 
+  function renderPvpStatus(status = null) {
+    const s = status || window.pvpClient?.getStatus?.() || {};
+    const el = document.getElementById('pvpStatus');
+    const readyBtn = document.getElementById('btnPvpReady');
+    const input = document.getElementById('pvpRoomInput');
+    if (input && s.roomId) input.value = s.roomId;
+    if (readyBtn) readyBtn.textContent = s.ready ? '取消准备' : '准备';
+    if (!el) return;
+    const seat = s.playerIndex >= 0 ? `P${s.playerIndex + 1}` : '未入座';
+    const peer = s.peerJoined ? (s.peerReady ? '对手已准备' : '对手未准备') : '等待对手';
+    el.innerHTML = `${s.status || '未连接'} · ${seat}<br>房间 ${s.roomId || '----'} · ${s.ready ? '我方已准备' : '我方未准备'} · ${peer}`;
+  }
+
+  function renderArena() {
+    renderLadder();
+    renderPvpStatus();
+  }
+
   function startLadder() {
     hidePanels();
     state.endless = true;
@@ -523,11 +566,11 @@
     const menuClone = menu.cloneNode(true);
     menu.parentNode.replaceChild(menuClone, menu);
     menu = menuClone;
-    menu.textContent = '返回天梯';
+    menu.textContent = '返回竞技';
     menu.addEventListener('click', () => {
       panel.classList.add('hide');
       state.phase = 'menu';
-      showTab('ladder');
+      showTab('arena');
       syncNavVisibility();
     });
     panel.classList.remove('hide');
@@ -554,11 +597,12 @@
     ensureBottomNav();
     ensureShopPanel();
     ensureLabPanel();
-    ensureLadderPanel();
+    ensureArenaPanel();
     replaceStartButton();
     hookGameOver();
     const deckBtn = document.getElementById('btnDeck');
     if (deckBtn) deckBtn.style.display = 'none';
+    window.productShellShowTab = showTab;
     showTab('battle');
     setInterval(syncNavVisibility, 180);
     syncNavVisibility();

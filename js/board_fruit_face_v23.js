@@ -224,4 +224,4 @@ function patchBoardFruitFaceV23() {
     };
     drawBoard._fruitFaceV23 = true;
   }
-})();
+}

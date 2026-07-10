@@ -102,6 +102,7 @@
   }
 
   function tryEnemyJuiceSummon() {
+    if (state?.mode === 'pvp') return false;
     if (!state || state.phase !== 'playing' || !state.enemySlots) return false;
     const cost = enemyActionCost();
     if ((state.enemySp || 0) < cost) return false;
@@ -124,16 +125,18 @@
       addFx(BOARD_X + 38, (LAYOUT.operationY || 570) - 6, '+1果汁', THEME.gold, 10);
     }
 
-    state._juiceEnemyTimer = (state._juiceEnemyTimer || 0) + dt;
-    while (state._juiceEnemyTimer >= JUICE_PASSIVE_INTERVAL) {
-      state._juiceEnemyTimer -= JUICE_PASSIVE_INTERVAL;
-      state.enemySp = (state.enemySp || 0) + 1;
-    }
+    if (state.mode !== 'pvp') {
+      state._juiceEnemyTimer = (state._juiceEnemyTimer || 0) + dt;
+      while (state._juiceEnemyTimer >= JUICE_PASSIVE_INTERVAL) {
+        state._juiceEnemyTimer -= JUICE_PASSIVE_INTERVAL;
+        state.enemySp = (state.enemySp || 0) + 1;
+      }
 
-    state.enemySpCheckTimer = (state.enemySpCheckTimer || 0) + dt;
-    while (state.enemySpCheckTimer >= ENEMY_ACTION_INTERVAL) {
-      state.enemySpCheckTimer -= ENEMY_ACTION_INTERVAL;
-      tryEnemyJuiceSummon();
+      state.enemySpCheckTimer = (state.enemySpCheckTimer || 0) + dt;
+      while (state.enemySpCheckTimer >= ENEMY_ACTION_INTERVAL) {
+        state.enemySpCheckTimer -= ENEMY_ACTION_INTERVAL;
+        tryEnemyJuiceSummon();
+      }
     }
   }
 
@@ -184,6 +187,7 @@
     state.rings.push({ x: center.x, y: center.y, r: 9, life: 0.36, maxLife: 0.36, color: t.color || THEME.gold });
     addFx(center.x, center.y - 24, `-${cost} 果汁`, THEME.gold, 11);
     playSfx('merge');
+    if (window.pvpClient) window.pvpClient.localSummon(r, c, cost);
     return true;
   }
 
@@ -247,6 +251,7 @@
           pulseJuice(-cost, 'spend');
           state.rings.push({ x: center.x, y: center.y, r: 8, life: 0.34, maxLife: 0.34, color: THEME.gold });
           addFx(center.x, center.y - 24, `-${cost} 果汁 · 急派`, THEME.gold, 11);
+          if (window.pvpClient) window.pvpClient.localUrgent(r, c, cost);
         } else {
           addFx(center.x, center.y - 24, '无法派兵', THEME.accent, 11);
         }
