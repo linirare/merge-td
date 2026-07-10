@@ -11,7 +11,7 @@ app.use(express.static(path.join(__dirname, '..'), {
   etag: false,
   lastModified: false,
   setHeaders(res, filePath) {
-    if (filePath.endsWith('.js')) {
+    if (filePath.endsWith('.js') || filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
   },
