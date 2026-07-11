@@ -68,7 +68,8 @@ function ensureLane(s) {
 function steerToLane(s, ratio = 0.65) {
   ensureLane(s);
   const dx = s.laneX - s.x;
-  const max = SOLDIER_SPEED * ratio * dt_global;
+  const speed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, SOLDIER_SPEED) : SOLDIER_SPEED;
+  const max = speed * ratio * dt_global;
   if (Math.abs(dx) > 1) s.x += Math.sign(dx) * Math.min(Math.abs(dx), max);
   s.x = clamp(s.x, 24, W - 24);
 }
@@ -110,14 +111,14 @@ function moveOutOfCastle(s) {
   const gateY = ownGateY(s);
   if (s.side === 'player') {
     if (s.y > gateY) {
-      s.y -= SOLDIER_SPEED * dt_global;
+      s.y -= (typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, SOLDIER_SPEED) : SOLDIER_SPEED) * dt_global;
       if (s.y <= gateY) s.y = gateY;
       markBattleReadyIfNeeded(s);
       return true;
     }
   } else {
     if (s.y < gateY) {
-      s.y += SOLDIER_SPEED * dt_global;
+      s.y += (typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, SOLDIER_SPEED) : SOLDIER_SPEED) * dt_global;
       if (s.y >= gateY) s.y = gateY;
       markBattleReadyIfNeeded(s);
       return true;
@@ -210,8 +211,9 @@ function moveTowardEnemy(s, target) {
   const desiredX = clamp(target.x, s.laneX - FIGHT_X_LEASH, s.laneX + FIGHT_X_LEASH);
   const dx = desiredX - s.x;
   const dy = target.y - s.y;
-  const xStep = CHASE_SPEED * 0.42 * dt_global;
-  const yStep = CHASE_SPEED * dt_global;
+  const cspeed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : CHASE_SPEED;
+  const xStep = cspeed * 0.42 * dt_global;
+  const yStep = cspeed * dt_global;
 
   if (Math.abs(dx) > 3) s.x += Math.sign(dx) * Math.min(Math.abs(dx), xStep);
   if (Math.abs(dy) > 3) s.y += Math.sign(dy) * Math.min(Math.abs(dy), yStep);
@@ -223,7 +225,8 @@ function kiteAsBackline(s, target) {
   s.mode = 'backline';
   steerToLane(s, 0.9);
   const dir = s.side === 'player' ? 1 : -1;
-  s.y += dir * CHASE_SPEED * 0.68 * dt_global;
+  const kspeed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : CHASE_SPEED;
+  s.y += dir * kspeed * 0.68 * dt_global;
   keepInsideBattlefield(s);
 }
 
@@ -232,8 +235,9 @@ function advanceTowardWall(s) {
   s.target = null;
   steerToLane(s, 0.55);
   const mod = combatIsBackline(s) ? 0.72 : 1;
-  if (s.side === 'player') s.y -= SIEGE_SPEED * mod * dt_global;
-  else s.y += SIEGE_SPEED * mod * dt_global;
+  const sspeed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, SIEGE_SPEED) : SIEGE_SPEED;
+  if (s.side === 'player') s.y -= sspeed * mod * dt_global;
+  else s.y += sspeed * mod * dt_global;
 }
 
 function wallDataFor(s) {
