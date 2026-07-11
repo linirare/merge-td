@@ -12,6 +12,7 @@
     "test:stages": "node test/stage-config.js",
     "test:stage-sim": "node test/stage-sim.js",
     "test:stage-real": "node test/stage-real-sim.js",
+    "visual": "node test/visual-check.mjs",
     "check": "npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:security && npm run test:pvp && npm run test:pvp-auth"
   },
   "dependencies": {
