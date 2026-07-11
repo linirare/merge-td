@@ -55,7 +55,7 @@ function patchProjectileV15() {
       const dy = tgt.y - p.y;
       const d = Math.sqrt(dx * dx + dy * dy);
       if (d < 10) {
-        const source = { type: p.ownerType || 'grape_archer', firstHit: p.firstHit };
+        const source = { type: p.ownerType || 'grape_archer', firstHit: p.firstHit, level: p.ownerLevel || 1 };
         const dealt = typeof applyFruitDamage === 'function' ? applyFruitDamage(tgt, p.dmg, source) : p.dmg;
         if (typeof applyFruitDamage !== 'function') {
           tgt.hp -= dealt;
@@ -63,6 +63,20 @@ function patchProjectileV15() {
         }
         if (p.side === 'player') state.damageByType[p.ownerType || 'grape_archer'] = (state.damageByType[p.ownerType || 'grape_archer'] || 0) + dealt;
         if (p.slow) { tgt.slowTimer = 2.2 + (tgt.level || 1) * 0.12; tgt.slowMul = 0.52; }
+        // 樱桃炸弹:范围炸弹,炸目标周围同侧敌人
+        if (p.aoe) {
+          const aoeR = 44, aoeDmg = Math.max(1, Math.round(p.dmg * 0.6));
+          for (const e of enemies) {
+            if (e === tgt || !isCombatant(e)) continue;
+            if (Math.hypot(e.x - tgt.x, e.y - tgt.y) <= aoeR) {
+              const dd = typeof applyFruitDamage === 'function' ? applyFruitDamage(e, aoeDmg, { type: 'cherry_bomber', firstHit: false, level: p.ownerLevel || 4 }) : aoeDmg;
+              if (typeof applyFruitDamage !== 'function') e.hp -= dd;
+              if (e.hp <= 0) killSoldier(e, p.side, dd, 'cherry_bomber');
+            }
+          }
+          addFx(tgt.x, tgt.y, '💥', THEME.accent, 14);
+          state.shake = Math.max(state.shake || 0, 0.4);
+        }
         const text = p.counterHit ? `克制 -${dealt}` : `-${dealt}`;
         addFx((p.x + tgt.x) / 2, (p.y + tgt.y) / 2 - 8, text, p.counterHit ? THEME.gold : THEME.accent, p.counterHit ? 13 : 11);
         for (let j = 0; j < 2; j++) {

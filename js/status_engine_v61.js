@@ -254,6 +254,8 @@ function migrateOldStatus(s) {
       // 每次攻击都触发的
       if (source.type === 'dragonfruit_warrior' && lv >= 4) applyStatus(target, source, 'burning', 2.0);          // 火龙果:点燃
       else if (source.type === 'melon_shaman' && Math.random() < 0.5) applyStatus(target, source, 'weakened', 2.0); // 哈密瓜:削弱ATK
+      else if (source.type === 'blueberry_sniper') applyStatus(target, source, 'armorBreak', 2.5, { value: 5 });  // 蓝莓:穿甲(削 5 护甲)
+      else if (source.type === 'pear_frost' && lv >= 6) applyStatus(target, source, 'frozen', 1.2);               // 冰梨 Lv6:减速升级为冰冻
       // 仅首击触发的
       if (source.firstHit) {
         if (source.type === 'banana_raider' && lv >= 3) applyStatus(target, source, 'stunned', 0.5);              // 香蕉:首击眩晕

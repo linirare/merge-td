@@ -203,6 +203,11 @@ function patchRoleDamageV15() {
 
     if (v15IsBackRole(s) && s.type !== 'peach_medic') {
       playSfx('arrow');
+      let cherryAoe = false; // 樱桃炸弹 Lv4+:每 5 次射击投一枚范围炸弹
+      if (s.type === 'cherry_bomber' && (s.level || 1) >= 4) {
+        s._cherryShot = (s._cherryShot || 0) + 1;
+        if (s._cherryShot % 5 === 0) cherryAoe = true;
+      }
       state.projectiles.push({
         x: s.x,
         y: s.y,
@@ -216,7 +221,9 @@ function patchRoleDamageV15() {
         side: s.side,
         counterHit: !!counterText && mul > 1,
         ownerType: s.type,
+        ownerLevel: s.level,
         slow: s.type === 'pear_frost',
+        aoe: cherryAoe,
         firstHit: s.firstHit,
       });
       s.firstHit = false;

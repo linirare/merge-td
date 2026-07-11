@@ -107,17 +107,19 @@ function updateRollingPumpkins(dt) {
     state.rings.push({ x: r.x, y: r.y, r: 3, life: 0.08, maxLife: 0.08, color: '#ff7d35' });
 
     const enemies = r.side === 'player' ? state.enemySoldiers : state.playerSoldiers;
+    let hitAny = false;
     for (const e of enemies) {
       if (!isCombatant(e) || e.laneIndex !== r.lane) continue;
-      if (Math.abs(e.y - r.y) < 18) {
-        const dmg = Math.round(r.dmg * 0.75);
-        applyFruitDamage(e, dmg, { type:'pumpkin_roller', firstHit:false });
-        addFx(e.x, e.y - 18, `南瓜撞-${dmg}`, '#ff7d35', 12);
+      if (Math.abs(e.y - r.y) < 22) {                 // 范围爆炸:命中半径内所有同路敌人
+        const dmg = Math.round(r.dmg * 0.9);
+        applyFruitDamage(e, dmg, { type: 'pumpkin_roller', firstHit: false });
+        if (typeof applyStatus === 'function') applyStatus(e, { type: 'pumpkin_roller' }, 'stunned', 0.6); // 南瓜爆炸眩晕
+        addFx(e.x, e.y - 18, `南瓜爆-${dmg}`, '#ff7d35', 12);
         if (e.hp <= 0) killSoldier(e, r.side, dmg, 'pumpkin_roller');
-        r.life = 0;
-        break;
+        hitAny = true;
       }
     }
+    if (hitAny) { r.life = 0; }
 
     const wallY = r.side === 'player' ? LAYOUT.enemyWallY + LAYOUT.wallH + 4 : LAYOUT.playerWallY - 4;
     const hitWall = r.side === 'player' ? r.y <= wallY : r.y >= wallY;
