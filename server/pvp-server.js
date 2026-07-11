@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { verifyToken } = require('./auth');
 
 const rooms = new Map();
 const allClients = new Set();
@@ -87,6 +88,14 @@ function send(client, message) {
   client.socket.write(encodeFrame(JSON.stringify(message)));
 }
 
+// 回 pong(opcode 0xA):响应客户端 ping,维持连接活性
+function sendPong(client, payload) {
+  if (!client || !client.socket || client.socket.destroyed) return;
+  const body = Buffer.isBuffer(payload) ? payload.subarray(0, 125) : Buffer.alloc(0);
+  const header = Buffer.from([0x8a, body.length]);
+  client.socket.write(Buffer.concat([header, body]));
+}
+
 function sendError(client, message) {
   send(client, { type: 'error', message });
 }
@@ -145,7 +154,10 @@ function leaveRoom(client, notify = true) {
   if (client.index >= 0 && room.players[client.index] === client) {
     room.players[client.index] = null;
   }
-  if (notify) broadcast(room, { type: 'peer_left', roomId: room.id }, client);
+  if (notify) {
+    broadcast(room, { type: 'peer_left', roomId: room.id }, client);
+    if (room.observers) for (const obs of room.observers) send(obs, { type: 'peer_left', roomId: room.id });
+  }
   if (!room.players[0] && !room.players[1]) rooms.delete(room.id);
 
   client.roomId = '';
@@ -252,6 +264,7 @@ function forwardAction(client, action) {
 function observeRoom(client, roomId) {
   const room = rooms.get(String(roomId || '').trim());
   if (!room) return sendError(client, 'room_not_found');
+  if ((room.observers || []).length >= 20) return sendError(client, 'observers_full');
   leaveObserve(client);
   leaveRoom(client, false);
   room.observers.push(client);
@@ -263,7 +276,10 @@ function pushChat(client, message) {
   const chat = require('./index').chatMessages;
   const text = sanitizeText(message.text || message.m || '', 80);
   if (!text) return;
-  const nick = sanitizeText(message.nick || message.nickname || message.n || '', 24);
+  // 昵称一律取服务端认证信息,忽略客户端自报 —— 杜绝冒充他人昵称
+  const nick = client._uid
+    ? (sanitizeText(client._nick || '', 24) || ('玩家' + String(client._uid).slice(0, 4)))
+    : '游客';
   const msg = {
     uid: sanitizeText(client._uid || '', 32),
     nick,
@@ -299,13 +315,19 @@ function flushClientBuffer(client) {
   client.buffer = decoded.rest;
   for (const message of decoded.messages) {
     if (message.close) return client.socket.end();
+    if (message.ping) { sendPong(client, message.ping); continue; }
     if (message.text) handleMessage(client, message.text);
   }
 }
 
-function attachSocket(socket, head = null) {
-  const client = { socket, buffer: Buffer.alloc(0), roomId: '', index: -1, ready: false, deck: [], _observer: '' };
+function attachSocket(socket, head = null, auth = null) {
+  const client = {
+    socket, buffer: Buffer.alloc(0), roomId: '', index: -1, ready: false, deck: [], _observer: '',
+    _uid: (auth && auth.uid) || '', _nick: (auth && auth.nick) || '',
+  };
   allClients.add(client);
+  // 空闲超时:120s 无任何数据自动断开,清理半开(掉线未发 FIN)连接
+  socket.setTimeout(120000, () => { try { socket.end(); } catch (e) {} });
   if (head && head.length) client.buffer = Buffer.concat([client.buffer, head]);
 
   const onData = (chunk) => {
@@ -328,6 +350,26 @@ function attachSocket(socket, head = null) {
   }
 }
 
+// 从连接 URL 的 ?token= 解析并校验 JWT;返回 {uid, nick}(游客为空串)
+function authFromUrl(url) {
+  try {
+    const q = new URL(String(url || ''), 'http://pvp.local').searchParams;
+    const token = q.get('token');
+    if (!token) return { uid: '', nick: '' };
+    const payload = verifyToken(token);
+    if (!payload || !payload.uid) return { uid: '', nick: '' };
+    let nick = '';
+    try {
+      const db = require('./db');
+      const row = db.prepare('SELECT nickname FROM users WHERE uid = ?').get(payload.uid);
+      nick = (row && row.nickname) || '';
+    } catch (e) { nick = ''; }
+    return { uid: payload.uid, nick };
+  } catch (e) {
+    return { uid: '', nick: '' };
+  }
+}
+
 function handlePvpUpgrade(req, socket, head) {
   if (!String(req.url || '').startsWith('/pvp')) {
     socket.write('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n');
@@ -338,6 +380,7 @@ function handlePvpUpgrade(req, socket, head) {
   const key = req.headers['sec-websocket-key'];
   if (!key) return socket.destroy();
 
+  const auth = authFromUrl(req.url);
   socket.write([
     'HTTP/1.1 101 Switching Protocols',
     'Upgrade: websocket',
@@ -346,7 +389,7 @@ function handlePvpUpgrade(req, socket, head) {
     '',
     '',
   ].join('\r\n'));
-  attachSocket(socket, head);
+  attachSocket(socket, head, auth);
 }
 
 function attachPvp(httpServer) {

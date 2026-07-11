@@ -44,7 +44,10 @@
   function connect() {
     if (pvp.ws && (pvp.ws.readyState === WebSocket.OPEN || pvp.ws.readyState === WebSocket.CONNECTING)) return;
     setStatus('连接中...');
-    pvp.ws = new WebSocket(PVP_SERVER_URL);
+    // 带上登录 token(若已登录):服务端据此认证身份、决定聊天昵称,杜绝冒充
+    const token = (window.account && window.account.token) || '';
+    const url = PVP_SERVER_URL + (token ? '?token=' + encodeURIComponent(token) : '');
+    pvp.ws = new WebSocket(url);
     pvp.ws.addEventListener('open', () => setStatus('已连接'));
     pvp.ws.addEventListener('close', () => setStatus('连接已断开'));
     pvp.ws.addEventListener('error', () => setStatus('连接失败，请确认 PVP 服务已启动'));

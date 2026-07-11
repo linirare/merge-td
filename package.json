@@ -8,9 +8,10 @@
     "test:combat": "node test/combat-baseline.js --check",
     "test:security": "node test/server-security.js",
     "test:pvp": "node test/pvp-handshake.js",
+    "test:pvp-auth": "node test/pvp-auth.js",
     "test:stages": "node test/stage-config.js",
     "test:stage-sim": "node test/stage-sim.js",
-    "check": "npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:security && npm run test:pvp"
+    "check": "npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:security && npm run test:pvp && npm run test:pvp-auth"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
