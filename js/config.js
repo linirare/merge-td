@@ -237,6 +237,17 @@ function starHpBonus(star)  { return [0, 0, 0.03, 0.06, 0.10, 0.15, 0.20, 0.26][
 // 碎片 → 最终 ATK/HP 乘子:(1+养成加成)×(1+星级加成)
 function fragmentAtkMul(shards) { return (1 + cultivateBonusAt(cultivateLevelFromShards(shards))) * (1 + starAtkBonus(starLevelFromShards(shards))); }
 function fragmentHpMul(shards)  { return (1 + cultivateBonusAt(cultivateLevelFromShards(shards))) * (1 + starHpBonus(starLevelFromShards(shards))); }
+// 玩家平均养成级(用于动态难度,设计 §9.3):取前一半水果的养成级平均,
+// 避免中位数被大量零养成果拖成 0(玩家专精一两果时也会随投入产生难度)。
+function avgPlayerCultivateLv(meta) {
+  const shards = (meta && meta.shardsTotal) ? meta.shardsTotal : {};
+  const vals = UNIT_POOL.filter(id => TYPES[id]).map(id => cultivateLevelFromShards(shards[id] || 0));
+  if (!vals.length) return 0;
+  vals.sort((a, b) => b - a); // 降序
+  const n = Math.max(1, Math.floor(vals.length / 2));
+  let sum = 0; for (let i = 0; i < n; i++) sum += vals[i];
+  return Math.round(sum / n);
+}
 const BASE_WALL_HP = 72;
 const SIEGE_SLOTS_PER_LANE = 3;
 const BALL_SPAWN_INTERVAL = 4.4;
