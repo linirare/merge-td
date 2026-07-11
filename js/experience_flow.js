@@ -311,24 +311,7 @@
     ctx.restore();
   }
 
-  function drawSummonHints() {
-    if (!state || state.phase !== 'playing' || !state.playerSlots) return;
-    const cost = typeof nextJuiceActionCost === 'function' ? nextJuiceActionCost() : 1;
-    if ((state.sp || 0) < cost) return;
-    const pulse = 0.35 + Math.sin(performance.now() / 220) * 0.12;
-    ctx.save();
-    ctx.strokeStyle = `rgba(255, 212, 90, ${pulse})`;
-    ctx.lineWidth = 2;
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (state.playerSlots[r][c]) continue;
-        const p = slotCenter(r, c, false);
-        drawRoundRect(p.x - CELL / 2 + 3, p.y - CELL / 2 + 3, CELL - 6, CELL - 6, 8);
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
+  function drawSummonHints() {}
 
   function drawDragAction() {
     const d = state?.drag;

@@ -6,12 +6,12 @@
 body{background:#2b3240;font-family:sans-serif;padding:16px}
 h1{color:#eee;text-align:center;margin-bottom:6px;font-size:19px}
 p.sub{color:#9aa4b2;text-align:center;margin-bottom:14px;font-size:12px}
-canvas{display:block;margin:0 auto;border-radius:8px;background:#ede8d5}
+canvas{display:block;margin:0 auto;border-radius:8px;background:#ede8d5;max-width:100%;height:auto}
 </style></head>
 <body>
 <h1>水果突击 · 火柴人渲染器 v60 预览</h1>
 <p class="sub">每种水果三个等级(Lv1/2/3,越高越大)。红边=敌方朝向,绿边=我方朝向;Lv3 展示攻击姿态。直接双击本文件即可在浏览器打开。</p>
-<canvas id="c" width="1040" height="1900"></canvas>
+<canvas id="c" width="1040" height="2250"></canvas>
 <!-- 真渲染器:定义 drawStickmanShape / stickWeaponForRole,IIFE 因无 drawSoldier 自动空转 -->
 <script src="../js/stickman_render_v60.js"></script>
 <script>
@@ -47,7 +47,7 @@ const FRUITS = [
 
 const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
-const colW = 172, rowH = 250, startX = 70, startY = 360;
+const colW = 172, rowH = 250, startX = 70, startY = 560;
 
 const draws = [];
 FRUITS.forEach((f, i) => {
@@ -99,9 +99,65 @@ function previewRoundRect(x, y, w, h, r) {
   ctx.closePath();
 }
 
+function drawPreviewFruitBoard(x, y, cell, gap, flip) {
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 5; c++) {
+      const idx = (r * 5 + c + (flip ? 7 : 0)) % FRUITS.length;
+      const px = x + c * (cell + gap);
+      const py = y + r * (cell + gap);
+      ctx.fillStyle = 'rgba(255,253,240,0.86)';
+      previewRoundRect(px, py, cell, cell, 8);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(105,136,82,0.20)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.font = `${Math.round(cell * 0.56)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(FRUITS[idx].icon, px + cell / 2, py + cell / 2 + 1);
+    }
+  }
+}
+
+function drawPreviewSpawnStrip(x, y, w) {
+  ctx.fillStyle = 'rgba(255,253,240,0.88)';
+  previewRoundRect(x, y, w, 32, 10);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(38,82,57,0.14)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = '#203629';
+  previewRoundRect(x + 7, y + 5, 98, 22, 8);
+  ctx.fill();
+  ctx.fillStyle = '#fff8cf';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillText('果汁 8', x + 18, y + 16);
+
+  const bx = x + 124, bw = w - 132;
+  const g = ctx.createLinearGradient(0, y + 4, 0, y + 28);
+  g.addColorStop(0, '#ffe47a');
+  g.addColorStop(1, '#ff9d3f');
+  ctx.fillStyle = g;
+  previewRoundRect(bx, y + 4, bw, 24, 9);
+  ctx.fill();
+  ctx.fillStyle = '#6a320c';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillText('出球', bx + bw * 0.44, y + 16);
+  ctx.fillStyle = '#c94b55';
+  previewRoundRect(bx + bw - 46, y + 6, 38, 20, 8);
+  ctx.fill();
+  ctx.fillStyle = '#fff8cf';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillText('-3', bx + bw - 27, y + 16);
+}
+
 function drawBattlefieldPreview() {
   ctx.save();
-  const x = 70, y = 48, w = W - 140, h = 260;
+  const x = 70, y = 48, w = W - 140, h = 430;
   const g = ctx.createLinearGradient(0, y, 0, y + h);
   g.addColorStop(0, '#f9edc6');
   g.addColorStop(0.5, '#f4e5b6');
@@ -113,37 +169,40 @@ function drawBattlefieldPreview() {
   ctx.lineWidth = 2;
   ctx.stroke();
 
+  drawPreviewFruitBoard(x + 255, y + 18, 38, 7, true);
+  drawPreviewFruitBoard(x + 255, y + h - 182, 38, 7, false);
+
+  ctx.fillStyle = 'rgba(185,87,102,0.76)';
+  previewRoundRect(x + 56, y + 152, w - 112, 14, 7);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(74,168,105,0.76)';
+  previewRoundRect(x + 56, y + h - 214, w - 112, 14, 7);
+  ctx.fill();
+
   for (let i = 0; i < 5; i++) {
     const lx = x + 120 + i * ((w - 240) / 4);
     ctx.strokeStyle = 'rgba(92,160,98,0.14)';
     ctx.lineWidth = i === 2 ? 1.5 : 1;
     ctx.beginPath();
-    ctx.moveTo(lx, y + 34);
-    ctx.lineTo(lx, y + h - 34);
+    ctx.moveTo(lx, y + 176);
+    ctx.lineTo(lx, y + h - 228);
     ctx.stroke();
   }
   ctx.setLineDash([8, 9]);
   ctx.strokeStyle = 'rgba(224,178,88,0.20)';
   ctx.beginPath();
-  ctx.moveTo(x + 28, y + h / 2);
-  ctx.lineTo(x + w - 28, y + h / 2);
+  ctx.moveTo(x + 28, y + h / 2 + 8);
+  ctx.lineTo(x + w - 28, y + h / 2 + 8);
   ctx.stroke();
   ctx.setLineDash([]);
-
-  ctx.fillStyle = '#C97984';
-  previewRoundRect(x + 32, y + 22, w - 64, 18, 8);
-  ctx.fill();
-  ctx.fillStyle = '#78C783';
-  previewRoundRect(x + 32, y + h - 40, w - 64, 18, 8);
-  ctx.fill();
 
   ctx.fillStyle = '#556';
   ctx.textAlign = 'left';
   ctx.font = 'bold 15px sans-serif';
-  ctx.fillText('Battlefield tone check', x, y - 14);
+  ctx.fillText('Battle screen fusion check', x, y - 14);
   ctx.font = '12px sans-serif';
   ctx.fillStyle = '#7b7f87';
-  ctx.fillText('Cream field, soft lanes, red/green wall colors', x + 180, y - 14);
+  ctx.fillText('3x5 fruit boards, gummy line soldiers, spawn button', x + 210, y - 14);
 
   for (const d of fieldDraws) {
     ctx.save();
@@ -154,6 +213,7 @@ function drawBattlefieldPreview() {
   ctx.textAlign = 'center';
   ctx.font = '11px sans-serif';
   for (const d of fieldDraws) ctx.fillText(d._fieldLabel, d.cx, d.groundY + 28);
+  drawPreviewSpawnStrip(x + 255, y + h - 38, 5 * 38 + 4 * 7);
   ctx.restore();
 }
 
