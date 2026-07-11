@@ -1,202 +1,99 @@
-/* ============================================================
-   水果突击 · UI Redesign v66 — 可爱鲜亮休闲手游风
-   深暖底色 + 高饱和水果色 + 大圆角卡片 + 活泼按钮
-   ============================================================ */
-:root {
-  --bg: #1e2032;
-  --bg-card: #282b40;
-  --bg-card-hover: #323552;
-  --bg-nav: #252840;
-  --text: #f2efe8;
-  --text-dim: #a8a4ba;
-  --accent: #ff6b4a;
-  --green: #34c96b;
-  --purple: #9b5cff;
-  --yellow: #ffd447;
-  --pink: #ff9fbd;
-  --blue: #4db6ff;
-  --gold: #ffc93c;
-  --radius: 18px;
-  --radius-sm: 10px;
-  --shadow-card: 0 4px 16px rgba(0,0,0,0.30);
-  --shadow-btn: 0 3px 10px rgba(0,0,0,0.25);
-  --font: "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
-}
+/* Fruit Assault — UI v66 可爱鲜亮深色水果风 */
+:root{--bg:#1a1c2e;--card:#282b40;--card2:#323552;--ink:#f0ece4;--dim:#9a95b4;--green:#34c96b;--orange:#ff6b4a;--yellow:#ffd447;--pink:#ff9fbd;--purple:#9b5cff;--blue:#4db6ff;--gold:#ffc93c;--red:#ff4a5f;--line:rgba(255,255,255,0.08);--shadow:0 4px 18px rgba(0,0,0,0.35);--radius:12px;--font:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+body.ui-redesign{background:var(--bg);color:var(--ink);font-family:var(--font);overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+body.ui-redesign::before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 16% 20%,rgba(255,107,74,0.10),transparent 26%),radial-gradient(circle at 88% 62%,rgba(155,92,255,0.08),transparent 30%)}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* panels */
+body.shell-v65 .panel{position:fixed;top:0;left:0;right:0;bottom:62px;z-index:10;overflow-y:auto;background:var(--bg);padding:16px}
+body.shell-v65 .panel.hide{display:none}
+body.shell-v65 .panel-inner{max-width:520px;margin:0 auto}
+body.shell-v65 .panel-inner.shell-page{width:min(450px,100%);max-height:100%;overflow:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:var(--radius);border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow)}
 
-body.ui-redesign {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  overflow-x: hidden;
-  -webkit-tap-highlight-color: transparent;
-}
+/* bottom nav */
+body.shell-v65 #bottomNav{position:fixed;bottom:0;left:0;right:0;z-index:100;height:62px;display:flex;justify-content:center;background:var(--card);border-top:1px solid var(--line);padding:4px 8px 6px;box-shadow:0 -2px 14px rgba(0,0,0,0.40)}
+body.shell-v65 #bottomNav.shell-hidden{display:none}
+body.shell-v65 .bnav-tab{flex:1;max-width:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:none;border:none;color:var(--dim);cursor:pointer;font-size:10px;font-family:var(--font);padding:4px 2px;border-radius:8px;transition:0.15s}
+body.shell-v65 .bnav-tab .bnav-icon{font-size:22px;line-height:1.2}
+body.shell-v65 .bnav-tab.active{color:var(--orange);font-weight:700}
+body.shell-v65 .bnav-tab.active .bnav-icon{transform:scale(1.12)}
 
-/* ---- Panels ---- */
-body.ui-redesign .panel {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 64px;
-  z-index: 10; overflow-y: auto;
-  background: var(--bg);
-  padding: 16px;
-  transition: opacity 0.18s;
-}
-body.ui-redesign .panel.hide { display: none; }
-body.ui-redesign .panel-inner {
-  max-width: 520px; margin: 0 auto;
-}
+/* page head */
+body.shell-v65 .shell-page-head{padding:4px 2px 0}
+body.shell-v65 .shell-page-head h2{font-size:22px;font-weight:800;color:var(--ink);margin:0}
+body.shell-v65 .shell-page-head small{color:var(--orange);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+body.shell-v65 .shell-page-head p{color:var(--dim);font-size:12px;margin:2px 0 0}
 
-/* ---- Bottom Nav ---- */
-body.shell-v65 #bottomNav {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-  height: 62px;
-  display: flex; justify-content: center; gap: 0;
-  background: var(--bg-nav);
-  border-top: 1px solid rgba(255,255,255,0.06);
-  padding: 4px 8px 6px;
-  box-shadow: 0 -2px 12px rgba(0,0,0,0.35);
-}
-body.shell-v65 #bottomNav.shell-hidden { display: none; }
+/* resource bar */
+body.shell-v65 .shell-resource-bar{display:flex;justify-content:center;gap:14px;padding:8px 12px;margin-bottom:8px;background:var(--card);border-radius:60px;box-shadow:var(--shadow)}
+body.shell-v65 .shell-resource-bar span{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--ink)}
+body.shell-v65 .shell-resource-bar i{font-size:17px;font-style:normal}
+body.shell-v65 .shell-resource-bar b{font-size:16px;color:var(--ink)}
 
-body.shell-v65 .bnav-tab {
-  flex: 1; max-width: 80px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: none; border: none; color: var(--text-dim); cursor: pointer;
-  font-size: 10px; font-family: var(--font);
-  padding: 4px 2px; border-radius: var(--radius-sm);
-  transition: 0.15s;
-}
-body.shell-v65 .bnav-tab .bnav-icon { font-size: 22px; line-height: 1.2; }
-body.shell-v65 .bnav-tab.active { color: var(--accent); font-weight: 700; }
-body.shell-v65 .bnav-tab.active .bnav-icon { transform: scale(1.12); }
+/* buttons */
+body.shell-v65 .btn-primary,body.shell-v65 .shell-primary-cta{display:block;width:100%;max-width:360px;margin:10px auto;padding:13px 20px;border:none;border-radius:60px;background:linear-gradient(135deg,var(--orange),#e04a30);color:#fff;font-size:15px;font-weight:800;text-align:center;cursor:pointer;transition:0.12s;font-family:var(--font);box-shadow:0 4px 14px rgba(0,0,0,0.30)}
+body.shell-v65 .btn-primary:active,body.shell-v65 .shell-primary-cta:active{transform:scale(1.02);filter:brightness(1.08)}
+body.shell-v65 .btn-secondary{display:block;width:100%;max-width:360px;margin:8px auto;padding:12px 18px;border:2px solid var(--line);border-radius:60px;background:transparent;color:var(--ink);font-size:14px;font-weight:600;text-align:center;cursor:pointer;font-family:var(--font)}
+body.shell-v65 .btn-secondary:active{border-color:var(--orange);color:var(--orange)}
+body.shell-v65 button:disabled{opacity:0.45;transform:none;filter:none}
 
-/* ---- Page Head ---- */
-body.ui-redesign .shell-page-head {
-  text-align: center; padding: 8px 0 14px;
-}
-body.ui-redesign .shell-page-head small {
-  display: block; font-size: 11px; color: var(--accent);
-  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;
-}
-body.ui-redesign .shell-page-head h2 { font-size: 22px; font-weight: 800; }
-body.ui-redesign .shell-page-head p { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+/* cards */
+body.shell-v65 .home-hero-card,body.shell-v65 .arena-card,body.shell-v65 .shell-row,body.shell-v65 .quick-card,body.shell-v65 .help-section,body.shell-v65 .fruit-detail-card,body.shell-v65 .shop-feature,body.shell-v65 .arena-mode-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+body.shell-v65 .home-hero-card{min-height:200px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(180deg,var(--card2),var(--card))}
+body.shell-v65 .home-hero-card h1{font-size:28px;line-height:1.1;color:var(--ink);margin:0;font-weight:900}
+body.shell-v65 .home-brand-row{display:flex;align-items:center;gap:12px}
+body.shell-v65 .home-logo{width:52px;height:52px;display:grid;place-items:center;border-radius:var(--radius);background:var(--card);font-size:30px}
 
-/* ---- Resource Bar ---- */
-body.ui-redesign .shell-resource-bar {
-  display: flex; justify-content: center; gap: 18px;
-  padding: 8px 12px; margin-bottom: 12px;
-  background: var(--bg-card); border-radius: 60px;
-  box-shadow: var(--shadow-card);
-}
-body.ui-redesign .shell-resource-bar span {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 13px; font-weight: 700;
-}
-body.ui-redesign .shell-resource-bar i { font-size: 16px; }
+/* stage grid */
+body.shell-v65 .stage-grid,body.shell-v65 .td-stage-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:4px 0}
+body.shell-v65 .stage-card,body.shell-v65 .td-stage-node{background:var(--card);border:2px solid transparent;border-radius:var(--radius);padding:12px 8px;text-align:center;cursor:pointer;transition:0.12s;color:var(--ink);font-family:var(--font)}
+body.shell-v65 .stage-card:active,body.shell-v65 .td-stage-node:active{transform:translateY(-2px);border-color:var(--orange)}
+body.shell-v65 .stage-card .stage-num,body.shell-v65 .td-stage-node b{font-size:18px;font-weight:800}
+body.shell-v65 .td-stage-node.boss{border-color:var(--orange);background:linear-gradient(135deg,#3a2a30,var(--card))}
+body.shell-v65 .td-stage-node.current{border-color:var(--green)}
+body.shell-v65 .td-stage-node.locked{opacity:0.35}
 
-/* ---- Cards / Rows ---- */
-body.ui-redesign .stage-grid {
-  display: grid; grid-template-columns: repeat(4,1fr);
-  gap: 10px; padding: 4px 0;
-}
-body.ui-redesign .stage-card {
-  background: var(--bg-card); border-radius: var(--radius);
-  padding: 12px 8px; text-align: center;
-  box-shadow: var(--shadow-card);
-  cursor: pointer; transition: 0.12s;
-  border: 2px solid transparent;
-}
-body.ui-redesign .stage-card:hover, body.ui-redesign .stage-card:active {
-  transform: translateY(-2px); border-color: var(--accent);
-}
-body.ui-redesign .stage-card .stage-num { font-size: 18px; font-weight: 800; }
-body.ui-redesign .stage-card .stage-stars { font-size: 10px; color: var(--gold); margin: 2px 0; }
-body.ui-redesign .stage-card .stage-reward { font-size: 11px; color: var(--text-dim); }
-body.ui-redesign .stage-card.boss {
-  background: linear-gradient(135deg, #3a2a30, var(--bg-card));
-  border-color: var(--accent);
-}
+/* home */
+body.shell-v65 .td-home{display:flex;flex-direction:column;gap:12px}
+body.shell-v65 .td-topbar{display:flex;align-items:center;justify-content:space-between;padding:2px 0}
+body.shell-v65 .td-avatar{width:46px;height:46px;border-radius:var(--radius);border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:24px;cursor:pointer}
+body.shell-v65 .td-resources{display:flex;gap:12px}
+body.shell-v65 .td-resources span{font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:4px}
+body.shell-v65 .td-battle-preview{min-height:110px;border-radius:var(--radius);background:linear-gradient(180deg,var(--card2),var(--card));position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+body.shell-v65 .td-team-strip{display:flex;gap:6px;flex-wrap:wrap}
+body.shell-v65 .td-team-strip button{display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:60px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:11px;cursor:pointer;font-family:var(--font)}
+body.shell-v65 .td-emoji-unit{font-size:22px}
+body.shell-v65 .td-stage-panel{display:flex;flex-direction:column;gap:8px}
 
-body.ui-redesign .arena-card {
-  background: var(--bg-card); border-radius: var(--radius);
-  padding: 14px; margin-bottom: 10px;
-  box-shadow: var(--shadow-card);
-}
-body.ui-redesign .shell-row {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--bg-card); border-radius: var(--radius);
-  padding: 12px 14px; margin-bottom: 8px;
-  box-shadow: var(--shadow-card);
-}
+/* home strip */
+body.shell-v65 .home-stage-strip{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 11px;border-radius:var(--radius);background:var(--card2);color:var(--ink);font-weight:700}
+body.shell-v65 .home-stage-strip strong{font-size:22px;color:var(--gold)}
+body.shell-v65 .home-stage-strip em{min-width:52px;text-align:center;border-radius:60px;padding:4px 8px;background:rgba(255,255,255,0.08);color:var(--ink);font-style:normal;font-weight:700}
 
-/* ---- Buttons ---- */
-body.ui-redesign .btn-primary {
-  display: block; width: 100%; max-width: 360px; margin: 12px auto;
-  padding: 14px 20px; border: none; border-radius: 60px;
-  background: linear-gradient(135deg, var(--accent), #e55a3a);
-  color: #fff; font-size: 16px; font-weight: 800;
-  box-shadow: var(--shadow-btn); cursor: pointer;
-  letter-spacing: 0.5px;
-  transition: 0.12s;
-}
-body.ui-redesign .btn-primary:hover, body.ui-redesign .btn-primary:active {
-  transform: scale(1.02); filter: brightness(1.08);
-}
-body.ui-redesign .btn-primary:disabled { opacity: 0.45; transform: none; filter: none; }
+/* home quick */
+body.shell-v65 .home-quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+body.shell-v65 .quick-card{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;min-height:88px;font-weight:700}
+body.shell-v65 .quick-card span{font-size:22px}
+body.shell-v65 .quick-card small{color:var(--dim);font-size:10px}
 
-body.ui-redesign .btn-secondary {
-  display: block; width: 100%; max-width: 360px; margin: 8px auto;
-  padding: 12px 18px; border: 2px solid rgba(255,255,255,0.15);
-  border-radius: 60px;
-  background: transparent; color: var(--text);
-  font-size: 14px; font-weight: 600; cursor: pointer;
-  transition: 0.12s;
-}
-body.ui-redesign .btn-secondary:hover {
-  border-color: var(--accent); color: var(--accent);
-}
+/* gacha */
+body.shell-v65 .gacha-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center}
+body.shell-v65 .gacha-box{background:var(--card);border-radius:var(--radius);padding:24px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.50);text-align:center}
+body.shell-v65 .gacha-result{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;margin:6px 0}
+body.shell-v65 .gacha-result .ico{font-size:28px}
+body.shell-v65 .gacha-result b{font-size:15px;color:var(--ink)}
 
-/* ---- Shop Tabs / Gacha ---- */
-body.ui-redesign .gacha-overlay {
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(0,0,0,0.65);
-  display: flex; align-items: center; justify-content: center;
-}
-body.ui-redesign .gacha-box {
-  background: var(--bg-card); border-radius: var(--radius);
-  padding: 24px; max-width: 380px; width: 90%;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.50);
-  text-align: center;
-}
-body.ui-redesign .gacha-result {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px; border-radius: var(--radius-sm);
-  margin: 6px 0;
-}
-body.ui-redesign .gacha-result .ico { font-size: 28px; }
-body.ui-redesign .gacha-result b { font-size: 15px; }
+/* result */
+body.shell-v65 .result-card{background:var(--card);border-radius:var(--radius);padding:28px 20px;text-align:center;box-shadow:var(--shadow)}
+body.shell-v65 .result-card h2{font-size:26px;margin-bottom:10px;color:var(--ink)}
+body.shell-v65 .result-card p{color:var(--dim);margin-bottom:18px}
 
-/* ---- Result Screen ---- */
-body.ui-redesign .result-card {
-  background: var(--bg-card); border-radius: var(--radius);
-  padding: 28px 20px; text-align: center;
-  box-shadow: var(--shadow-card);
-}
-body.ui-redesign .result-card h2 { font-size: 26px; margin-bottom: 10px; }
-body.ui-redesign .result-card p { color: var(--text-dim); margin-bottom: 18px; }
+/* help */
+body.shell-v65 .help-panel{max-width:480px;margin:0 auto}
+body.shell-v65 .help-section{background:var(--card);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px}
+body.shell-v65 .help-section h3{font-size:14px;color:var(--orange);margin-bottom:6px}
+body.shell-v65 .help-section p{font-size:12px;line-height:1.6;color:var(--dim)}
 
-/* ---- Misc ---- */
-body.ui-redesign .help-panel { max-width: 480px; margin: 0 auto; }
-body.ui-redesign .help-section {
-  background: var(--bg-card); border-radius: var(--radius);
-  padding: 14px 16px; margin-bottom: 10px;
-}
-body.ui-redesign .help-section h3 { font-size: 14px; color: var(--accent); margin-bottom: 6px; }
-body.ui-redesign .help-section p { font-size: 12px; line-height: 1.6; color: var(--text-dim); }
+/* arena */
+body.shell-v65 .arena-card .pvp-status-line{font-size:12px;color:var(--dim);margin-top:6px}
 
-/* ---- Responsive ---- */
-@media (max-width: 380px) {
-  body.ui-redesign .stage-grid { grid-template-columns: repeat(3,1fr); gap: 8px; }
-  body.ui-redesign .stage-card { padding: 10px 6px; }
-  body.shell-v65 .bnav-tab { font-size: 9px; }
-}
+@media(max-width:380px){body.shell-v65 .stage-grid,body.shell-v65 .td-stage-grid{grid-template-columns:repeat(3,1fr)}body.shell-v65 .bnav-tab{font-size:9px}}
