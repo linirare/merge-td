@@ -1,0 +1,335 @@
+/* ============================================================
+   水果突击 · Hi-Fi 烫金抽卡皮 (里程碑1:首页 + 共享底栏)
+   源自 merge-td-redesign/app-hifi.html。
+   作用域 = .hifi 类(只加在 #menuPanel / #bottomNav 上),
+   token 挂在 .hifi 而非 :root,不污染 shell-v65 旧屏。
+   本文件须在 ui_redesign.css 之后加载。
+   ============================================================ */
+
+.hifi{
+  --gold:#F5C242; --gold-lt:#FDE79A; --gold-dk:#B5750A; --gold-dpp:#7A4E08;
+  --maroon:#8B1A1A; --maroon-dk:#5A0E0E;
+  --coin:#FFCB3D; --gem:#38C6E8; --ruby:#E23B4E; --jade:#2FBF71;
+  --cream:#FFF6DE; --paper:#F3E3C0;
+}
+.hifi .icon{width:1em;height:1em;display:inline-block;vertical-align:-.15em;}
+.hifi .display{font-family:'ZCOOL KuaiLe',cursive;}
+.hifi button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit;}
+
+/* ---- 壳屏面板全屏化:覆盖 shell-v65 的 .panel 定位(ID+class 特异性 > body.shell-v65 .panel) ---- */
+#menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi{position:fixed;inset:0;padding:0;overflow:hidden;background:#14100b;display:block;z-index:10;}
+#menuPanel.hifi .panel-inner,#shopPanel.hifi .panel-inner,#shellLabPanel.hifi .panel-inner,#arenaPanel.hifi .panel-inner,#rankPanel.hifi .panel-inner{width:100%;max-width:none;height:100%;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:0;display:block;transform:none;}
+
+/* ---- 首页容器 ---- */
+.hifi-home{position:absolute;inset:0;overflow:hidden;font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;color:#fff;}
+.hifi-home .bg{position:absolute;inset:0;background:url('../art/bg-clean_002.jpg') center/cover;}
+.hifi-home .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,30,.30) 0%,transparent 16%,transparent 60%,rgba(30,6,6,.35) 100%);}
+
+/* ---- 顶栏 ---- */
+.hifi .top{position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:12px;right:12px;display:flex;align-items:center;gap:8px;z-index:20;}
+.hifi .ring{position:relative;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 38% 30%,#FFF6DE,#F5C242 55%,#D18A0E);border:3px solid #7A4E08;
+  box-shadow:0 4px 8px rgba(0,0,0,.45),inset 0 2px 3px rgba(255,255,255,.8),inset 0 -3px 5px rgba(122,78,8,.6);transition:transform .12s;}
+.hifi .ring:active{transform:scale(.9);}
+.hifi .ring>.inner{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 40% 34%,#5b6b8f,#26314b);box-shadow:inset 0 2px 4px rgba(0,0,0,.6);}
+.hifi .ring .icon{width:20px;height:20px;color:#FFE9A8;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5));}
+.hifi .avatar .inner{background:radial-gradient(circle at 40% 34%,#8B6CC0,#4A2D7A);}
+.hifi .avatar .lvl{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:var(--maroon);color:#FFE9A8;font-family:'Fredoka';font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;border:1.5px solid #F5C242;white-space:nowrap;}
+.hifi .cchip{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 8px 0 6px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(30,18,40,.92),rgba(18,10,26,.94));border:2px solid var(--gold);
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.15),0 3px 6px rgba(0,0,0,.4);color:#fff;font-weight:800;font-size:13px;}
+.hifi .cchip .icon{width:20px;height:20px;}
+.hifi .cchip .plus{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#8FE38F,#22A24A);display:grid;place-items:center;box-shadow:0 2px 0 #157A34;margin-left:1px;}
+.hifi .cchip .plus .icon{width:12px;height:12px;color:#fff;}
+.hifi .top .sp{flex:1;}
+
+/* ---- 标题 logo ---- */
+.hifi .logo{position:absolute;top:calc(env(safe-area-inset-top) + 66px);left:0;right:0;text-align:center;z-index:8;pointer-events:none;}
+.hifi .logo h1{font-size:58px;line-height:1;color:#FFE7A0;-webkit-text-stroke:2.5px #6B0F0F;paint-order:stroke fill;
+  text-shadow:0 2px 0 #F0A81E,0 4px 0 #D68C10,0 6px 0 #B5750A,0 8px 0 #8B1A1A,0 12px 16px rgba(0,0,0,.55);letter-spacing:2px;}
+.hifi .logo .rib{display:inline-block;margin-top:12px;font-family:'ZCOOL KuaiLe';font-size:14px;color:#5A0E0E;background:linear-gradient(180deg,#FDE79A,#F5C242);padding:3px 16px;border-radius:999px;border:2px solid #fff;box-shadow:0 3px 6px rgba(0,0,0,.4);}
+
+/* ---- 首页侧边入口 ---- */
+.hifi .side,.hifi .side-l{position:absolute;top:34%;display:flex;flex-direction:column;gap:16px;z-index:9;}
+.hifi .side{right:12px;} .hifi .side-l{left:12px;}
+.hifi .side .ring,.hifi .side-l .ring{width:50px;height:50px;}
+.hifi .side .ring>.inner,.hifi .side-l .ring>.inner{width:38px;height:38px;}
+.hifi .side .ring .icon,.hifi .side-l .ring .icon{width:22px;height:22px;}
+.hifi .ring .lbl{position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-family:'ZCOOL KuaiLe';font-size:10px;color:#fff;text-shadow:0 1px 0 #6B0F0F,0 0 4px rgba(0,0,0,.7);white-space:nowrap;}
+.hifi .ring .badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--ruby);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;border:2px solid #fff;font-family:'Nunito';}
+
+/* ---- 首页两大主按钮:开始对战 / 开始竞技 ---- */
+.hifi .homecta{position:absolute;left:20px;right:20px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:10;display:flex;gap:12px;}
+.hifi .homecta::before{content:"";position:absolute;left:-12px;right:-12px;top:-13px;bottom:-15px;z-index:-1;border-radius:22px;
+  background:linear-gradient(180deg,rgba(22,12,30,.82),rgba(10,6,16,.92));border:1.5px solid rgba(245,194,66,.5);
+  box-shadow:0 10px 26px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,233,168,.3);}
+.hifi .cta{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:8px;min-height:68px;border-radius:18px;border:3px solid;transition:transform .1s,box-shadow .1s;}
+.hifi .cta:active{transform:translateY(4px);}
+.hifi .cta .micon{width:28px;height:28px;flex:none;color:#FFF6DE;filter:drop-shadow(0 1px 0 rgba(0,0,0,.45));}
+.hifi .cta .txtcol{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;}
+.hifi .cta .t{font-family:'ZCOOL KuaiLe';font-size:20px;color:#FFF6DE;-webkit-text-stroke:1px;paint-order:stroke fill;}
+.hifi .cta .s{font-family:'Nunito';font-weight:800;font-size:10px;}
+.hifi .cta .shine{position:absolute;top:0;left:-60%;width:45%;height:100%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:hifiShine 3.6s ease-in-out infinite;}
+.hifi .cta.pve{background:linear-gradient(180deg,#FFE9A8,#F5C242 45%,#E8A317 62%,#D18A0E);border-color:#7A4E08;box-shadow:0 6px 0 #7A4E08,0 10px 16px rgba(0,0,0,.45),inset 0 2px 3px rgba(255,255,255,.85),0 0 22px rgba(245,194,66,.4);}
+.hifi .cta.pve .t{-webkit-text-stroke-color:#7A2010;text-shadow:0 2px 0 #B5480A;} .hifi .cta.pve .s{color:#5A0E0E;}
+.hifi .cta.pve:active{box-shadow:0 2px 0 #7A4E08;}
+.hifi .cta.pvp{background:linear-gradient(180deg,#A6E4F5,#38C6E8 45%,#1E9AC0 62%,#137A9A);border-color:#0E5A72;box-shadow:0 6px 0 #0E5A72,0 10px 16px rgba(0,0,0,.45),inset 0 2px 3px rgba(255,255,255,.7),0 0 22px rgba(56,198,232,.4);}
+.hifi .cta.pvp .t{-webkit-text-stroke-color:#0A4A5E;text-shadow:0 2px 0 #0E6A86;} .hifi .cta.pvp .s{color:#06323F;}
+.hifi .cta.pvp:active{box-shadow:0 2px 0 #0E5A72;}
+
+/* ============================================================
+   共享底部导航(覆盖 shell-v65 的 #bottomNav 容器规则)
+   ============================================================ */
+body.shell-v65 #bottomNav.hifi,
+#bottomNav.hifi{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:100;height:calc(70px + env(safe-area-inset-bottom));
+  padding:0 4px env(safe-area-inset-bottom);display:flex;align-items:center;justify-content:space-around;
+  background:linear-gradient(180deg,#3E2716,#22110A);border-top:3px solid #F5C242;box-shadow:0 -4px 16px rgba(0,0,0,.55),inset 0 2px 0 rgba(255,233,168,.35);
+  backdrop-filter:none;-webkit-backdrop-filter:none;overflow:visible;}
+body.shell-v65 #bottomNav.hifi.shell-hidden,
+#bottomNav.hifi.shell-hidden{display:none;}
+#bottomNav.hifi .navtab{flex:1;max-width:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:5px;color:#B99A6E;font-family:'ZCOOL KuaiLe';font-size:12px;transition:color .15s;background:none;border:0;}
+#bottomNav.hifi .navtab .ic{position:relative;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;
+  background:radial-gradient(circle at 40% 34%,#5A3A1E,#2C1B0E);border:1.5px solid #7A4E08;box-shadow:inset 0 1px 2px rgba(255,255,255,.18),inset 0 -2px 3px rgba(0,0,0,.4);transition:transform .12s;}
+#bottomNav.hifi .navtab .ic .icon{width:22px;height:22px;color:#8A6A3E;transition:color .15s;}
+#bottomNav.hifi .navtab:active .ic{transform:scale(.9);}
+#bottomNav.hifi .navtab.active{color:#FFE9A8;}
+#bottomNav.hifi .navtab.active .ic{background:radial-gradient(circle at 40% 34%,#8A5A2E,#4A2E12);border-color:#F5C242;box-shadow:inset 0 1px 2px rgba(255,255,255,.3),0 0 10px rgba(245,194,66,.5);}
+#bottomNav.hifi .navtab.active .ic .icon{color:#F5C242;}
+#bottomNav.hifi .navmain{flex:none;position:relative;transform:translateY(-20px);width:76px;height:76px;border-radius:50%;overflow:hidden;
+  background:linear-gradient(180deg,#FFE9A8,#F5C242 44%,#E8A317 62%,#D18A0E);border:3px solid #7A4E08;
+  box-shadow:0 7px 0 #7A4E08,0 12px 20px rgba(0,0,0,.5),inset 0 2px 3px rgba(255,255,255,.85),0 0 24px rgba(245,194,66,.55);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:transform .1s,box-shadow .1s;animation:hifiBob 2.4s ease-in-out infinite;color:#FFF6DE;}
+#bottomNav.hifi .navmain:active{transform:translateY(-14px);box-shadow:0 2px 0 #7A4E08;animation:none;}
+#bottomNav.hifi .navmain .micon{width:24px;height:24px;color:#FFF6DE;filter:drop-shadow(0 1px 0 #B5480A);}
+#bottomNav.hifi .navmain .txt{font-family:'ZCOOL KuaiLe';font-size:16px;color:#FFF6DE;-webkit-text-stroke:1px #7A2010;paint-order:stroke fill;text-shadow:0 2px 0 #B5480A;line-height:1;}
+#bottomNav.hifi .navmain .shine{position:absolute;top:0;left:-60%;width:45%;height:100%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:hifiShine 3.4s ease-in-out infinite;}
+
+@keyframes hifiBob{50%{transform:translateY(-26px);}}
+@keyframes hifiShine{0%,60%{left:-60%;}100%{left:130%;}}
+@media (prefers-reduced-motion: reduce){.hifi *,#bottomNav.hifi *{animation:none !important;}}
+
+/* 桌面下给壳屏加个手机边框(与原型一致) */
+/* 桌面下把整个 app 收成居中 430px 全高一列(壳屏 + 底栏对齐),避免底栏满屏 */
+@media(min-width:470px){
+  #menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi{left:50%;right:auto;transform:translateX(-50%);width:430px;box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);}
+  body.shell-v65 #bottomNav.hifi,#bottomNav.hifi{left:50%;right:auto;transform:translateX(-50%);width:430px;}
+}
+
+/* ---- 轻量占位 toast(未接后端的入口用) ---- */
+.hifi-toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%) translateY(20px);z-index:400;
+  background:linear-gradient(180deg,rgba(40,16,10,.96),rgba(24,8,6,.96));color:#FFE9A8;font-weight:800;
+  font-family:'ZCOOL KuaiLe','PingFang SC','Microsoft YaHei',sans-serif;padding:11px 20px;border-radius:999px;opacity:0;transition:.3s;
+  border:2px solid #F5C242;box-shadow:0 8px 22px rgba(0,0,0,.5);pointer-events:none;max-width:80%;text-align:center;}
+.hifi-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ============================================================
+   通用 hifi 滚动屏(商店;后续卡牌/竞技/排行复用)
+   ============================================================ */
+.hifi-screen{position:absolute;inset:0;overflow:hidden;color:#fff;font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;}
+.hifi-screen>.bg{position:absolute;inset:0;background-position:center;background-size:cover;}
+.hifi-screen>.scrim{position:absolute;inset:0;}
+.hifi-screen.shop-bg>.bg{background-image:url('../art/bg-hall_001.jpg');}
+.hifi-screen.shop-bg>.scrim{background:linear-gradient(180deg,rgba(20,10,4,.80),rgba(14,7,3,.88));}
+.hifi .hifi-scroll{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(env(safe-area-inset-top) + 60px) 14px calc(102px + env(safe-area-inset-bottom));}
+.hifi .hifi-scroll::-webkit-scrollbar{width:0;}
+
+.hifi .shead{display:flex;align-items:center;gap:10px;margin:2px 2px 14px;}
+.hifi .shead h2{font-family:'ZCOOL KuaiLe';font-size:24px;color:#FFE9A8;-webkit-text-stroke:1px #6B0F0F;paint-order:stroke fill;text-shadow:0 2px 0 #8B1A1A,0 3px 6px rgba(0,0,0,.5);}
+.hifi .shead .line{flex:1;height:2px;background:linear-gradient(90deg,rgba(245,194,66,.8),transparent);}
+.hifi .shead .r{font-family:'ZCOOL KuaiLe';color:#E9C98A;font-size:13px;}
+
+/* .gpanel = 金皮卡片(避开里子全局 .panel 冲突) */
+.hifi .gpanel{position:relative;background:linear-gradient(180deg,rgba(56,34,18,.9),rgba(32,18,8,.92));border:2px solid #C89A3C;border-radius:16px;
+  box-shadow:0 6px 16px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,233,168,.25);padding:14px;color:var(--paper);margin-bottom:14px;}
+.hifi .gpanel::after{content:"";position:absolute;inset:4px;border:1px solid rgba(245,194,66,.32);border-radius:12px;pointer-events:none;}
+.hifi .pity-row{display:flex;justify-content:space-between;font-weight:800;font-size:13px;color:#C9B48A;margin-bottom:8px;position:relative;z-index:1;}
+.hifi .pity-row b{color:#F5C242;font-family:'Fredoka';}
+
+.hifi .gbtn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:'ZCOOL KuaiLe';font-size:18px;color:#FFF6DE;
+  padding:12px 16px;border-radius:14px;min-height:52px;overflow:hidden;background:linear-gradient(180deg,#FFE9A8,#F5C242 45%,#E8A317 62%,#D18A0E);
+  border:2px solid #7A4E08;box-shadow:0 5px 0 #7A4E08,0 8px 14px rgba(0,0,0,.4),inset 0 2px 3px rgba(255,255,255,.8);
+  -webkit-text-stroke:.7px #7A2010;paint-order:stroke fill;text-shadow:0 1px 0 #B5480A;transition:transform .1s,box-shadow .1s;}
+.hifi .gbtn:active{transform:translateY(4px);box-shadow:0 1px 0 #7A4E08;}
+.hifi .gbtn .icon{width:20px;height:20px;-webkit-text-stroke:0;}
+.hifi .gbtn.gray{background:linear-gradient(180deg,#8f897c,#6b665b);border-color:#4c483f;box-shadow:0 3px 0 #4c483f;color:#d8d4c8;filter:grayscale(.7);text-shadow:none;pointer-events:none;}
+.hifi .gbtn small{font-family:'Nunito';font-weight:800;font-size:13px;-webkit-text-stroke:0;}
+.hifi .cost{display:inline-flex;align-items:center;gap:5px;font-family:'ZCOOL KuaiLe';font-size:15px;}
+.hifi .bar{height:15px;border-radius:999px;background:rgba(0,0,0,.4);overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.5);border:1px solid rgba(245,194,66,.4);position:relative;z-index:1;}
+.hifi .bar>span{display:block;height:100%;border-radius:999px;}
+.hifi .rchip{font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;color:#20140a;}
+
+.hifi .banner{position:relative;border-radius:16px;overflow:hidden;border:2px solid #F5C242;box-shadow:0 6px 16px rgba(0,0,0,.5);margin-bottom:14px;}
+.hifi .banner img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover;}
+.hifi .banner .cap{position:absolute;left:0;right:0;bottom:0;padding:22px 14px 12px;background:linear-gradient(transparent,rgba(20,8,4,.85));}
+.hifi .banner .cap h3{font-family:'ZCOOL KuaiLe';font-size:24px;color:#FFE9A8;-webkit-text-stroke:1px #6B0F0F;paint-order:stroke fill;text-shadow:0 2px 3px #000;}
+.hifi .banner .cap .rar{display:flex;gap:6px;margin-top:6px;}
+.hifi .draw2{display:flex;gap:12px;margin-bottom:14px;}
+.hifi .draw2 .gbtn{flex:1;flex-direction:column;gap:2px;min-height:70px;}
+.hifi .pack{display:flex;align-items:center;gap:12px;}
+.hifi .pack .pic{width:56px;height:56px;border-radius:12px;flex:none;display:grid;place-items:center;background:radial-gradient(circle at 40% 34%,#F0C24A,#B5750A);border:2px solid #7A4E08;box-shadow:inset 0 2px 3px rgba(255,255,255,.5);position:relative;z-index:1;}
+.hifi .pack .pic .icon{width:30px;height:30px;color:#5A0E0E;}
+.hifi .pack .info{flex:1;position:relative;z-index:1;} .hifi .pack .info h4{font-family:'ZCOOL KuaiLe';font-size:16px;color:#FFE9A8;} .hifi .pack .info p{font-size:12px;color:#C9B48A;font-weight:700;margin-top:2px;}
+.hifi .pack .gbtn{position:relative;z-index:1;}
+
+/* ---- 抽卡结果弹层金皮(overlay 挂 body 上,靠后代 .hifi 提特异性压过 shell-v65) ---- */
+.gacha-overlay.hifi{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(10,6,3,.66);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
+.gacha-overlay.hifi .gacha-box{background:linear-gradient(180deg,#3E2716,#241206);border:2px solid #F5C242;border-radius:20px;padding:22px;max-width:360px;width:90%;box-shadow:0 12px 30px rgba(0,0,0,.6);text-align:center;color:var(--cream);}
+.gacha-overlay.hifi .gacha-box h2{font-family:'ZCOOL KuaiLe';color:#FFE9A8;margin-bottom:10px;}
+.gacha-overlay.hifi .gacha-result{display:flex;align-items:center;gap:12px;padding:9px;border-radius:12px;margin:6px 0;background:rgba(0,0,0,.28);border:1px solid rgba(245,194,66,.22);}
+.gacha-overlay.hifi .gacha-result .ico{font-size:28px;}
+.gacha-overlay.hifi .gacha-result b{font-size:15px;color:#FFE9A8;}
+.gacha-overlay.hifi .gacha-result .frag{margin-left:auto;font-family:'Fredoka';font-weight:700;color:#F5C242;}
+.gacha-overlay.hifi .btn-primary{margin-top:12px;background:linear-gradient(180deg,#FFE9A8,#F5C242 45%,#E8A317 62%,#D18A0E);border:2px solid #7A4E08;color:#5A0E0E;font-family:'ZCOOL KuaiLe';font-weight:800;padding:12px 20px;border-radius:14px;box-shadow:0 4px 0 #7A4E08;width:auto;}
+
+/* ============================================================
+   M3 卡牌/阵容屏 + 英雄详情弹层
+   ============================================================ */
+.hifi .team{display:flex;gap:8px;justify-content:space-between;margin-bottom:14px;}
+.hifi .slot{flex:1;aspect-ratio:.8;border-radius:12px;border:2px dashed rgba(245,194,66,.5);background:rgba(0,0,0,.25);display:grid;place-items:center;position:relative;}
+.hifi .slot.f{border-style:solid;cursor:pointer;}
+.hifi .fdisc{position:relative;border-radius:50%;display:grid;place-items:center;flex:none;font-family:'Fredoka';font-weight:700;color:#fff;
+  box-shadow:0 4px 7px rgba(0,0,0,.3),inset 3px 3px 5px rgba(255,255,255,.4),inset -4px -5px 7px rgba(0,0,0,.2);border:1.5px solid rgba(0,0,0,.3);}
+.hifi .slot .plus2{color:rgba(245,194,66,.6);width:26px;height:26px;}
+.hifi .roster{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
+.hifi .card{position:relative;aspect-ratio:.78;border-radius:12px;padding:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  background:linear-gradient(160deg,#4a3016,#241206);border:2px solid var(--rc,#7A4E08);box-shadow:0 3px 8px rgba(0,0,0,.4),0 0 8px -2px var(--rc);cursor:pointer;}
+.hifi .card .rc{position:absolute;top:3px;left:3px;font-size:9px;font-weight:900;padding:0 4px;border-radius:5px;background:var(--rc);color:#20140a;font-family:'Nunito';}
+.hifi .card .lv{position:absolute;top:3px;right:3px;font-size:9px;font-weight:800;color:#FFE9A8;font-family:'Fredoka';}
+.hifi .card .nm{font-size:11px;font-weight:800;color:#F3E3C0;font-family:'ZCOOL KuaiLe';text-align:center;line-height:1.1;}
+.hifi .card .stars{display:flex;gap:1px;} .hifi .card .stars .icon{width:9px;height:9px;color:var(--gold);}
+.hifi .card.lock{filter:grayscale(.75);opacity:.85;cursor:default;}
+.hifi .card .lk{position:absolute;inset:0;display:grid;place-items:center;color:#fff;}
+.hifi .card .lk .icon{width:22px;height:22px;}
+.hifi .card .lk small{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:8.5px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000;}
+
+.hifi .ctabs{display:flex;gap:6px;background:rgba(0,0,0,.35);padding:4px;border-radius:12px;margin:0 0 12px;border:1px solid rgba(245,194,66,.25);}
+.hifi .ctab{flex:1;padding:9px 4px;border-radius:9px;font-family:'ZCOOL KuaiLe';font-size:13px;color:#B99A6E;text-align:center;background:none;border:0;}
+.hifi .ctab.on{background:linear-gradient(180deg,#F5C242,#D18A0E);color:#3a1e08;box-shadow:0 2px 5px rgba(0,0,0,.35);}
+
+/* 英雄详情弹层(bottom sheet;body 级,自带 .hifi 取 token) */
+.hifi-ov{position:fixed;inset:0;z-index:120;display:none;background:rgba(18,9,3,.62);align-items:flex-end;justify-content:center;}
+.hifi-ov.active{display:flex;animation:hifiFade .2s ease;}
+@keyframes hifiFade{from{opacity:0}to{opacity:1}}
+.hifi-ov .sheet{width:100%;max-width:430px;max-height:88dvh;display:flex;flex-direction:column;background:linear-gradient(180deg,#3E2716,#241206);
+  border-top:3px solid #F5C242;border-radius:22px 22px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.55);animation:hifiUp .26s cubic-bezier(.34,1.3,.64,1);}
+@keyframes hifiUp{from{transform:translateY(30px)}to{transform:translateY(0)}}
+.hifi-ov .sheet-h{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1.5px solid rgba(245,194,66,.25);}
+.hifi-ov .sheet-h h2{font-family:'ZCOOL KuaiLe';font-size:22px;color:#FFE9A8;-webkit-text-stroke:1px #6B0F0F;paint-order:stroke fill;text-shadow:0 2px 0 #8B1A1A;flex:1;}
+.hifi-ov .sheet-h .x{width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.35);display:grid;place-items:center;color:#E9C98A;border:1.5px solid rgba(245,194,66,.4);}
+.hifi-ov .sheet-h .x .icon{width:18px;height:18px;}
+.hifi-ov .sheet-b{padding:14px 16px calc(18px + env(safe-area-inset-bottom));overflow-y:auto;color:#F3E3C0;}
+.hifi .cardsheet .hero{display:flex;gap:14px;align-items:center;margin-bottom:6px;}
+.hifi .cardsheet .hero .big{flex:none;}
+.hifi .cardsheet .hero h3{font-family:'ZCOOL KuaiLe';font-size:24px;color:#FFE9A8;}
+.hifi .cardsheet .tags{display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap;}
+.hifi .sec{margin-top:16px;} .hifi .sec h4{font-family:'ZCOOL KuaiLe';font-size:15px;color:#F5C242;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.hifi .sec h4 .icon{width:18px;height:18px;}
+.hifi .statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.hifi .statrow .s{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.3);border:1px solid rgba(245,194,66,.2);border-radius:10px;padding:8px 10px;font-weight:800;font-size:12px;color:#C9B48A;}
+.hifi .statrow .s .icon{width:15px;height:15px;} .hifi .statrow .s b{margin-left:auto;font-family:'Fredoka';font-size:15px;color:#fff;}
+.hifi .skillbox{background:rgba(0,0,0,.3);border:1px solid rgba(245,194,66,.25);border-radius:12px;padding:12px;}
+.hifi .skillbox .nm{font-family:'ZCOOL KuaiLe';font-size:15px;color:#8FE0A0;margin-bottom:4px;}
+.hifi .skillbox p{font-size:13px;color:#F3E3C0;font-weight:700;line-height:1.5;}
+.hifi .ladder{display:flex;gap:4px;}
+.hifi .ladder .lv{flex:1;text-align:center;background:rgba(0,0,0,.28);border:1px solid rgba(245,194,66,.16);border-radius:8px;padding:6px 1px;position:static;}
+.hifi .ladder .lv b{font-family:'Fredoka';font-size:13px;color:#C9B48A;display:block;position:static;}
+.hifi .ladder .lv small{font-size:8px;color:#8a7a5a;font-weight:800;display:block;line-height:1.15;margin-top:2px;}
+.hifi .ladder .lv.cur{border-color:#F5C242;background:rgba(245,194,66,.16);} .hifi .ladder .lv.cur b{color:#FFE9A8;}
+.hifi .ladder .lv.key small{color:#8FE0A0;}
+.hifi .cbar{height:14px;border-radius:999px;background:rgba(0,0,0,.4);overflow:hidden;border:1px solid rgba(245,194,66,.3);}
+.hifi .cbar>span{display:block;height:100%;background:linear-gradient(90deg,#F5C242,#E8A317);}
+.hifi .cnote{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:#C9B48A;margin-top:6px;}
+.hifi .stars-line{display:flex;gap:3px;} .hifi .stars-line .icon{width:20px;height:20px;color:#5c4a2a;} .hifi .stars-line .on{color:#F5C242;}
+.hifi .stareff{display:flex;flex-direction:column;gap:6px;}
+.hifi .stareff .e{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;padding:7px 10px;border-radius:9px;background:rgba(0,0,0,.28);color:#8a7a5a;}
+.hifi .stareff .e.on{background:rgba(47,191,113,.12);color:#F3E3C0;border:1px solid rgba(47,191,113,.3);}
+.hifi .stareff .e .k{font-family:'Fredoka';font-weight:700;color:#F5C242;flex:none;width:36px;}
+.hifi .srcnote{font-size:11px;color:#8a7a5a;font-weight:700;text-align:center;margin-top:14px;}
+.hifi .gbtn.blk{width:100%;}
+.hifi .gbtn:disabled{filter:grayscale(.6);opacity:.5;pointer-events:none;box-shadow:0 2px 0 #7A4E08;transform:none;}
+
+/* ---- M4 竞技/论剑台 ---- */
+.hifi .rankbadge{display:flex;align-items:center;gap:14px;}
+.hifi .rankbadge .medal{width:72px;height:72px;flex:none;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 40% 34%,#FDE79A,#E8A317 60%,#B5750A);border:3px solid #7A4E08;box-shadow:0 5px 10px rgba(0,0,0,.4),inset 0 2px 3px rgba(255,255,255,.7);}
+.hifi .rankbadge .medal .icon{width:40px;height:40px;color:#5A0E0E;}
+.hifi .rankbadge h3{font-family:'ZCOOL KuaiLe';font-size:24px;color:#FFE9A8;}
+.hifi .conn{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;font-weight:800;font-size:13px;position:relative;z-index:1;}
+.hifi .conn .dot{width:11px;height:11px;border-radius:50%;flex:none;}
+.hifi .conn.off{background:rgba(226,59,78,.18);color:#F3A3AC;border:1px solid rgba(226,59,78,.5);} .hifi .conn.off .dot{background:var(--ruby);}
+.hifi .conn.on{background:rgba(47,191,113,.18);color:#9FE8BE;border:1px solid rgba(47,191,113,.5);} .hifi .conn.on .dot{background:var(--jade);}
+.hifi .field{display:flex;flex-direction:column;gap:6px;position:relative;z-index:1;}
+.hifi .field label{font-weight:800;font-size:13px;color:#C9B48A;padding-left:4px;}
+.hifi .field input{padding:13px;border-radius:10px;border:2px solid rgba(245,194,66,.5);background:rgba(0,0,0,.35);color:#FFE9A8;font-size:16px;font-weight:700;font-family:'ZCOOL KuaiLe';}
+.hifi .field input::placeholder{color:#8a7a5a;} .hifi .field input:focus{outline:none;border-color:var(--gold);}
+
+/* ---- M5 排行榜 ---- */
+.hifi .rtabs{display:flex;gap:8px;background:rgba(0,0,0,.35);padding:5px;border-radius:12px;margin-bottom:14px;border:1px solid rgba(245,194,66,.3);}
+.hifi .rtab{flex:1;padding:9px;border-radius:9px;font-family:'ZCOOL KuaiLe';font-size:14px;color:#B99A6E;text-align:center;background:none;border:0;}
+.hifi .rtab.on{background:linear-gradient(180deg,#F5C242,#D18A0E);color:#3a1e08;box-shadow:0 2px 5px rgba(0,0,0,.4);}
+.hifi .podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;margin-bottom:8px;}
+.hifi .pod{display:flex;flex-direction:column;align-items:center;gap:5px;}
+.hifi .pod .av{border-radius:50%;background:radial-gradient(circle at 40% 34%,#8B6CC0,#4A2D7A);display:grid;place-items:center;border:3px solid var(--gold);box-shadow:0 4px 8px rgba(0,0,0,.4);}
+.hifi .pod .av .icon{color:#fff;}
+.hifi .pod .nm{font-family:'ZCOOL KuaiLe';font-size:12px;color:#FFE9A8;}
+.hifi .pod .base{width:70px;border-radius:10px 10px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:6px;color:#3a1e08;font-family:'Fredoka';font-weight:700;background:linear-gradient(180deg,#F5C242,#B5750A);border:2px solid #7A4E08;border-bottom:0;}
+.hifi .pod .base .icon{width:22px;height:22px;}
+.hifi .rrow{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;background:rgba(0,0,0,.28);border:1px solid rgba(245,194,66,.2);margin-bottom:8px;}
+.hifi .rrow .no{width:26px;text-align:center;font-family:'Fredoka';font-weight:700;font-size:18px;color:#C9B48A;}
+.hifi .rrow .av{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#8B6CC0,#4A2D7A);display:grid;place-items:center;flex:none;border:2px solid #7A4E08;}
+.hifi .rrow .av .icon{width:22px;height:22px;color:#fff;}
+.hifi .rrow .nm{flex:1;font-weight:800;color:#F3E3C0;}
+.hifi .rrow .pw{display:flex;align-items:center;gap:5px;font-family:'Fredoka';font-weight:700;color:#FFCB3D;}
+.hifi .rrow .pw .icon{width:18px;height:18px;}
+.hifi .rrow.me{background:linear-gradient(90deg,rgba(245,194,66,.28),rgba(245,194,66,.12));border-color:var(--gold);}
+.hifi .selfrank{position:absolute;left:12px;right:12px;bottom:calc(98px + env(safe-area-inset-bottom));z-index:15;
+  display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;
+  background:linear-gradient(90deg,#F5C242,#E8A317);border:2px solid #7A4E08;
+  box-shadow:0 6px 16px rgba(0,0,0,.55),inset 0 1px 2px rgba(255,255,255,.5);color:#3a1e08;}
+.hifi .selfrank .tag{font-family:'ZCOOL KuaiLe';font-size:12px;background:#5A0E0E;color:#FFE9A8;padding:2px 8px;border-radius:8px;flex:none;}
+.hifi .selfrank .no{font-family:'Fredoka';font-weight:700;font-size:20px;}
+.hifi .selfrank .av{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#8B6CC0,#4A2D7A);display:grid;place-items:center;border:2px solid #7A4E08;flex:none;}
+.hifi .selfrank .av .icon{width:20px;height:20px;color:#fff;}
+.hifi .selfrank .nm{flex:1;font-weight:900;}
+.hifi .selfrank .pw{display:flex;align-items:center;gap:4px;font-family:'Fredoka';font-weight:700;}
+.hifi .selfrank .pw .icon{width:16px;height:16px;color:#8B1A1A;}
+#rankPanel.hifi .hifi-scroll{padding-bottom:calc(150px + env(safe-area-inset-bottom));}
+
+/* 首页"选关"按钮 */
+.hifi .hifi-levelsel{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(184px + env(safe-area-inset-bottom));z-index:10;font-family:'ZCOOL KuaiLe';font-size:13px;color:#FFE9A8;background:rgba(20,12,30,.72);border:1.5px solid rgba(245,194,66,.5);border-radius:999px;padding:6px 16px;box-shadow:0 4px 10px rgba(0,0,0,.4);}
+.hifi .hifi-levelsel:active{transform:translateX(-50%) scale(.94);}
+
+/* ---- M6 账号/社交弹层 ---- */
+.hifi .linput{width:100%;padding:13px;border-radius:12px;border:2px solid rgba(245,194,66,.4);background:rgba(0,0,0,.35);color:#FFE9A8;font-size:16px;font-weight:700;margin-bottom:10px;font-family:'Nunito';}
+.hifi .linput::placeholder{color:#8a7a5a;} .hifi .linput:focus{outline:none;border-color:#F5C242;}
+.hifi .ltabs{display:flex;gap:8px;margin-bottom:14px;}
+.hifi .ltab{flex:1;padding:10px;border-radius:12px;font-family:'ZCOOL KuaiLe';font-size:16px;color:#B99A6E;text-align:center;background:rgba(0,0,0,.3);border:1.5px solid rgba(245,194,66,.25);}
+.hifi .ltab.on{background:linear-gradient(180deg,#F5C242,#D18A0E);color:#3a1e08;}
+.hifi .pf-top{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+.hifi .pf-av{width:70px;height:70px;border-radius:22px;background:radial-gradient(circle at 40% 34%,#A78BD8,#4A2D7A);display:grid;place-items:center;border:3px solid #F5C242;box-shadow:0 4px 10px rgba(0,0,0,.4);flex:none;}
+.hifi .pf-av .icon{width:38px;height:38px;color:#fff;}
+.hifi .uid{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:#C9B48A;}
+.hifi .uid .cp{background:rgba(0,0,0,.3);border:1px solid rgba(245,194,66,.35);border-radius:8px;padding:3px 8px;color:#F5C242;font-size:11px;}
+.hifi .mail-item{display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px;background:rgba(0,0,0,.28);border:1px solid rgba(245,194,66,.2);margin-bottom:10px;position:relative;}
+.hifi .mail-item .mi{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none;background:radial-gradient(circle at 40% 34%,#F0C24A,#B5750A);}
+.hifi .mail-item .mi .icon{width:22px;height:22px;color:#5A0E0E;}
+.hifi .mail-item .mc{flex:1;} .hifi .mail-item .mc h4{font-family:'ZCOOL KuaiLe';font-size:15px;color:#FFE9A8;} .hifi .mail-item .mc p{font-size:12px;color:#C9B48A;font-weight:700;margin-top:2px;}
+.hifi .mail-item .dot{position:absolute;top:8px;left:8px;width:9px;height:9px;border-radius:50%;background:var(--ruby);border:1.5px solid #fff;}
+.hifi .chat-msgs{display:flex;flex-direction:column;gap:10px;height:44dvh;overflow-y:auto;padding:4px;}
+.hifi .cmsg{display:flex;gap:8px;align-items:flex-start;max-width:84%;}
+.hifi .cmsg .ca{width:32px;height:32px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#8B6CC0,#4A2D7A);display:grid;place-items:center;flex:none;border:1.5px solid #7A4E08;}
+.hifi .cmsg .ca .icon{width:18px;height:18px;color:#fff;}
+.hifi .cmsg .cb{background:rgba(255,255,255,.1);border-radius:4px 12px 12px 12px;padding:7px 11px;}
+.hifi .cmsg .cb .nm{font-size:11px;font-weight:800;color:#F5C242;margin-bottom:2px;}
+.hifi .cmsg .cb .tx{font-size:13px;color:#F3E3C0;font-weight:600;}
+.hifi .cmsg.me{align-self:flex-end;flex-direction:row-reverse;}
+.hifi .cmsg.me .cb{background:linear-gradient(180deg,#F5C242,#D18A0E);border-radius:12px 4px 12px 12px;}
+.hifi .cmsg.me .cb .nm{color:#5A0E0E;} .hifi .cmsg.me .cb .tx{color:#3a1e08;}
+.hifi .chat-in{display:flex;gap:8px;margin-top:12px;}
+.hifi .chat-in input{flex:1;padding:12px;border-radius:12px;border:2px solid rgba(245,194,66,.4);background:rgba(0,0,0,.35);color:#FFE9A8;font-weight:700;font-family:'Nunito';}
+.hifi .chat-in input:focus{outline:none;border-color:#F5C242;}
+
+/* 菜单态:藏掉底层游戏画布 + 纯深底,避免桌面/宽屏下画布从壳屏两侧露出(像叠了一层)。进战斗(非菜单态)自动恢复。 */
+body.hifi-menu #wrap{display:none;}
+body.hifi-menu{background:#0c0a06;}
+body.hifi-menu::before{display:none;}

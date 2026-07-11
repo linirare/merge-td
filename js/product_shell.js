@@ -9,8 +9,26 @@
   const DAILY_GEMS = 5;
   const GACHA_COST_1 = 5;
   const GACHA_COST_10 = 45;
-  const INIT_MAX = 4;
-  const INIT_COST = { 1: 3, 2: 10, 3: 25 };
+  const GEM_RATE = 10; // 1 RMB = 10 钻石
+
+  function purchaseGems(rmb) {
+    shell.gems = (shell.gems || 0) + Math.floor(rmb * GEM_RATE);
+    saveShell();
+    if (renderShop) renderShop('gacha');
+  }
+  const INIT_MAX = 7;
+  // Lv1->7 升级消耗:碎片+金币 (设计档 §7.1 碎片指数 + 金币=碎片×10)
+  const INIT_LEVELS = [
+    { lv: 1, frags: 0, gold: 0 },
+    { lv: 2, frags: 5, gold: 50 },
+    { lv: 3, frags: 20, gold: 200 },
+    { lv: 4, frags: 80, gold: 800 },
+    { lv: 5, frags: 320, gold: 3200 },
+    { lv: 6, frags: 1280, gold: 12800 },
+    { lv: 7, frags: 5120, gold: 51200 },
+  ];
+  function initFragCost(lv) { const t = INIT_LEVELS.find(x => x.lv === lv + 1); return t ? t.frags : Infinity; }
+  function initGoldCost(lv) { const t = INIT_LEVELS.find(x => x.lv === lv + 1); return t ? t.gold : Infinity; }
 
   const tabs = [
     { id: 'home', icon: '🏡', label: '首页' },
@@ -21,10 +39,22 @@
   ];
 
   let shell = loadShell();
+  window.shell = shell; // account_client 需要访问
   let activeTab = 'home';
   let prevPhase = '';
   let selectedFruit = '';
   let selectedShopTab = 'gacha';
+  // M3 卡牌屏状态 + 常量
+  let squadFilter = 'all';
+  let detailId = '';
+  let detailTab = 'attr';
+  let rankTab = 'power';
+  const RANK_TABS = [['power', '战力榜'], ['stage', '关卡榜'], ['ladder', '竞技榜']];
+  const RAR_KEY = { normal: 'N', rare: 'R', epic: 'E' };
+  const RAR_COLOR = { normal: '#9AA6B2', rare: '#57B0E8', epic: '#C77BE8' };
+  const ROLE_ZH = { tank: '坦克', back: '远程', rush: '突击', front: '前排', siege: '攻城', control: '控制', support: '辅助', merge: '合成' };
+  const LV_KEY = { 4: '解锁技能', 5: '强化·金徽', 6: '质变', 7: '满级质变' };
+  const SKILL_ZH = { shield: '周期护盾', first_shield: '首战护盾', rapid: '连射', snipe: '狙击', dash: '突进', first_crit: '首击暴击', anti_rush: '反突击', siege: '攻城', death_roll: '死亡爆炸', slow: '减速/冰冻', heal: '治疗', wildcard: '万能合成', copy: '复制', charge: '冲锋', immune: '免伤', burn: '点燃', stealth: '隐身首击', aoe: '范围炸弹', weaken: '削弱', sp_regen: '回能提速', kill_sp: '击杀回能', sp_refund: '操作返能', sp_bank: '储蓄产能', sp_discount: '操作减费' };
 
   function todayKey() {
     const d = new Date();
@@ -42,6 +72,29 @@
 
   function saveShell() {
     try { localStorage.setItem(SHELL_KEY, JSON.stringify(shell)); } catch (e) {}
+  }
+
+  // 轻量占位提示(未接后端的入口按钮用)
+  function hifiToast(msg) {
+    let t = document.getElementById('hifiToast');
+    if (!t) { t = document.createElement('div'); t.id = 'hifiToast'; t.className = 'hifi-toast'; document.body.appendChild(t); }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(hifiToast._t);
+    hifiToast._t = setTimeout(() => t.classList.remove('show'), 1600);
+  }
+
+  // 共享烫金顶栏(首页/商店等 hifi 屏复用)。data-go / data-help 由各屏统一绑定。
+  function hifiTopBarHtml() {
+    return `
+      <header class="top">
+        <button class="ring avatar" data-account><span class="inner"><svg class="icon"><use href="#i-user"/></svg></span><span class="lvl">Lv.${highestLevel()}</span></button>
+        <span class="cchip"><svg class="icon"><use href="#i-coin"/></svg><b data-shell-gold>${meta.gold || 0}</b><span class="plus"><svg class="icon"><use href="#i-plus"/></svg></span></span>
+        <span class="cchip"><svg class="icon"><use href="#i-gem"/></svg><b data-shell-gems>${shell.gems || 0}</b><span class="plus"><svg class="icon"><use href="#i-plus"/></svg></span></span>
+        <span class="sp"></span>
+        <button class="ring" data-tut><span class="inner"><svg class="icon"><use href="#i-help"/></svg></span></button>
+        <button class="ring" data-go="shop"><span class="inner"><svg class="icon"><use href="#i-gear"/></svg></span></button>
+      </header>`;
   }
 
   function ensureShellData() {
@@ -62,6 +115,7 @@
     saveShell();
     if (typeof saveMeta === 'function') saveMeta();
   }
+  window.saveAll = saveAll; // account_client 云存档钩子需要
 
   function initLv(id) {
     id = normalizeTypeId(id);
@@ -69,8 +123,10 @@
   }
 
   function initUpgradeCost(id) {
-    const lv = initLv(id);
-    return lv >= INIT_MAX ? Infinity : INIT_COST[lv] || Infinity;
+    return initFragCost(initLv(id));
+  }
+  function initUpgradeGoldCost(id) {
+    return initGoldCost(initLv(id));
   }
 
   function applyInitLevel(id, level) {
@@ -203,6 +259,7 @@
     shellPage('shellLabPanel', 'shell-squad-page');
     shellPage('shopPanel', 'shell-shop-page');
     shellPage('arenaPanel', 'shell-arena-page');
+    shellPage('rankPanel', 'shell-rank-page');
   }
 
   function ensureBottomNav() {
@@ -212,26 +269,32 @@
       nav.id = 'bottomNav';
       document.body.appendChild(nav);
     }
-    nav.className = 'shell-hidden shell-v65-nav';
-    nav.innerHTML = tabs.map(t => `
-      <button class="bnav-tab" data-tab="${t.id}">
-        <span class="bnav-icon">${t.icon}</span>
-        <span>${t.label}</span>
-      </button>
-    `).join('');
-    nav.querySelectorAll('.bnav-tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+    nav.className = 'shell-hidden hifi';
+    // 烫金风底栏:中间"对战"凸起,沿用里子既有 5 tab 与 showTab 路由
+    const navItems = [
+      { id: 'shop',    icon: 'i-bag',    label: '商城' },
+      { id: 'upgrade', icon: 'i-cards',  label: '阵容' },
+      { id: 'home',    icon: 'i-sword',  label: '对战', main: true },
+      { id: 'arena',   icon: 'i-vs',     label: '竞技' },
+      { id: 'rank',    icon: 'i-trophy', label: '排行' },
+    ];
+    nav.innerHTML = navItems.map(t => t.main
+      ? `<button class="navtab navmain" data-tab="${t.id}"><svg class="micon"><use href="#${t.icon}"/></svg><span class="txt">${t.label}</span><span class="shine"></span></button>`
+      : `<button class="navtab" data-tab="${t.id}"><span class="ic"><svg class="icon"><use href="#${t.icon}"/></svg></span>${t.label}</button>`
+    ).join('');
+    nav.querySelectorAll('.navtab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
   }
 
   function hidePanels() {
     [
       'menuPanel', 'campaignPanel', 'upgradePanel', 'shopPanel', 'arenaPanel',
       'ladderPanel', 'resultPanel', 'overflowPopup', 'helpPanel', 'simPanel',
-      'fruitLabPanel', 'shellLabPanel', 'deckPanel', 'flowGuidePanel',
+      'fruitLabPanel', 'shellLabPanel', 'deckPanel', 'flowGuidePanel', 'rankPanel',
     ].forEach(id => document.getElementById(id)?.classList.add('hide'));
   }
 
   function updateNav() {
-    document.querySelectorAll('.bnav-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === activeTab));
+    document.querySelectorAll('#bottomNav .navtab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === activeTab));
   }
 
   function refreshResourceNumbers() {
@@ -242,71 +305,44 @@
 
   function renderHome() {
     ensureShellData();
+    document.getElementById('menuPanel')?.classList.add('hifi');
     const root = shellPage('menuPanel', 'shell-home-page');
     const lv = currentStage();
-    const d = deck();
-    const isBoss = lv % 5 === 0;
     const dailyReady = shell.lastDaily !== todayKey();
-    const nextReward = stageRewardText(lv);
-    const stars = starsText(lv);
     root.innerHTML = `
-      <section class="td-home">
-        <header class="td-topbar">
-          <button class="td-avatar" data-go="upgrade">${fruitUnitSprite(d[0])}</button>
-          <div class="td-resources">
-            <span><i>🪙</i><b data-shell-gold>${meta.gold || 0}</b></span>
-            <span><i>💎</i><b data-shell-gems>${shell.gems || 0}</b></span>
-          </div>
-          <button class="td-menu-btn" data-go="shop">☰</button>
-        </header>
+      <div class="hifi-home">
+        <div class="bg"></div><div class="scrim"></div>
+        ${hifiTopBarHtml()}
 
-        <section class="td-battle-preview">
-          <div class="td-sky"></div>
-          <div class="td-hp-bar"><i style="width:${Math.max(24, Math.min(82, 40 + lv * 6))}%"></i></div>
-          <div class="td-castle td-player-castle"><b>果堡</b></div>
-          <div class="td-castle td-enemy-castle"><b>${isBoss ? 'Boss' : '敌堡'}</b></div>
-          <div class="td-road"></div>
-          <div class="td-army td-army-left">
-            ${d.slice(0, 5).map((id, i) => `<span style="--i:${i}">${fruitUnitSprite(id)}</span>`).join('')}
-          </div>
-          <div class="td-army td-army-right">
-            ${['strawberry_knight','strawberry_knight','grape_archer','strawberry_knight','strawberry_knight'].map((id, i) => `<span style="--i:${i}">${fruitUnitSprite(id, 'strawberry_knight')}</span>`).join('')}
-          </div>
-        </section>
+        <div class="logo"><h1 class="display">水果突击</h1><div class="rib">灵果召唤 · 合成塔防</div></div>
 
-        <section class="td-team-strip">
-          ${d.slice(0, 5).map(id => `<button data-go="upgrade">${fruitUnitSprite(id)}<b>Lv.${initLv(id)}</b></button>`).join('')}
-        </section>
+        <div class="side-l">
+          <button class="ring" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">签到</span>${dailyReady ? '<span class="badge">1</span>' : ''}</button>
+          <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg></span><span class="lbl">邮件</span></button>
+          <button class="ring" data-chat><span class="inner" style="background:radial-gradient(circle at 40% 34%,#8FE0A0,#2E9A56)"><svg class="icon"><use href="#i-cards"/></svg></span><span class="lbl">聊天</span></button>
+        </div>
+        <div class="side">
+          <button class="ring" data-go="shop"><span class="inner" style="background:radial-gradient(circle at 40% 34%,#FFB05A,#D9600E)"><svg class="icon"><use href="#i-flame"/></svg></span><span class="lbl">活动</span></button>
+          <button class="ring" data-help><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-bell"/></svg></span><span class="lbl">公告</span></button>
+        </div>
 
-        <section class="td-stage-panel">
-          <div class="td-stage-grid">
-            ${Array.from({ length: 10 }, (_, i) => {
-              const n = i + 1;
-              const open = n <= highestLevel();
-              const current = n === lv;
-              const boss = n % 5 === 0;
-              return `<button class="td-stage-node${current ? ' current' : ''}${boss ? ' boss' : ''}${open ? '' : ' locked'}" data-stage="${n}" ${open ? '' : 'disabled'}><small>${starsText(n)}</small><b>${n}</b></button>`;
-            }).join('')}
-          </div>
-          <div class="td-chest-row">
-            <span>⭐</span>
-            <div><i style="width:${Math.min(100, 20 + lv * 7)}%"></i></div>
-            <button data-go="shop">🎁</button>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:10px">
-<button class="td-start-btn" id="homeStartBtn" style="flex:1"><span>⚔️</span>开始挑战</button>
-<button class="btn-secondary" id="homeHelpBtn" style="width:48px;max-width:48px;padding:13px 0">?</button>
-</div>
-        </section>
-      </section>
+        <button class="hifi-levelsel" id="hifiLevelSel">☰ 选关 · 第${lv}关</button>
+        <div class="homecta">
+          <button class="cta pve" id="hifiPve"><svg class="micon"><use href="#i-sword"/></svg><span class="txtcol"><span class="t">开始对战</span><span class="s">闯关 · 第${lv}关</span></span><span class="shine"></span></button>
+          <button class="cta pvp" id="hifiPvp"><svg class="micon"><use href="#i-vs"/></svg><span class="txtcol"><span class="t">开始竞技</span><span class="s">PVP · 论剑</span></span><span class="shine"></span></button>
+        </div>
+      </div>
     `;
-    root.querySelector('#homeStartBtn')?.addEventListener('click', () => startCampaign(lv));
-    root.querySelector('#homeHelpBtn')?.addEventListener('click', () => {
+    root.querySelector('#hifiPve')?.addEventListener('click', () => startCampaign(lv));
+    root.querySelector('#hifiPvp')?.addEventListener('click', () => showTab('arena'));
+    root.querySelector('#hifiLevelSel')?.addEventListener('click', () => showTab('battle'));
+    root.querySelector('[data-daily]')?.addEventListener('click', () => claimDaily());
+    root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => {
       hidePanels();
       document.getElementById('helpPanel')?.classList.remove('hide');
-    });
+    }));
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
-    root.querySelectorAll('[data-stage]').forEach(btn => btn.addEventListener('click', () => startCampaign(Number(btn.dataset.stage || lv))));
+    root.querySelectorAll('[data-toast]').forEach(btn => btn.addEventListener('click', () => hifiToast(btn.dataset.toast)));
     refreshResourceNumbers();
   }
 
@@ -329,6 +365,10 @@
       <section class="campaign-map" id="campaignMap"></section>
     `;
     root.querySelector('#campaignStartBtn')?.addEventListener('click', () => startCampaign(current));
+    // 训练模式:不消耗资源,不加经验,不给奖励
+    const trainBtn = document.createElement('button'); trainBtn.className = 'btn-secondary'; trainBtn.textContent = '🧪 训练模式'; trainBtn.style.cssText = 'margin-top:8px';
+    trainBtn.addEventListener('click', () => { state.trainingMode = true; startCampaign(current); });
+    root.querySelector('#campaignStartBtn')?.parentNode?.appendChild(trainBtn);
     const map = root.querySelector('#campaignMap');
     for (let lv = 1; lv <= maxShow; lv++) {
       const open = lv <= highest;
@@ -349,84 +389,181 @@
     return selectedFruit;
   }
 
+  function hifiDisc(id, size) {
+    const t = fruit(id);
+    const col = t.color || '#F5C242';
+    return `<span class="fdisc" style="width:${size}px;height:${size}px;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.55),${col});font-size:${Math.round(size * 0.52)}px">${t.icon || '🍏'}</span>`;
+  }
+  function roleZh(r) { return ROLE_ZH[r] || r || '单位'; }
+  function skillZh(t) { return SKILL_ZH[t.skill] || '专属技能'; }
+
   function renderSquad() {
     ensureShellData();
+    document.getElementById('shellLabPanel')?.classList.add('hifi');
     const root = shellPage('shellLabPanel', 'shell-squad-page');
     const d = deck();
-    const selected = ensureSelectedFruit();
-    const selectedInDeck = d.includes(selected);
-    const t = fruit(selected);
-    const lv = initLv(selected);
-    const frags = shell.fragments[selected] || 0;
-    const cost = initUpgradeCost(selected);
-    const unlocked = isUnlocked(selected);
-    const canUpgrade = unlocked && lv < INIT_MAX && frags >= cost;
-    const canDeck = unlocked && (selectedInDeck || d.length < DECK_SIZE);
-
+    const unlockedCount = UNIT_POOL.filter(id => isUnlocked(id)).length;
     root.innerHTML = `
-      ${resourceBarHtml()}
-      ${pageHeadHtml('SQUAD', '水果阵容', '编队、升级、查看水果职责')}
-      <section class="deck-slots" id="deckSlots">
-        ${Array.from({ length: DECK_SIZE }, (_, i) => {
-          const id = d[i];
-          return `<button class="deck-slot${id === selected ? ' selected' : ''}" data-fruit="${id || ''}">${id ? `${fruitDisplay(id)}<b>Lv.${initLv(id)}</b>` : '<span class="td-emoji-unit">+</span><b>空位</b>'}</button>`;
-        }).join('')}
-      </section>
-      <section class="fruit-detail-card">
-        <div class="fruit-portrait">
-          ${fruitDisplay(selected)}
-          <i>${roleText(selected)}</i>
+      <div class="hifi-screen shop-bg">
+        <div class="bg"></div><div class="scrim"></div>
+        ${hifiTopBarHtml()}
+        <div class="hifi-scroll">
+          <div class="shead"><h2 class="display">卡牌图鉴</h2><span class="line"></span><span class="r">上阵 ${d.length}/${DECK_SIZE}</span></div>
+          <div class="team">
+            ${Array.from({ length: DECK_SIZE }, (_, i) => {
+              const id = d[i];
+              return id
+                ? `<div class="slot f" data-detail="${id}">${hifiDisc(id, 40)}</div>`
+                : `<div class="slot"><svg class="icon plus2"><use href="#i-plus"/></svg></div>`;
+            }).join('')}
+          </div>
+          <div class="gpanel" style="display:flex;align-items:center;justify-content:space-around;gap:10px;padding:16px 14px">
+            <div style="text-align:center"><div style="font-family:Fredoka;font-weight:700;font-size:24px;color:#F5C242">${unlockedCount}/${UNIT_POOL.length}</div><small style="font-size:11px;color:#C9B48A;font-weight:800">图鉴收集</small></div>
+            <div style="width:1px;height:34px;background:rgba(245,194,66,.3)"></div>
+            <div style="text-align:center"><div style="font-family:Fredoka;font-weight:700;font-size:24px;color:#FFCB3D">${typeof computePower === 'function' ? computePower() : 0}</div><small style="font-size:11px;color:#C9B48A;font-weight:800">总战力</small></div>
+            <div style="width:1px;height:34px;background:rgba(245,194,66,.3)"></div>
+            <div style="text-align:center"><div style="font-family:Fredoka;font-weight:700;font-size:24px;color:#8FE0A0">Lv.${highestLevel()}</div><small style="font-size:11px;color:#C9B48A;font-weight:800">指挥官</small></div>
+          </div>
+          <div class="ctabs">
+            ${[['all', '全部'], ['tank', '坦克'], ['back', '远程'], ['rush', '突击'], ['siege', '攻城']].map(([k, label]) => `<button class="ctab ${squadFilter === k ? 'on' : ''}" data-filter="${k}">${label}</button>`).join('')}
+          </div>
+          <div class="roster" id="hifiRoster"></div>
         </div>
-        <div class="fruit-detail-main">
-          <small>${unlocked ? '已解锁' : `第 ${typeof unlockLevelFor === 'function' ? unlockLevelFor(selected) : '?'} 关解锁`}</small>
-          <h3>${fruitName(selected)}</h3>
-          <p>${t.desc || '水果单位'}</p>
-          <div class="fruit-progress"><span>初始 Lv.${lv}</span><b>${lv >= INIT_MAX ? 'MAX' : `碎片 ${frags}/${cost}`}</b></div>
-        </div>
-        <div class="fruit-actions" id="fruitActions"></div>
-      </section>
-      <section class="fruit-codex" id="fruitCodex"></section>
+      </div>
     `;
-
-    const actions = root.querySelector('#fruitActions');
-    actions.appendChild(makeButton('shell-btn', lv >= INIT_MAX ? '已满级' : `${cost}碎片升级`, () => {
-      if (!canUpgrade) return;
-      shell.fragments[selected] -= cost;
-      shell.fruitLv[selected] = Math.min(INIT_MAX, lv + 1);
-      saveAll();
-      renderSquad();
-    }, !canUpgrade));
-    actions.appendChild(makeButton('shell-btn secondary', selectedInDeck ? '下阵' : '上阵', () => {
-      if (!canDeck) return;
-      let next = d.slice();
-      if (selectedInDeck) {
-        if (next.length <= 1) return;
-        next = next.filter(x => x !== selected);
-      } else if (next.length < DECK_SIZE) {
-        next.push(selected);
+    const roster = root.querySelector('#hifiRoster');
+    const list = UNIT_POOL.filter(id => squadFilter === 'all' || (TYPES[id] && TYPES[id].role === squadFilter));
+    roster.innerHTML = list.map(id => {
+      const t = fruit(id);
+      const rc = RAR_COLOR[t.rarity] || '#9AA6B2';
+      const rk = RAR_KEY[t.rarity] || 'N';
+      if (!isUnlocked(id)) {
+        const at = typeof unlockLevelFor === 'function' ? unlockLevelFor(id) : '?';
+        return `<button class="card lock" style="--rc:${rc}"><span class="rc">${rk}</span>${hifiDisc(id, 38)}<span class="nm">${t.name}</span><span class="lk"><svg class="icon"><use href="#i-lock"/></svg><small>第${at}关解锁</small></span></button>`;
       }
+      const lv = initLv(id);
+      const stars = Array.from({ length: Math.min(5, lv) }, () => '<svg class="icon"><use href="#i-star"/></svg>').join('');
+      return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 38)}<span class="nm">${t.name}</span><span class="stars">${stars}</span></button>`;
+    }).join('') || '<div style="grid-column:1/-1;text-align:center;color:#8a7a5a;font-weight:800;padding:24px">该职责暂无英雄</div>';
+
+    root.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => { squadFilter = btn.dataset.filter; renderSquad(); }));
+    root.querySelectorAll('[data-detail]').forEach(el => el.addEventListener('click', () => openCardDetail(el.dataset.detail)));
+    root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => { hidePanels(); document.getElementById('helpPanel')?.classList.remove('hide'); }));
+    root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
+    refreshResourceNumbers();
+  }
+
+  function openCardDetail(id) {
+    id = normalizeTypeId(id);
+    if (!isUnlocked(id)) return;
+    detailId = id;
+    let ov = document.getElementById('hifiCardOv');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'hifiCardOv';
+      ov.className = 'hifi-ov hifi';
+      ov.innerHTML = `<div class="sheet cardsheet"><div class="sheet-h"><h2>英雄详情</h2><button class="x" data-close><svg class="icon"><use href="#i-x"/></svg></button></div><div class="sheet-b" id="hifiCardBody"></div></div>`;
+      document.body.appendChild(ov);
+      ov.addEventListener('click', (e) => { if (e.target === ov || (e.target.closest && e.target.closest('[data-close]'))) ov.classList.remove('active'); });
+    }
+    renderCardDetail(id);
+    ov.classList.add('active');
+  }
+
+  function renderCardDetail(id) {
+    detailId = id;
+    const t = fruit(id);
+    const lv = initLv(id);
+    const shards = (meta.shardsTotal && meta.shardsTotal[id]) || 0;
+    const star = typeof starLevelFromShards === 'function' ? starLevelFromShards(shards) : 1;
+    const sl = [1, 2, 3, 4, 5, 6, 7].map(k => `<svg class="icon ${k <= star ? 'on' : ''}"><use href="#i-star"/></svg>`).join('');
+    const body = document.getElementById('hifiCardBody');
+    if (!body) return;
+    body.innerHTML =
+      `<div class="hero"><div class="big">${hifiDisc(id, 78)}</div><div style="flex:1"><h3>${t.name}</h3><div class="tags"><span class="rchip" style="background:${RAR_COLOR[t.rarity] || '#9AA6B2'}">${RAR_KEY[t.rarity] || 'N'}</span><span class="rchip" style="background:#5c4a2a;color:#F3E3C0">${roleZh(t.role)}</span><span style="font-weight:800;font-size:12px;color:#C9B48A">局内 Lv.${lv}</span></div><div class="stars-line" style="margin-top:6px">${sl}</div></div></div>`
+      + `<div class="ctabs">${[['attr', '属性·技能'], ['grow', '等级成长'], ['star', '星级特效']].map(([k, l]) => `<button class="ctab ${detailTab === k ? 'on' : ''}" data-ctab="${k}">${l}</button>`).join('')}</div>`
+      + `<div id="hifiCardTabBody"></div>`
+      + `<div id="hifiCardActions" style="display:flex;gap:10px;margin-top:14px"></div>`
+      + `<div class="srcnote">数值/成长由里子引擎实时计算(TYPES + 养成/星级表)· 养成 Lv1-20 与星级随累计碎片自动提升</div>`;
+    renderCardTab(detailTab);
+    renderCardActions(id);
+    body.querySelectorAll('.ctab[data-ctab]').forEach(b => b.addEventListener('click', () => { detailTab = b.dataset.ctab; renderCardDetail(id); }));
+  }
+
+  function renderCardTab(tab) {
+    const id = detailId;
+    const t = fruit(id);
+    const lv = initLv(id);
+    const shards = (meta.shardsTotal && meta.shardsTotal[id]) || 0;
+    const cult = typeof cultivateLevelFromShards === 'function' ? cultivateLevelFromShards(shards) : 0;
+    const star = typeof starLevelFromShards === 'function' ? starLevelFromShards(shards) : 1;
+    let h = '';
+    if (tab === 'attr') {
+      const atkMul = typeof getAtkMul === 'function' ? getAtkMul(meta, id) : 1;
+      const hpMul = typeof getHpMul === 'function' ? getHpMul(meta, id) : 1;
+      h = `<div class="sec"><h4><svg class="icon"><use href="#i-sword"/></svg>当前属性(含养成/星级)</h4><div class="statrow">`
+        + `<div class="s"><svg class="icon" style="color:#EF4444"><use href="#i-sword"/></svg>攻击<b>${Math.round(t.atk * atkMul)}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#2FBF71"><use href="#i-heart"/></svg>血量<b>${Math.round(t.hp * hpMul)}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#9AA6B2"><use href="#i-shield"/></svg>护甲<b>${t.armor || 0}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#38C6E8"><use href="#i-refresh"/></svg>攻速<b>${t.speed}s</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#F5C242"><use href="#i-flame"/></svg>攻城<b>×${t.siege}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#C77BE8"><use href="#i-vs"/></svg>职责<b style="font-size:13px">${roleZh(t.role)}</b></div></div>`
+        + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 攻${t.atk}/血${t.hp} × 养成×星级加成</p></div>`
+        + `<div class="sec"><h4><svg class="icon"><use href="#i-flame"/></svg>专属技能 · ${skillZh(t)}</h4><div class="skillbox"><div class="nm">${skillZh(t)}</div><p>${t.desc || ''}</p></div></div>`;
+    } else if (tab === 'grow') {
+      const lad = [1, 2, 3, 4, 5, 6, 7].map(l => `<div class="lv ${l === lv ? 'cur' : ''} ${LV_KEY[l] ? 'key' : ''}"><b>Lv${l}</b><small>×${LEVEL_MUL[l]}${LV_KEY[l] ? '<br>' + LV_KEY[l] : ''}</small></div>`).join('');
+      const cb = Math.round((typeof cultivateBonusAt === 'function' ? cultivateBonusAt(cult) : 0) * 100);
+      const cmax = typeof CULTIVATE_MAX !== 'undefined' ? CULTIVATE_MAX : 20;
+      const nextCum = cult < cmax && typeof cultivateCumCost === 'function' ? cultivateCumCost(cult + 1) : null;
+      h = `<div class="sec"><h4><svg class="icon"><use href="#i-cards"/></svg>局内成长 Lv1-7</h4><div class="ladder">${lad}</div><p class="srcnote" style="text-align:left;margin-top:8px">Lv1-3 数值 · Lv4 解锁技能 · Lv5 强化 · Lv6-7 质变(碎片+金币升)</p></div>`
+        + `<div class="sec"><h4><svg class="icon"><use href="#i-gift"/></svg>碎片养成 Lv1-20(累计碎片自动)</h4><div class="cbar"><span style="width:${cult / cmax * 100}%"></span></div><div class="cnote"><span>当前 Lv.${cult}/${cmax} · 攻血 +${cb}%</span><span>${nextCum != null ? `累计 ${shards}/${nextCum} 自动升` : '已满级'}</span></div></div>`;
+    } else {
+      const sa = Math.round((typeof starAtkBonus === 'function' ? starAtkBonus(star) : 0) * 100);
+      const sh = Math.round((typeof starHpBonus === 'function' ? starHpBonus(star) : 0) * 100);
+      const eff = [['基础', `攻 +${sa}% · 血 +${sh}%`, star >= 1], ['★3', '技能 CD -0.5s', star >= 3], ['★5', '技能强化(Lv7 额外效果)', star >= 5], ['★6', '同职责光环 +3% ATK', star >= 6], ['★7', '开局 SP +2(PvP +1)', star >= 7]];
+      const eh = eff.map(e => `<div class="e ${e[2] ? 'on' : ''}"><span class="k">${e[0]}</span>${e[1]}</div>`).join('');
+      const thresholds = typeof STAR_THRESHOLDS !== 'undefined' ? STAR_THRESHOLDS : [];
+      const nextStar = star < 7 && thresholds[star] != null ? thresholds[star] : null;
+      h = `<div class="sec"><h4><svg class="icon"><use href="#i-star"/></svg>星级特效 ★${star}/7</h4><div class="stareff">${eh}</div>${nextStar != null ? `<p class="srcnote" style="text-align:left;margin-top:8px">累计碎片 ${shards}/${nextStar} 升下一星</p>` : ''}</div>`;
+    }
+    const el = document.getElementById('hifiCardTabBody');
+    if (el) el.innerHTML = h;
+  }
+
+  function renderCardActions(id) {
+    const actions = document.getElementById('hifiCardActions');
+    if (!actions) return;
+    const d = deck();
+    const lv = initLv(id);
+    const inDeck = d.includes(id);
+    const unlocked = isUnlocked(id);
+    const cost = initUpgradeCost(id);
+    const goldCost = initUpgradeGoldCost(id);
+    const frags = (shell.fragments && shell.fragments[id]) || 0;
+    const canUp = unlocked && lv < INIT_MAX && frags >= cost && (meta.gold || 0) >= goldCost;
+    const canDeck = unlocked && (inDeck || d.length < DECK_SIZE);
+    actions.innerHTML = '';
+    const upBtn = makeButton('gbtn blk', lv >= INIT_MAX ? '已满级' : `升级 ${cost}碎片+${goldCost}🪙`, () => {
+      shell.fragments[id] -= cost;
+      meta.gold = (meta.gold || 0) - goldCost;
+      shell.fruitLv[id] = Math.min(INIT_MAX, lv + 1);
+      saveAll();
+      renderCardDetail(id);
+      renderSquad();
+    }, !canUp);
+    const deckBtn = makeButton('gbtn blk', inDeck ? '下阵' : '上阵', () => {
+      let next = d.slice();
+      if (inDeck) { if (next.length <= 1) return; next = next.filter(x => x !== id); }
+      else if (next.length < DECK_SIZE) next.push(id);
       meta.deck = next;
       saveAll();
+      renderCardDetail(id);
       renderSquad();
       renderHome();
-    }, !canDeck || (selectedInDeck && d.length <= 1)));
-
-    root.querySelectorAll('.deck-slot[data-fruit]').forEach(btn => {
-      const id = btn.dataset.fruit;
-      if (id) btn.addEventListener('click', () => { selectedFruit = id; renderSquad(); });
-    });
-
-    const codex = root.querySelector('#fruitCodex');
-    for (const id of UNIT_POOL) {
-      const open = isUnlocked(id);
-      const btn = document.createElement('button');
-      btn.className = `fruit-tile${id === selected ? ' selected' : ''}${open ? '' : ' locked'}${d.includes(id) ? ' in-deck' : ''}`;
-      btn.dataset.fruit = id;
-      btn.innerHTML = `${fruitDisplay(id)}<b>${fruitName(id)}</b><small>${open ? `Lv.${initLv(id)} · ${shell.fragments[id] || 0}片` : '未解锁'}</small>`;
-      btn.addEventListener('click', () => { selectedFruit = id; renderSquad(); });
-      codex.appendChild(btn);
-    }
-    refreshResourceNumbers();
+    }, !canDeck || (inDeck && d.length <= 1));
+    deckBtn.style.cssText = 'background:linear-gradient(180deg,#8FE0A0,#2E9A56);border-color:#1C6A38;box-shadow:0 5px 0 #1C6A38;color:#0d3a1e';
+    actions.appendChild(upBtn);
+    actions.appendChild(deckBtn);
   }
 
   function shopCard(title, desc, icon, price, enabled, onClick, extra = '') {
@@ -446,79 +583,120 @@
 
   function renderShop(tab = selectedShopTab) {
     selectedShopTab = tab || 'gacha';
+    document.getElementById('shopPanel')?.classList.add('hifi');
     const root = shellPage('shopPanel', 'shell-shop-page');
+    const claimed = shell.lastDaily === todayKey();
+    const pityE = Math.min(shell.pityE || 0, 29);
+    const canG1 = (shell.gems || 0) >= GACHA_COST_1;
+    const canG10 = (shell.gems || 0) >= GACHA_COST_10;
+    const canAtk = (meta.gold || 0) >= 180;
+    const canFort = (meta.gold || 0) >= 150;
     root.innerHTML = `
-      ${resourceBarHtml()}
-      ${pageHeadHtml('SHOP', '果园商城', '补强水果、领取资源')}
-      <div class="shop-tabs">
-        <button id="shopTabGacha" class="${selectedShopTab === 'gacha' ? 'active' : ''}">碎片补强</button>
-        <button id="shopTabPack" class="${selectedShopTab === 'pack' ? 'active' : ''}">每日补给</button>
+      <div class="hifi-screen shop-bg">
+        <div class="bg"></div><div class="scrim"></div>
+        ${hifiTopBarHtml()}
+        <div class="hifi-scroll">
+          <div class="shead"><h2 class="display">山货集市</h2><span class="line"></span></div>
+          <div class="banner">
+            <img src="art/banner-gacha_001.jpg" alt="卡池">
+            <div class="cap"><h3>缤纷水果祭</h3><div class="rar">
+              ${GACHA_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
+            </div></div>
+          </div>
+          <div class="gpanel">
+            <div class="pity-row"><span>史诗 E 保底</span><span><b>${pityE}</b> / 29 抽</span></div>
+            <div class="bar"><span style="width:${Math.round(pityE / 29 * 100)}%;background:linear-gradient(90deg,#4db6ff,#ffc93c)"></span></div>
+          </div>
+          <div class="draw2">
+            <button class="gbtn ${canG1 ? '' : 'gray'}" id="hifiGacha1"><span class="display">单抽</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${GACHA_COST_1}</small></button>
+            <button class="gbtn ${canG10 ? '' : 'gray'}" id="hifiGacha10"><span class="display">十连 ×10</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${GACHA_COST_10} · R保底</small></button>
+          </div>
+          <div class="shead" style="margin-top:20px"><h2 class="display" style="font-size:20px">每日补给</h2><span class="line"></span></div>
+          <div class="gpanel pack">
+            <div class="pic"><svg class="icon"><use href="#i-gift"/></svg></div>
+            <div class="info"><h4>每日果汁补给</h4><p>领取 ${DAILY_GOLD}🪙 + ${DAILY_GEMS}💎 · 每日刷新</p></div>
+            <button class="gbtn ${claimed ? 'gray' : ''}" id="hifiDaily" style="min-height:44px;padding:10px 14px">${claimed ? '已领' : '领取'}</button>
+          </div>
+          <div class="gpanel pack">
+            <div class="pic"><svg class="icon"><use href="#i-flame"/></svg></div>
+            <div class="info"><h4>全体攻击强化</h4><p>全部水果攻击科技 +1 级</p></div>
+            <button class="gbtn ${canAtk ? '' : 'gray'}" id="hifiPackAtk" style="min-height:44px;padding:10px 14px">180🪙</button>
+          </div>
+          <div class="gpanel pack">
+            <div class="pic" style="background:radial-gradient(circle at 40% 34%,#8ABF90,#2E7A44)"><svg class="icon" style="color:#0d3a1e"><use href="#i-shield"/></svg></div>
+            <div class="info"><h4>果堡+果汁礼包</h4><p>果堡加固 +1 · 果汁泵 +1</p></div>
+            <button class="gbtn ${canFort ? '' : 'gray'}" id="hifiPackFort" style="min-height:44px;padding:10px 14px">150🪙</button>
+          </div>
+        </div>
       </div>
-      <section class="shop-feature" id="shopFeature"></section>
-      <section class="shop-grid" id="shopList"></section>
     `;
-    root.querySelector('#shopTabGacha')?.addEventListener('click', () => renderShop('gacha'));
-    root.querySelector('#shopTabPack')?.addEventListener('click', () => renderShop('pack'));
-
-    const feature = root.querySelector('#shopFeature');
-    const list = root.querySelector('#shopList');
-    if (selectedShopTab === 'gacha') {
-      feature.innerHTML = `
-        <div>
-          <small>FRUIT POOL</small>
-          <h3>水果补给池</h3>
-          <p>重复水果转化为碎片，用于阵容页提升初始等级。</p>
-        </div>
-        <span>🎴</span>
-      `;
-      list.appendChild(shopCard('单抽', '随机获得水果碎片，可能解锁新水果。', '🎴', `${GACHA_COST_1}💎`, shell.gems >= GACHA_COST_1, () => doGacha(1), 'N/R/E 碎片池'));
-      list.appendChild(shopCard('十连抽', '十次连续抽取，九折并带 R+ 保底。', '🌈', `${GACHA_COST_10}💎`, shell.gems >= GACHA_COST_10, () => doGacha(10), `R保底 ${Math.max(0, 10 - (shell.pityR || 0))} 抽`));
-    } else {
-      const claimed = shell.lastDaily === todayKey();
-      feature.innerHTML = `
-        <div>
-          <small>DAILY SUPPLY</small>
-          <h3>${claimed ? '今日补给已领取' : '今日补给待领取'}</h3>
-          <p>补给和礼包都只消耗游戏内资源。</p>
-        </div>
-        <span>🎁</span>
-      `;
-      list.appendChild(shopCard('每日果汁补给', `领取 ${DAILY_GOLD}🪙 + ${DAILY_GEMS}💎`, '🎁', claimed ? '已领取' : '领取', !claimed, claimDaily, '每日刷新'));
-      list.appendChild(shopCard('全体攻击强化', '全部水果攻击科技 +1 级。', '🍒', '180🪙', (meta.gold || 0) >= 180, () => buyUpgradePack('atk_all', 180), '全队成长'));
-      list.appendChild(shopCard('果堡+果汁礼包', '果堡加固 +1，果汁泵 +1。', '🏰', '150🪙', (meta.gold || 0) >= 150, () => buyUpgradePack('fort_sp', 150), '防守补强'));
-    }
+    if (canG1) root.querySelector('#hifiGacha1')?.addEventListener('click', () => doGacha(1));
+    if (canG10) root.querySelector('#hifiGacha10')?.addEventListener('click', () => doGacha(10));
+    if (!claimed) root.querySelector('#hifiDaily')?.addEventListener('click', () => claimDaily());
+    if (canAtk) root.querySelector('#hifiPackAtk')?.addEventListener('click', () => buyUpgradePack('atk_all', 180));
+    if (canFort) root.querySelector('#hifiPackFort')?.addEventListener('click', () => buyUpgradePack('fort_sp', 150));
+    root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => {
+      hidePanels();
+      document.getElementById('helpPanel')?.classList.remove('hide');
+    }));
+    root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
     refreshResourceNumbers();
   }
 
+  function arenaRankName(best) {
+    if (best >= 40) return '王者';
+    if (best >= 25) return '钻石';
+    if (best >= 15) return '黄金';
+    if (best >= 8) return '白银';
+    if (best >= 3) return '青铜';
+    return '新手';
+  }
+
   function renderArena() {
+    document.getElementById('arenaPanel')?.classList.add('hifi');
     const root = shellPage('arenaPanel', 'shell-arena-page');
+    const best = shell.ladderBest || 0;
+    const power = typeof computePower === 'function' ? computePower() : 0;
     root.innerHTML = `
-      ${resourceBarHtml()}
-      ${pageHeadHtml('ARENA', '果园竞技', '房间对战与无尽天梯')}
-      <section class="arena-mode-card pvp-mode">
-        <div>
-          <small>REALTIME</small>
-          <h3>实时对战</h3>
-          <p>创建房间或输入房间码，对手准备后同步开局。</p>
+      <div class="hifi-screen shop-bg">
+        <div class="bg"></div><div class="scrim"></div>
+        ${hifiTopBarHtml()}
+        <div class="hifi-scroll">
+          <div class="shead"><h2 class="display">论剑台</h2><span class="line"></span></div>
+          <div class="gpanel">
+            <div class="rankbadge">
+              <div class="medal"><svg class="icon"><use href="#i-crown"/></svg></div>
+              <div style="flex:1">
+                <h3 class="display">${arenaRankName(best)}</h3>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:4px;font-weight:800;font-size:13px;color:#C9B48A">战力 <b style="color:#FFCB3D;font-family:Fredoka">${power}</b></div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:4px;font-weight:800;font-size:13px;color:#C9B48A">天梯最好 <b style="color:#8FE0A0;font-family:Fredoka">${best}</b> 波</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="shead" style="margin-top:16px"><h2 class="display" style="font-size:20px">实时对战</h2><span class="line"></span></div>
+          <div class="gpanel">
+            <p style="font-size:13px;color:#C9B48A;font-weight:700;margin:0 0 10px;position:relative;z-index:1">创建房间或输入房间码,对手准备后同步开局。</p>
+            <div class="conn off" id="pvpStatus"><span class="dot"></span>未连接</div>
+            <div class="field" style="margin-top:10px"><label>房间码</label><input id="pvpRoomInput" type="text" inputmode="numeric" maxlength="6" placeholder="输入 6 位房间码"></div>
+            <div style="display:flex;gap:10px;margin-top:12px;position:relative;z-index:1">
+              <button class="gbtn blk" id="btnPvpCreate">创建房间</button>
+              <button class="gbtn blk" id="btnPvpJoin">加入房间</button>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:10px;position:relative;z-index:1">
+              <button class="gbtn blk" id="btnPvpReady" style="background:linear-gradient(180deg,#8FE0A0,#2E9A56);border-color:#1C6A38;box-shadow:0 5px 0 #1C6A38;color:#0d3a1e">准备</button>
+              <button class="gbtn blk" id="btnPvpLeave" style="background:linear-gradient(180deg,#8f897c,#6b665b);border-color:#4c483f;box-shadow:0 5px 0 #4c483f;color:#e8e4d8;text-shadow:none">离开</button>
+            </div>
+          </div>
+
+          <div class="shead" style="margin-top:16px"><h2 class="display" style="font-size:20px">无尽天梯</h2><span class="line"></span></div>
+          <div class="gpanel">
+            <p style="font-size:13px;color:#C9B48A;font-weight:700;margin:0 0 12px;position:relative;z-index:1">连续波次挑战,失败后按坚持波数结算。</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;position:relative;z-index:1"><span style="font-weight:800;color:#C9B48A">历史最好</span><span><b id="ladderBest" style="font-family:Fredoka;font-size:26px;color:#F5C242">${best}</b> <small style="color:#C9B48A">波</small></span></div>
+            <button class="gbtn blk" id="btnLadderStart" style="position:relative;z-index:1"><svg class="icon"><use href="#i-vs"/></svg>开始天梯</button>
+          </div>
         </div>
-        <div class="pvp-status" id="pvpStatus">未连接</div>
-        <input id="pvpRoomInput" class="pvp-code" placeholder="输入房间码" maxlength="6">
-        <div class="pvp-actions">
-          <button class="shell-btn" id="btnPvpCreate">创建房间</button>
-          <button class="shell-btn" id="btnPvpJoin">加入房间</button>
-          <button class="shell-btn secondary" id="btnPvpReady">准备</button>
-          <button class="shell-btn secondary" id="btnPvpLeave">离开</button>
-        </div>
-      </section>
-      <section class="arena-mode-card ladder-mode">
-        <div>
-          <small>LADDER</small>
-          <h3>无尽天梯</h3>
-          <p>连续波次挑战，失败后按坚持波数结算。</p>
-        </div>
-        <div class="ladder-score"><span>历史最好</span><b id="ladderBest">${shell.ladderBest || 0}</b><small>波</small></div>
-        <button id="btnLadderStart" class="shell-primary-cta compact">开始天梯</button>
-      </section>
+      </div>
     `;
     root.querySelector('#btnPvpCreate')?.addEventListener('click', () => window.pvpClient?.createRoom());
     root.querySelector('#btnPvpJoin')?.addEventListener('click', () => window.pvpClient?.joinRoom(root.querySelector('#pvpRoomInput')?.value || ''));
@@ -528,8 +706,203 @@
     });
     root.querySelector('#btnPvpLeave')?.addEventListener('click', () => window.pvpClient?.leaveRoom());
     root.querySelector('#btnLadderStart')?.addEventListener('click', startLadder);
+    root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => { hidePanels(); document.getElementById('helpPanel')?.classList.remove('hide'); }));
+    root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
     renderPvpStatus();
     refreshResourceNumbers();
+  }
+
+  function renderRank() {
+    document.getElementById('rankPanel')?.classList.add('hifi');
+    const root = shellPage('rankPanel', 'shell-rank-page');
+    const power = typeof computePower === 'function' ? computePower() : 0;
+    const myName = (window.account && account.user && account.user.nickname) || '果园园长';
+    const myScore = rankTab === 'power' ? power : (rankTab === 'stage' ? highestLevel() : (shell.ladderBest || 0));
+    root.innerHTML = `
+      <div class="hifi-screen shop-bg">
+        <div class="bg"></div><div class="scrim"></div>
+        ${hifiTopBarHtml()}
+        <div class="hifi-scroll">
+          <div class="shead"><h2 class="display">排行榜</h2><span class="line"></span></div>
+          <div class="rtabs">${RANK_TABS.map(([k, l]) => `<button class="rtab ${rankTab === k ? 'on' : ''}" data-rtab="${k}">${l}</button>`).join('')}</div>
+          <div class="podium" id="hifiPodium"></div>
+          <div id="hifiRlist"></div>
+        </div>
+        <div class="selfrank"><span class="tag">你的排名</span><span class="no">—</span><span class="av"><svg class="icon"><use href="#i-user"/></svg></span><span class="nm">${myName}</span><span class="pw"><svg class="icon"><use href="#i-flame"/></svg>${myScore}</span></div>
+      </div>
+    `;
+    root.querySelectorAll('[data-rtab]').forEach(b => b.addEventListener('click', () => { rankTab = b.dataset.rtab; renderRank(); }));
+    root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => { hidePanels(); document.getElementById('helpPanel')?.classList.remove('hide'); }));
+    root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
+    populateRank(root);
+    refreshResourceNumbers();
+  }
+
+  function populateRank(root) {
+    const podium = root.querySelector('#hifiPodium');
+    const rlist = root.querySelector('#hifiRlist');
+    if (!podium || !rlist) return;
+    const scoreLabel = rankTab === 'stage' ? '关' : (rankTab === 'ladder' ? '波' : '');
+    const self = root.querySelector('.selfrank');
+    const empty = (msg) => {
+      if (self) self.style.display = 'none';
+      podium.innerHTML = '';
+      rlist.innerHTML = `<div style="text-align:center;color:#8a7a5a;font-weight:800;padding:28px 12px;line-height:1.8">${msg || '暂无排行数据'}<br><small style="color:#7a6a4a">登录并联网后同步全服榜单</small></div>`;
+    };
+    const render = (list) => {
+      if (!Array.isArray(list) || !list.length) { empty(); return; }
+      if (self) self.style.display = 'flex';
+      const top3 = list.slice(0, 3);
+      podium.innerHTML = [1, 0, 2].filter(i => top3[i]).map(i => {
+        const r = top3[i]; const rank = i + 1;
+        const h = rank === 1 ? 86 : (rank === 2 ? 64 : 50);
+        const avS = rank === 1 ? 64 : 52;
+        return `<div class="pod">${rank === 1 ? '<svg class="icon" style="width:26px;height:26px;color:#F5C242;margin-bottom:-2px"><use href="#i-crown"/></svg>' : ''}<div class="av" style="width:${avS}px;height:${avS}px${rank === 1 ? ';border-color:#FFE9A8' : ''}"><svg class="icon" style="width:${Math.round(avS * 0.5)}px;height:${Math.round(avS * 0.5)}px"><use href="#i-user"/></svg></div><span class="nm">${r.nickname || '玩家'}</span><div class="base" style="height:${h}px${rank === 1 ? ';background:linear-gradient(180deg,#FFE9A8,#E8A317)' : ''}"><svg class="icon"><use href="#i-star"/></svg>${rank}</div></div>`;
+      }).join('');
+      rlist.innerHTML = list.slice(3).map((r, idx) => `<div class="rrow"><span class="no">${idx + 4}</span><span class="av"><svg class="icon"><use href="#i-user"/></svg></span><span class="nm">${r.nickname || '玩家'}</span><span class="pw"><svg class="icon"><use href="#i-flame"/></svg>${(r.score || 0).toLocaleString()}${scoreLabel}</span></div>`).join('');
+    };
+    if (!(window.account && typeof account.leaderboard === 'function')) { empty(); return; }
+    empty('加载中…');
+    account.leaderboard(rankTab).then(render).catch(() => empty());
+  }
+
+  // ===== M6 账号/社交弹层 =====
+  let authMode = 'login';
+  let tutStep = 0;
+  const TUT_STEPS = [
+    { ic: 'i-leaf', t: '出球召唤', p: '点底部「出球」消耗果汁 SP,在你的棋盘上召唤水果。' },
+    { ic: 'i-cards', t: '拖拽合成', p: '把两个相同水果拖到一起合成升级(上限 Lv7),越高越强。' },
+    { ic: 'i-vs', t: '职责克制', p: '坦克/远程/突击/攻城/控制 相互克制(7×7 矩阵),搭配阵容更稳。' },
+    { ic: 'i-shield', t: '拆敌堡', p: '水果变士兵冲向 5 条兵线,打空敌方城墙即胜利!同时守住我堡别被破。' },
+  ];
+
+  function ensureSheet() {
+    let ov = document.getElementById('hifiSheet');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'hifiSheet';
+      ov.className = 'hifi-ov hifi';
+      ov.innerHTML = `<div class="sheet"><div class="sheet-h"><h2></h2><button class="x" data-close><svg class="icon"><use href="#i-x"/></svg></button></div><div class="sheet-b"></div></div>`;
+      document.body.appendChild(ov);
+      ov.addEventListener('click', (e) => { if (e.target === ov || (e.target.closest && e.target.closest('[data-close]'))) ov.classList.remove('active'); });
+    }
+    return ov;
+  }
+  function openSheet(title, html) {
+    const ov = ensureSheet();
+    ov.querySelector('.sheet-h h2').textContent = title;
+    const body = ov.querySelector('.sheet-b');
+    body.innerHTML = html;
+    ov.classList.add('active');
+    return body;
+  }
+  function closeSheet() { document.getElementById('hifiSheet')?.classList.remove('active'); }
+  function loggedIn() { return !!(window.account && account.token && account.user); }
+
+  function openAccount() { if (loggedIn()) openProfileSheet(); else openAuthSheet(); }
+
+  function openAuthSheet() {
+    const isReg = authMode === 'register';
+    const body = openSheet(isReg ? '注册' : '登录', `
+      <div class="ltabs">
+        <button class="ltab ${!isReg ? 'on' : ''}" data-auth="login">登录</button>
+        <button class="ltab ${isReg ? 'on' : ''}" data-auth="register">注册</button>
+      </div>
+      <input class="linput" id="authEmail" type="text" placeholder="邮箱" autocomplete="off">
+      <input class="linput" id="authPass" type="password" placeholder="密码">
+      ${isReg ? '<input class="linput" id="authNick" type="text" placeholder="昵称(可留空)" maxlength="12">' : ''}
+      <button class="gbtn blk" id="authGo" style="margin-top:4px">${isReg ? '注册并登录' : '登录'}</button>
+      <button class="gbtn blk" id="authGuest" style="margin-top:10px;background:linear-gradient(180deg,#8f897c,#6b665b);border-color:#4c483f;box-shadow:0 4px 0 #4c483f;color:#e8e4d8;text-shadow:none">游客继续(本地存档)</button>
+      <p style="text-align:center;font-size:11px;color:#8a7a5a;margin-top:12px;line-height:1.6">登录后云端存档 · 解锁邮件/排行/世界聊天<br>需连接后端服务器</p>
+    `);
+    body.querySelectorAll('[data-auth]').forEach(b => b.addEventListener('click', () => { authMode = b.dataset.auth; openAuthSheet(); }));
+    body.querySelector('#authGuest')?.addEventListener('click', () => closeSheet());
+    body.querySelector('#authGo')?.addEventListener('click', async () => {
+      const email = (body.querySelector('#authEmail').value || '').trim();
+      const pass = body.querySelector('#authPass').value || '';
+      if (!email || !pass) { hifiToast('请填写邮箱和密码'); return; }
+      if (!window.account || !account.register) { hifiToast('需要连接后端服务器'); return; }
+      try {
+        const r = isReg
+          ? await account.register(email, pass, (body.querySelector('#authNick')?.value || '').trim())
+          : await account.login(email, pass);
+        if (r && r.token) { hifiToast(isReg ? '注册成功,欢迎!' : '登录成功,欢迎回来'); closeSheet(); ensureShellData(); refreshResourceNumbers(); renderHome(); }
+        else hifiToast(r && r.error ? r.error : '失败,请重试');
+      } catch (e) { hifiToast('连接失败,请检查服务器'); }
+    });
+  }
+
+  function openProfileSheet() {
+    const u = account.user || {};
+    const body = openSheet('个人资料', `
+      <div class="pf-top">
+        <div class="pf-av"><svg class="icon"><use href="#i-user"/></svg></div>
+        <div style="flex:1">
+          <input class="linput" id="pfName" value="${u.nickname || '果园园长'}" maxlength="12" style="margin-bottom:6px">
+          <div class="uid">UID ${u.uid || '--------'}</div>
+        </div>
+      </div>
+      <div class="statrow" style="margin:12px 0">
+        <div class="s"><svg class="icon" style="color:#F5C242"><use href="#i-flame"/></svg>战力<b>${typeof computePower === 'function' ? computePower() : 0}</b></div>
+        <div class="s"><svg class="icon" style="color:#38C6E8"><use href="#i-star"/></svg>等级<b>${u.level || 1}</b></div>
+        <div class="s"><svg class="icon" style="color:#2FBF71"><use href="#i-trophy"/></svg>关卡<b>${highestLevel()}</b></div>
+      </div>
+      <button class="gbtn blk" id="pfSave">保存资料</button>
+      <button class="gbtn blk" id="pfLogout" style="margin-top:10px;background:linear-gradient(180deg,#8f897c,#6b665b);border-color:#4c483f;box-shadow:0 4px 0 #4c483f;color:#e8e4d8;text-shadow:none">退出登录</button>
+    `);
+    body.querySelector('#pfSave')?.addEventListener('click', () => {
+      const name = (body.querySelector('#pfName').value || '').trim();
+      if (window.account && account.api) account.api('POST', '/api/user/profile', { nickname: name }).catch(() => {});
+      if (account.user) account.user.nickname = name;
+      hifiToast('资料已保存'); renderHome();
+    });
+    body.querySelector('#pfLogout')?.addEventListener('click', () => { account.token = null; account.user = null; hifiToast('已退出登录'); closeSheet(); renderHome(); });
+  }
+
+  function openMail() {
+    const body = openSheet('邮件', '<div id="hifiMailList"><div style="text-align:center;color:#8a7a5a;padding:24px;font-weight:800">加载中…</div></div>');
+    const list = body.querySelector('#hifiMailList');
+    const showEmpty = (m) => { list.innerHTML = `<div style="text-align:center;color:#8a7a5a;padding:28px 12px;font-weight:800;line-height:1.8">${m || '暂无邮件'}<br><small style="color:#7a6a4a">登录联网后收取系统邮件</small></div>`; };
+    if (!(loggedIn() && account.getMail)) { showEmpty('登录后查看邮件'); return; }
+    account.getMail().then(mails => {
+      if (!Array.isArray(mails) || !mails.length) { showEmpty(); return; }
+      list.innerHTML = mails.map(m => `<div class="mail-item">${m.is_read ? '' : '<span class="dot"></span>'}<span class="mi"><svg class="icon"><use href="#i-gift"/></svg></span><div class="mc"><h4>${m.title || '邮件'}</h4><p>${m.body || ''}</p></div><button class="gbtn" data-mailid="${m.id}" style="min-height:40px;padding:8px 12px;font-size:14px">领取</button></div>`).join('');
+      list.querySelectorAll('[data-mailid]').forEach(b => b.addEventListener('click', () => { if (account.readMail) account.readMail(b.dataset.mailid).catch(() => {}); b.textContent = '已领'; b.classList.add('gray'); }));
+    }).catch(() => showEmpty('邮件加载失败'));
+  }
+
+  function openChat() {
+    const body = openSheet('世界聊天', '<div class="chat-msgs" id="hifiChatMsgs"></div><div class="chat-in"><input id="hifiChatIn" placeholder="说点什么…" maxlength="60"><button class="gbtn" id="hifiChatSend" style="min-height:44px;padding:10px 16px">发送</button></div>');
+    const msgs = body.querySelector('#hifiChatMsgs');
+    const showEmpty = (m) => { msgs.innerHTML = `<div style="text-align:center;color:#8a7a5a;padding:24px;font-weight:800;line-height:1.8;margin:auto">${m || '暂无消息'}</div>`; };
+    if (!(window.account && account.chatMessages)) { showEmpty('登录联网后进入世界频道'); }
+    else account.chatMessages().then(l => {
+      if (!Array.isArray(l) || !l.length) { showEmpty('世界频道暂时安静…'); return; }
+      msgs.innerHTML = l.map(c => `<div class="cmsg ${c.me ? 'me' : ''}"><span class="ca"><svg class="icon"><use href="#i-user"/></svg></span><div class="cb"><div class="nm">${c.nickname || c.n || '玩家'}</div><div class="tx">${c.text || c.m || ''}</div></div></div>`).join('');
+      msgs.scrollTop = msgs.scrollHeight;
+    }).catch(() => showEmpty('聊天加载失败'));
+    body.querySelector('#hifiChatSend')?.addEventListener('click', () => {
+      const inp = body.querySelector('#hifiChatIn');
+      if (!(inp.value || '').trim()) return;
+      hifiToast(loggedIn() ? '世界聊天发送需服务器接口(开发中)' : '登录联网后可发言');
+      inp.value = '';
+    });
+  }
+
+  function openTutorial() { tutStep = 0; renderTut(); }
+  function renderTut() {
+    const s = TUT_STEPS[tutStep];
+    const last = tutStep === TUT_STEPS.length - 1;
+    const body = openSheet('新手引导', `
+      <div style="text-align:center">
+        <div style="width:64px;height:64px;margin:4px auto 10px;border-radius:20px;background:radial-gradient(circle at 40% 34%,#A7F3D0,#2FBF71);display:grid;place-items:center;box-shadow:0 5px 0 #178A4C"><svg class="icon" style="width:34px;height:34px;color:#fff"><use href="#${s.ic}"/></svg></div>
+        <h3 style="font-family:'ZCOOL KuaiLe';font-size:22px;color:#FFE9A8;margin-bottom:6px">${s.t}</h3>
+        <p style="font-size:14px;color:#F3E3C0;font-weight:700;line-height:1.6;margin-bottom:14px">${s.p}</p>
+        <div style="display:flex;justify-content:center;gap:6px;margin-bottom:14px">${TUT_STEPS.map((_, i) => `<i style="width:${i === tutStep ? '20px' : '8px'};height:8px;border-radius:4px;background:${i === tutStep ? '#F5C242' : 'rgba(245,194,66,.3)'};display:inline-block"></i>`).join('')}</div>
+        <button class="gbtn blk" id="hifiTutNext">${last ? '开始游戏' : '下一步'}</button>
+      </div>
+    `);
+    body.querySelector('#hifiTutNext')?.addEventListener('click', () => { if (last) closeSheet(); else { tutStep++; renderTut(); } });
   }
 
   function renderPvpStatus(status = null) {
@@ -563,6 +936,9 @@
     } else if (activeTab === 'arena') {
       document.getElementById('arenaPanel')?.classList.remove('hide');
       renderArena();
+    } else if (activeTab === 'rank') {
+      document.getElementById('rankPanel')?.classList.remove('hide');
+      renderRank();
     }
     const activePanel = document.querySelector('.panel:not(.hide) .panel-inner');
     if (activePanel) activePanel.scrollTop = 0;
@@ -674,7 +1050,7 @@
 
   function showGachaResults(results) {
     const overlay = document.createElement('div');
-    overlay.className = 'gacha-overlay';
+    overlay.className = 'gacha-overlay hifi';
     overlay.innerHTML = `<div class="gacha-box"><h2>🎉 抽卡结果</h2><div id="gachaResults"></div><button class="btn-primary" id="closeGacha">确认</button></div>`;
     document.body.appendChild(overlay);
     const box = overlay.querySelector('#gachaResults');
@@ -758,6 +1134,15 @@
         if (win) return advanceLadderWave();
         return showLadderResult();
       }
+      // 训练模式:不消耗资源,不加经验,不给奖励
+      if (state.trainingMode) { state.trainingMode = false; return old(win); }
+      // 过关奖励金币(meta.gold,已有)+ 钻石(shell.gems,新增)
+      if (win) {
+        const k = state.currentLevel || 1;
+        const boss = k % 5 === 0;
+        shell.gems = (shell.gems || 0) + (boss ? 5 : 1); // 普通关 +1, Boss 关 +5
+        saveShell();
+      }
       return old(win);
     };
     onGameOver._productShellWrapped = true;
@@ -835,6 +1220,7 @@
     if (!nav) return;
     const show = state.phase === 'menu';
     nav.classList.toggle('shell-hidden', !show);
+    document.body.classList.toggle('hifi-menu', show);
     if (show && prevPhase && prevPhase !== 'menu') showTab('home');
     prevPhase = state.phase;
   }
@@ -848,6 +1234,17 @@
     hookGameOver();
     window.productShellShowTab = showTab;
     window.pvpClient?.onStatus(renderPvpStatus);
+    if (!document._hifiAccountBound) {
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest && e.target.closest('[data-account],[data-mail],[data-chat],[data-tut]');
+        if (!t) return;
+        if (t.hasAttribute('data-account')) openAccount();
+        else if (t.hasAttribute('data-mail')) openMail();
+        else if (t.hasAttribute('data-chat')) openChat();
+        else if (t.hasAttribute('data-tut')) openTutorial();
+      });
+      document._hifiAccountBound = true;
+    }
     showTab('home');
     setInterval(syncNavVisibility, 180);
     syncNavVisibility();
