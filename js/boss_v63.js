@@ -71,7 +71,7 @@
       } else if (b._bossKind === 'durian_cannon') {
         if (b._bossTimer >= 3.5) {
           b._bossTimer = 0;
-          const dmg = Math.round(b.atk * 1.4);
+          const dmg = Math.round(b.atk * 1.5);
           let hit = 0;
           for (const p of state.playerSoldiers) {
             if (hit >= 4) break;

@@ -13,7 +13,7 @@
   function actionCost() {
     if (!state) return 1;
     state.summonCostCounter = Math.max(1, Number(state.summonCostCounter || 1));
-    return state.summonCostCounter;
+    return Math.min(12, state.summonCostCounter); // 设计 §3.2:操作次数表到 12 为止
   }
 
   function enemyActionCost() {
