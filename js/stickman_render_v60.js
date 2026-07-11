@@ -83,28 +83,33 @@ function drawStickmanShape(ctx, o) {
   const ink = o.hitFlash > 0 ? '#ffffff' : baseInk;
   const k = stickLerpK(o.phase || 0);
   const lean = 0.28 * dir;               // ~16° 前倾
-  const stride = s * 7.8;
-  const bob = s * 2.5;
+  const stride = s * 5.5;                 // 沿行进方向的跨步幅度
+  const bob = s * 3.6;                     // 踩步起伏(加大,削弱"平移感")
+  const adv = o.advDir === 1 ? 1 : -1;     // 行进方向的屏幕 y 号(玩家上=-1/敌方下=+1,由 wrapper 传)
 
-  const hipX = cx, hipY = GROUND - s * 12 + k.body * bob;
+  const hipX = cx, hipY = GROUND - s * 12 - k.body * bob; // passing 帧身体抬高,contact 帧下沉
   const bodyLen = s * 7.6;                // 躯干缩短(更 Q 版)
   const lungeX = dir * (o.atkT || 0) * s * 2.4; // 出手时上半身前刺(腿不动)
   const shX = hipX + Math.sin(lean) * bodyLen + lungeX, shY = hipY - Math.cos(lean) * bodyLen;
   const neck = s * 4;
   const hx = shX + Math.sin(lean) * neck, hy = shY - Math.cos(lean) * neck - s * 2.6; // 头更贴肩
 
-  // 腿(远腿半透明模拟纵深)
-  function leg(fn, alpha) {
+  // 腿:沿"行进方向(竖向为主)"前后跨步 —— fn=+1 前脚(朝目标)、-1 后脚,前摆脚抬起,
+  // 使竖向移动读出"走"的感觉(而不是侧向摆腿+身体平移)。左右两腿分开、反相摆。
+  function leg(fn, sideSign, alpha) {
     ctx.globalAlpha = alpha;
-    const fx = hipX + dir * fn * stride, fy = GROUND;
-    const lift = Math.abs(fn) > 0.3 ? Math.abs(fn) * s * 3 : 0;
-    const kx = hipX + dir * fn * stride * 0.3 + dir * s * 2.5, ky = hipY + (fy - hipY) * 0.4 - lift;
+    const fx = hipX + sideSign * s * 1.8;         // 左右分开,避免两腿重合
+    const reach = adv * fn * stride;              // 沿行进方向前后跨
+    const lift = Math.max(0, fn) * s * 3.2;       // 前摆脚抬离地面
+    const fy = GROUND + reach - lift;
+    const kx = hipX + sideSign * s * 1.4;
+    const ky = hipY + (GROUND - hipY) * 0.45 + reach * 0.35 - lift * 0.6;
     ctx.strokeStyle = ink; ctx.lineWidth = s * 1.75; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(hipX, hipY);
-    ctx.quadraticCurveTo(kx, ky, fx, fy - lift * 0.6); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(fx - s * 1.5, fy - lift * 0.6); ctx.lineTo(fx + s * 1.5, fy - lift * 0.6); ctx.stroke();
+    ctx.quadraticCurveTo(kx, ky, fx, fy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fx - s * 1.4, fy); ctx.lineTo(fx + s * 1.4, fy); ctx.stroke(); // 脚掌
   }
-  leg(k.lf, 0.5); leg(k.rf, 1);
+  leg(k.lf, -1, 0.6); leg(k.rf, 1, 1);
   ctx.globalAlpha = 1;
 
   // 躯干
@@ -338,10 +343,13 @@ function drawStatusFX(ctx, g, se, s, time) {
     const r = (13 + (s.level || 1) * 1.18) * depth * tierScale * roleScale;
     const vis = battleVisualPosV59(s, r);
 
-    const moved = Math.hypot((s.x - (s._pxV60 ?? s.x)), (s.y - (s._pyV60 ?? s.y)));
+    const dyStep = s.y - (s._pyV60 ?? s.y);
+    const moved = Math.hypot((s.x - (s._pxV60 ?? s.x)), dyStep);
     s._pxV60 = s.x; s._pyV60 = s.y;
     const phase = walkPhase(s, moved);
     const dir = faceDir(s);
+    // 行进方向(屏幕 y 号):明显移动时按实际速度方向,否则按阵营推进方向(玩家上/敌方下)
+    const advDir = Math.abs(dyStep) > 0.05 ? (dyStep > 0 ? 1 : -1) : (s.side === 'player' ? -1 : 1);
     const scale = r * 0.13;
     const groundY = vis.y + r * 0.72;
     const fighting = s.mode === 'fight' || s.mode === 'siege' || s.mode === 'siege_support';
@@ -363,7 +371,7 @@ function drawStatusFX(ctx, g, se, s, time) {
     ctx.globalAlpha = invis ? 0.4 : 1;
 
     const geom = drawStickmanShape(ctx, {
-      cx: vis.x, groundY, scale, phase, dir,
+      cx: vis.x, groundY, scale, phase, dir, advDir,
       headColor: t.color || st.main, emoji: t.icon,
       weapon: stickWeaponForRole(t.role),
       atk: fighting, atkT: strike, fighting,
