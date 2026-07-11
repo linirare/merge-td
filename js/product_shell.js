@@ -293,11 +293,18 @@
             <div><i style="width:${Math.min(100, 20 + lv * 7)}%"></i></div>
             <button data-go="shop">🎁</button>
           </div>
-          <button class="td-start-btn" id="homeStartBtn"><span>⚔️</span>开始挑战</button>
+          <div style="display:flex;gap:8px;margin-top:10px">
+<button class="td-start-btn" id="homeStartBtn" style="flex:1"><span>⚔️</span>开始挑战</button>
+<button class="btn-secondary" id="homeHelpBtn" style="width:48px;max-width:48px;padding:13px 0">?</button>
+</div>
         </section>
       </section>
     `;
     root.querySelector('#homeStartBtn')?.addEventListener('click', () => startCampaign(lv));
+    root.querySelector('#homeHelpBtn')?.addEventListener('click', () => {
+      hidePanels();
+      document.getElementById('helpPanel')?.classList.remove('hide');
+    });
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
     root.querySelectorAll('[data-stage]').forEach(btn => btn.addEventListener('click', () => startCampaign(Number(btn.dataset.stage || lv))));
     refreshResourceNumbers();

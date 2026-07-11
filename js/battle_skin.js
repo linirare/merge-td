@@ -149,6 +149,12 @@ function drawWall(hp, maxHp, isEnemy) {
   roundRect(bx + 1.5, by + 1.5, Math.max(4, (bw - 3) * ratio), bh - 3, 3);
   ctx.fill();
 
+  // HP 数字(审计#5:城墙血量应可见)
+  ctx.fillStyle = isEnemy ? '#F4D7DC' : '#E7F8D9';
+  ctx.font = 'bold 10px "Segoe UI","Microsoft YaHei",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${Math.round(hp)}/${Math.round(maxHp)}`, x + w / 2, y + h + 14);
+
   if (ratio <= 0.60) drawWallDamageV51(x, y, w, h, ratio, isEnemy);
   ctx.restore();
 }
