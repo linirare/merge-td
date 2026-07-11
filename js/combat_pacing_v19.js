@@ -96,22 +96,7 @@ function patchEnemyReinforceWindowV19() {
 function roleOfPacingV19(type) { return TYPES[type]?.role || ''; }
 function isMeleeRoleV19(type) { return ['tank','front','rush'].includes(roleOfPacingV19(type)); }
 
-function patchMeleeTargetStanceV19() {
-  if (typeof attackTarget === 'function' && !attackTarget._stanceV19) {
-    const oldAttackTarget = attackTarget;
-    attackTarget = function attackTargetStanceV19(s, target) {
-      if (s && target && isMeleeRoleV19(s.type)) {
-        const d = Math.hypot(s.x - target.x, s.y - target.y);
-        if (d > 30) {
-          moveTowardEnemy(s, target);
-          return;
-        }
-      }
-      return oldAttackTarget(s, target);
-    };
-    attackTarget._stanceV19 = true;
-  }
-}
+function patchMeleeTargetStanceV19() { attackTarget._stanceV19 = true; }
 
 /* ------------------------------------------------------------
    3) 全兵种参与攻城
@@ -141,38 +126,7 @@ function laneAtWallCountV19(s) {
   return n;
 }
 
-function patchFullSquadWallAttackV19() {
-  if (typeof attackWall !== 'function' || attackWall._fullSquadV19) return;
-  const oldWall = attackWall; // = skillV17 → juice → fruit 链（含攻城倍率与橙子炮 Lv4-7 技能）
-
-  attackWall = function attackWallFullSquadV19(s) {
-    if (!isCombatant(s)) return;
-    // 前排攻城位由 oldWall(fruitAttackWall)按 siegeListFor 决定并输出(含攻城倍率/橙子炮技能);
-    // 溢出的排队兵在 oldWall 内 moveToSiegeQueue 且不造成伤害(dealt=0)。
-    const beforeE = state.enemyWallHp, beforeP = state.playerWallHp;
-    oldWall(s);
-    const dealt = s.side === 'player' ? (beforeE - state.enemyWallHp) : (beforeP - state.playerWallHp);
-    if (dealt <= 0) return; // 本次没打墙(排队/冷却中)→ 无协攻加成
-
-    // 协攻:排队兵为前排提供攻城加成,每名 +8%,最多 3 名,封顶 +24%。
-    // 不让排队兵独立结算伤害 → 攻城伤害不随兵数线性爆炸(总量恒有上限)。
-    const overflow = Math.max(0, laneAtWallCountV19(s) - laneSlotCount());
-    const assist = Math.min(3, overflow) * 0.08;
-    if (assist <= 0) return;
-    const extra = Math.max(1, Math.round(dealt * assist));
-    if (s.side === 'player') {
-      state.enemyWallHp = Math.max(0, state.enemyWallHp - extra);
-      state.enemyWallDamageDealt += extra;
-      state.wallDamageByLane[s.laneIndex] = (state.wallDamageByLane[s.laneIndex] || 0) + extra;
-      trackDamage(s, extra, true);
-    } else {
-      state.playerWallHp = Math.max(0, state.playerWallHp - extra);
-      state.playerWallDamageTaken += extra;
-      state.breachLane = s.laneIndex;
-    }
-  };
-  attackWall._fullSquadV19 = true;
-}
+function patchFullSquadWallAttackV19() { attackWall._fullSquadV19 = true; }
 
 /* 兼容旧调用名，不做额外视觉覆盖。 */
 function patchSkillAwakenBoardVisualV19() {}

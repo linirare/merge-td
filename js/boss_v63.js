@@ -96,10 +96,15 @@
           b._bossTimer = 0;
           const lanes = [1, 2, 3];
           for (let i = 0; i < 3; i++) {
-            const m = createSoldier('banana_raider', 3);
-            m.side = 'enemy'; m.laneIndex = lanes[i]; m.laneX = laneXByIndex(lanes[i]);
-            m.x = m.laneX; m.y = b.y + 12; m.alive = true; m.battleReady = true; m.protected = false; m.mode = 'march';
-            state.enemySoldiers.push(m);
+            const ball = createBall('banana_raider', 3);
+            const spawned = typeof spawnSoldierFromBall === 'function' ? spawnSoldierFromBall(ball, 0, lanes[i], 'enemy', true) : null;
+            if (!spawned) {
+              // 降级:超过 MAX_SOLDIERS 或 spawnSoldierFromBall 不可用时直接造
+              const m = createSoldier('banana_raider', 3);
+              m.side = 'enemy'; m.laneIndex = lanes[i]; m.laneX = laneXByIndex(lanes[i]);
+              m.x = m.laneX; m.y = b.y + 12; m.alive = true; m.battleReady = true; m.protected = false; m.mode = 'march';
+              state.enemySoldiers.push(m);
+            }
           }
           if (typeof addFx === 'function') addFx(b.x, b.y - 34, '果王召唤!', '#c0392b', 14);
         }
@@ -121,13 +126,4 @@
     initLevel._bossV63 = true;
   }
 
-  // hook updateCombat:每帧 tick Boss 机制
-  if (typeof updateCombat === 'function' && !updateCombat._bossV63) {
-    const oldUpdate = updateCombat;
-    updateCombat = function updateCombatBossV63() {
-      oldUpdate();
-      bossTick(dt_global || 0.016);
-    };
-    updateCombat._bossV63 = true;
-  }
 })();

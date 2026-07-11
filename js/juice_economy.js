@@ -29,7 +29,7 @@
     state._juicePulseKind = kind;
   }
 
-  window.nextJuiceActionCost = actionCost;
+  window.nextJuiceActionCost = function(){ return typeof actionCost === 'function' ? actionCost() : 1; };
 
   function juiceSpawnButtonRect() {
     if (typeof window.getJuiceSpawnButtonRectV60 === 'function') return window.getJuiceSpawnButtonRectV60();
@@ -72,7 +72,10 @@
   }
 
   function resetJuiceEconomyForLevel() {
-    state.sp = typeof getSpStart === 'function' ? getSpStart(meta) : 10;
+    // 星级特效:★7 开局 SP+2
+    const maxStar = Math.max(...((meta && meta.shardsTotal) ? Object.values(meta.shardsTotal).map(s => typeof starLevelFromShards === 'function' ? starLevelFromShards(s) : 1) : [1]), 1);
+    const starSp = (typeof starStartSpBonusPvp === 'function' && typeof window !== 'undefined' && window.__pvpMode ? starStartSpBonusPvp(maxStar) : (typeof starStartSpBonus === 'function' ? starStartSpBonus(maxStar) : 0));
+    state.sp = (typeof getSpStart === 'function' ? getSpStart(meta) : 10) + starSp;
     state.enemySp = 8;
     state.summonCostCounter = 1;
     state.enemySummonCostCounter = 1;
@@ -102,16 +105,14 @@
     killSoldier = function killSoldierWithJuiceRewardV59(target, killerSide, killerAtk, killerType) {
       const wasAlive = !!(target && target.alive);
       const reward = Math.max(1, Math.min(MAX_LEVEL || 7, Number(target && target.level) || 1));
-      const oldPlayerSp = state.sp || 0;
-      const oldEnemySp = state.enemySp || 0;
       const result = oldKillSoldier(target, killerSide, killerAtk, killerType);
       if (wasAlive && target && !target.alive) {
         if (killerSide === 'player') {
-          state.sp = oldPlayerSp + reward;
+          state.sp = (state.sp || 0) + reward; // 叠加而非覆盖 oldKillSoldier 可能已加 SP(如连杀)
           pulseJuice(reward, 'gain');
           addFx(target.x, target.y - 18, `+${reward}果汁`, THEME.gold, 10);
         } else if (killerSide === 'enemy') {
-          state.enemySp = oldEnemySp + reward;
+          state.enemySp = (state.enemySp || 0) + reward; // M4 fix:叠加而非覆盖
         }
       }
       return result;

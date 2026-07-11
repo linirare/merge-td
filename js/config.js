@@ -235,6 +235,29 @@ function starLevelFromShards(shards) {
 }
 function starAtkBonus(star) { return [0, 0, 0.05, 0.10, 0.16, 0.23, 0.30, 0.38][Math.min(Math.max(star, 1), 7)]; }
 function starHpBonus(star)  { return [0, 0, 0.03, 0.06, 0.10, 0.15, 0.20, 0.26][Math.min(Math.max(star, 1), 7)]; }
+
+/* 星级特效(设计档 §7.3) */
+function starSkillCdReduce(star) { return star >= 3 ? 0.5 : 0; }      // ★3: 技能 CD -0.5s
+function starSkillEnhanced(star)   { return star >= 5; }               // ★5: 技能强化(Lv7 技能额外效果)
+function starAuraAtkBonus(star)    { return star >= 6 ? 0.03 : 0; }    // ★6: 同职责光环 +3% ATK
+function starStartSpBonus(star)    { return star >= 7 ? 2 : 0; }       // ★7: 开局 SP+2
+// PvP 调整:★7 开局 SP+2 → +1
+function starStartSpBonusPvp(star) { return star >= 7 ? 1 : 0; }
+
+/* 战力统一值 */
+function computePower() {
+  const shards = (meta && meta.shardsTotal) ? meta.shardsTotal : {};
+  let sum = 0, n = 0;
+  for (const id of UNIT_POOL) {
+    if (!TYPES[id]) continue;
+    const s = shards[id] || 0;
+    const atkMul = typeof getAtkMul === 'function' ? getAtkMul(meta, id) : 1;
+    const hpMul = typeof getHpMul === 'function' ? getHpMul(meta, id) : 1;
+    sum += Math.round((TYPES[id].atk * atkMul + TYPES[id].hp * hpMul) * fragmentAtkMul(s));
+    n++;
+  }
+  return n > 0 ? Math.round(sum / n) : 0;
+}
 // 碎片 → 最终 ATK/HP 乘子:(1+养成加成)×(1+星级加成)
 function fragmentAtkMul(shards) { return (1 + cultivateBonusAt(cultivateLevelFromShards(shards))) * (1 + starAtkBonus(starLevelFromShards(shards))); }
 function fragmentHpMul(shards)  { return (1 + cultivateBonusAt(cultivateLevelFromShards(shards))) * (1 + starHpBonus(starLevelFromShards(shards))); }

@@ -4,7 +4,7 @@
    ============================================================ */
 (function installPvpV1() {
   const loc = window.location;
-  const PVP_SERVER_URL = `${loc.protocol === 'https:' ? 'wss:' : 'ws:'}//${loc.host}`;
+  const PVP_SERVER_URL = `${loc.protocol === 'https:' ? 'wss:' : 'ws:'}//${loc.host}/pvp`;
 
   const pvp = {
     ws: null,
@@ -163,6 +163,18 @@
     return ball;
   }
 
+  // PvP 专属数值表(设计档 §10.2):平衡性调整,降低爆发方差
+  const PVP_TABLE = {
+    critNerf: 0.8,        // 暴击倍率 ×0.8(×2.5→×2.0, ×2.0→×1.7)
+    stealthNerf: 0.67,    // 隐身时间 ×0.67(3s→2s)
+  };
+
+  function applyPvpNumbers() {
+    // 应用数值到状态引擎(通过全局标记)
+    window.__pvpMode = true;
+    state._pvpNumbers = true;
+  }
+
   function clearForPvp() {
     state.playerSlots = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
     state.enemySlots = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -175,6 +187,7 @@
     state.playerSoldiers = [];
     state.enemySoldiers = [];
     state.laneStats = emptyLaneStats();
+    applyPvpNumbers();
     state.laneAlerts = [];
     state.damageByType = {};
     state.wallDamageByLane = Array(COLS).fill(0);

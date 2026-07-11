@@ -1,26 +1,128 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
+const db = require('./db');
+const { signToken, authMiddleware } = require('./auth');
+const { handlePvpUpgrade } = require('./pvp-server');
 
 const app = express();
-const server = http.createServer(app);
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '..')));
 
-// 静态文件服务（所有文件在仓库根目录）
-app.use(express.static(path.join(__dirname, '..'), {
-  maxAge: 0,
-  etag: false,
-  lastModified: false,
-  setHeaders(res, filePath) {
-    if (filePath.endsWith('.js') || filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    }
-  },
-}));
-
-const { attachPvp } = require('./pvp-server');
-attachPvp(server);
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[server] 水果突击运行在端口 ${PORT}`);
+app.post('/api/auth/register', (req, res) => {
+  const { email, password, nickname } = req.body || {};
+  if (!email || !password) return res.status(400).json({ error: 'email and password required' });
+  if (db.prepare('SELECT uid FROM users WHERE email = ?').get(email)) return res.status(409).json({ error: 'email exists' });
+  const uid = uuidv4().slice(0, 8);
+  const hash = bcrypt.hashSync(password, 10);
+  db.prepare('INSERT INTO users (uid, email, password_hash, nickname) VALUES (?,?,?,?)').run(uid, email, hash, nickname || '');
+  db.prepare('INSERT INTO user_saves (uid) VALUES (?)').run(uid);
+  db.prepare('INSERT INTO leaderboard (uid) VALUES (?)').run(uid);
+  res.json({ uid, token: signToken(uid), nickname: nickname || '', avatar: '🍉', level: 1, exp: 0, diamonds: 0, gold: 0 });
 });
+
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body || {};
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (!user || !bcrypt.compareSync(password, user.password_hash)) return res.status(401).json({ error: 'wrong credentials' });
+  db.prepare("UPDATE users SET last_login = datetime('now') WHERE uid = ?").run(user.uid);
+  const save = db.prepare('SELECT meta_json, shell_json FROM user_saves WHERE uid = ?').get(user.uid);
+  res.json({ uid: user.uid, token: signToken(user.uid), nickname: user.nickname, avatar: user.avatar, level: user.level, exp: user.exp, diamonds: user.diamonds, gold: user.gold, highest_stage: user.highest_stage, ladder_rank: user.ladder_rank, ladder_score: user.ladder_score, meta_json: save ? save.meta_json : '{}', shell_json: save ? save.shell_json : '{}' });
+});
+
+app.get('/api/user/profile', authMiddleware, (req, res) => {
+  const u = db.prepare('SELECT nickname, avatar, level, exp, power, diamonds, gold, highest_stage, ladder_rank, ladder_score FROM users WHERE uid = ?').get(req.uid) || {};
+  res.json(u);
+});
+
+app.post('/api/user/profile', authMiddleware, (req, res) => {
+  const { nickname, avatar } = req.body || {};
+  if (nickname) db.prepare('UPDATE users SET nickname = ? WHERE uid = ?').run(nickname, req.uid);
+  if (avatar) db.prepare('UPDATE users SET avatar = ? WHERE uid = ?').run(avatar, req.uid);
+  res.json({ ok: true });
+});
+
+app.post('/api/save', authMiddleware, (req, res) => {
+  const b = req.body || {};
+  db.prepare('UPDATE user_saves SET meta_json=?, shell_json=?, updated_at=datetime("now") WHERE uid=?').run(b.meta_json || '{}', b.shell_json || '{}', req.uid);
+  db.prepare('UPDATE users SET level=?, exp=?, power=?, diamonds=?, gold=?, highest_stage=?, ladder_score=? WHERE uid=?').run(b.level || 1, b.exp || 0, b.power || 0, b.diamonds || 0, b.gold || 0, b.highest_stage || 1, b.ladder_score || 0, req.uid);
+  // 同步 leaderboard 表(power/stage——ladder_score 由 /api/ladder/report 写)
+  const lb = db.prepare('SELECT uid FROM leaderboard WHERE uid = ?').get(req.uid);
+  if (lb) db.prepare('UPDATE leaderboard SET power=?, highest_stage=?, updated_at=datetime("now") WHERE uid=?').run(b.power || 0, b.highest_stage || 1, req.uid);
+  else db.prepare('INSERT INTO leaderboard (uid, power, highest_stage) VALUES (?,?,?)').run(req.uid, b.power || 0, b.highest_stage || 1);
+  res.json({ ok: true });
+});
+
+app.get('/api/mail', authMiddleware, (req, res) => res.json(db.prepare('SELECT * FROM mail WHERE uid=? ORDER BY created_at DESC LIMIT 50').all(req.uid)));
+app.post('/api/mail/read', authMiddleware, (req, res) => { const b = req.body || {}; if (!b.id) return res.status(400).json({ error: 'id required' }); db.prepare('UPDATE mail SET is_read=1 WHERE id=? AND uid=?').run(b.id, req.uid); res.json({ ok: true }); });
+
+app.post('/api/checkin', authMiddleware, (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const ex = db.prepare('SELECT * FROM checkins WHERE uid=? AND date=?').get(req.uid, today);
+  if (ex) return res.json({ ok: true, streak: ex.streak, already: true });
+  const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const prev = db.prepare('SELECT streak FROM checkins WHERE uid=? AND date=?').get(req.uid, yest);
+  const streak = (prev ? prev.streak : 0) + 1;
+  db.prepare('INSERT INTO checkins (uid,date,streak) VALUES (?,?,?)').run(req.uid, today, streak);
+  const gr = 50 + streak * 10, dr = streak % 7 === 0 ? 10 : 3;
+  db.prepare('UPDATE users SET gold=gold+?, diamonds=diamonds+? WHERE uid=?').run(gr, dr, req.uid);
+  res.json({ ok: true, streak, goldReward: gr, gemReward: dr });
+});
+
+app.get('/api/announcements', (req, res) => res.json(db.prepare('SELECT * FROM announcements WHERE active=1 ORDER BY created_at DESC LIMIT 5').all()));
+
+app.get('/api/leaderboard/:type', (req, res) => {
+  const col = { power: 'power', stage: 'highest_stage', ladder: 'ladder_score' }[req.params.type] || 'power';
+  res.json(db.prepare(`SELECT u.uid,u.nickname,u.avatar,u.level,l.${col} as score FROM leaderboard l JOIN users u ON u.uid=l.uid ORDER BY l.${col} DESC LIMIT 100`).all());
+});
+
+const chatMessages = [];
+module.exports = { chatMessages };
+app.get('/api/chat', (req, res) => res.json(chatMessages.slice(-50)));
+
+// Admin
+const { mountAdmin } = require('./admin');
+const { mountActivity } = require('./activity');
+const { mountSocial } = require('./social');
+mountAdmin(app);
+mountActivity(app);
+mountSocial(app);
+
+// Ladder promotion logic
+app.post('/api/ladder/report', authMiddleware, (req, res) => {
+  const { score } = req.body || {};
+  const user = db.prepare('SELECT ladder_rank, ladder_score FROM users WHERE uid = ?').get(req.uid);
+  if (!user) return res.status(404).json({ error: 'not found' });
+  const newScore = Math.max(user.ladder_score || 0, score || 0);
+  let rank = user.ladder_rank || '新手';
+  if (newScore >= 5000) rank = '王者';
+  else if (newScore >= 3000) rank = '钻石';
+  else if (newScore >= 1500) rank = '黄金';
+  else if (newScore >= 500) rank = '白银';
+  else if (newScore >= 100) rank = '青铜';
+  else rank = '新手';
+  db.prepare('UPDATE users SET ladder_rank = ?, ladder_score = ? WHERE uid = ?').run(rank, newScore, req.uid);
+  db.prepare('UPDATE leaderboard SET ladder_score = ? WHERE uid = ?').run(newScore, req.uid);
+  res.json({ rank, score: newScore });
+});
+
+// Account level + exp (call on stage clear / PvP win)
+app.post('/api/user/exp', authMiddleware, (req, res) => {
+  const { exp } = req.body || {};
+  if (!exp || exp <= 0) return res.json({ ok: false });
+  let user = db.prepare('SELECT level, exp FROM users WHERE uid = ?').get(req.uid);
+  let lv = user.level || 1, xp = (user.exp || 0) + exp;
+  const need = (lv) => 100 + lv * 50; // 升级经验曲线
+  while (xp >= need(lv)) { xp -= need(lv); lv++; }
+  db.prepare('UPDATE users SET level = ?, exp = ? WHERE uid = ?').run(lv, xp, req.uid);
+  res.json({ level: lv, exp: xp, need: need(lv) });
+});
+
+const server = http.createServer(app);
+server.on('upgrade', (req, socket, head) => { handlePvpUpgrade(req, socket, head); });
+
+// 聊天也通过 WS 广播(复用现有的 pvp-server 的 broadcast 逻辑) => chat 消息走 REST polling 即可
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Server :${PORT}`));

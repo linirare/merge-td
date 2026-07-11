@@ -2,17 +2,19 @@
   "duels": {
     "banana_vs_watermelon_adjacent": {
       "engage": 59,
-      "frames": 332,
-      "winner": "enemy",
-      "pHp": 0,
-      "eHp": 50
+      "frames": 360,
+      "winner": "draw",
+      "pHp": 12,
+      "eHp": 33,
+      "pLane": 2,
+      "eLane": 2
     },
     "banana_vs_watermelon_sameLane": {
       "engage": 5,
-      "frames": 278,
+      "frames": 309,
       "winner": "enemy",
       "pHp": 0,
-      "eHp": 50
+      "eHp": 33
     },
     "lemon_vs_pineapple": {
       "engage": 3,
@@ -22,18 +24,18 @@
       "eHp": 0
     },
     "sniper_vs_banana": {
-      "engage": 5,
+      "engage": 17,
       "frames": 17,
       "winner": "enemy",
       "pHp": 0,
-      "eHp": 39
+      "eHp": 57
     },
     "frost_vs_coconut": {
-      "engage": 6,
+      "engage": 47,
       "frames": 584,
       "winner": "enemy",
       "pHp": 0,
-      "eHp": 79
+      "eHp": 167
     }
   },
   "wallDps": {
@@ -44,8 +46,15 @@
   "skirmish_900f": {
     "pAlive": 1,
     "eAlive": 2,
-    "pWall": 560,
+    "pWall": 600,
     "eWall": 600,
     "phase": "playing"
-  }
+  },
+  "boss_melon_shield": 0,
+  "status_burn_kill": true,
+  "status_frozen_block": {
+    "moved": 18,
+    "eHp": 32
+  },
+  "status_invis_target": false
 }

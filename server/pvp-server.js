@@ -79,11 +79,11 @@ function sendError(client, message) {
   send(client, { type: 'error', message });
 }
 
+const allClients = new Set();
 function broadcast(room, message, except = null) {
-  for (const player of room.players) {
-    if (player && player !== except) send(player, message);
-  }
+  for (const player of room.players) if (player && player !== except) send(player, message);
 }
+function broadcastAll(except, message) { for (const c of allClients) if (c !== except) send(c, message); }
 
 function roomState(room) {
   return {
@@ -98,6 +98,15 @@ function roomState(room) {
 
 function createRoom(client) {
   leaveRoom(client, false);
+  // 分池匹配(设计档 §10.1):按养成级分 5 池,交换信息时写入
+  function pvpTier(cultivateLv) {
+    if (cultivateLv <= 3) return '新手';
+    if (cultivateLv <= 8) return '普通';
+    if (cultivateLv <= 13) return '高级';
+    if (cultivateLv <= 17) return '大师';
+    return '传奇';
+  }
+
   const id = makeRoomId();
   const room = { id, seed: 0, players: [null, null] };
   client.roomId = id;
@@ -143,10 +152,33 @@ function forwardAction(client, action) {
   if (!room) return sendError(client, '尚未加入房间');
   const peer = room.players[client.index === 0 ? 1 : 0];
   if (!peer) return sendError(client, '对手不在线');
+  // 反作弊:seq 顺序 + 频率限制
+  if (!action || typeof action !== 'object') return sendError(client, '无效操作');
+  const key = '_seq_' + client.index;
+  room[key] = (room[key] || 0) + 1;
+  const now = Date.now();
+  client._actionTimes = (client._actionTimes || []).filter(t => now - t < 1000);
+  if (client._actionTimes.length >= 15) return sendError(client, '操作过快');
+  client._actionTimes.push(now);
   send(peer, { type: 'peer_action', from: client.index, action });
+  // 广播给观战者
+  if (room.observers) for (const obs of room.observers) send(obs, { type: 'peer_action', from: client.index, action });
+}
+function observeRoom(client, roomId) {
+  const room = rooms.get(String(roomId || '').trim());
+  if (!room) return sendError(client, '房间不存在');
+  if (!room.observers) room.observers = [];
+  room.observers.push(client); client._observer = roomId;
+  send(client, { type: 'room_joined', ...roomState(room), playerIndex: -1 });
+}
+function leaveObserve(client) {
+  const roomId = client._observer; if (!roomId) return;
+  const room = rooms.get(roomId);
+  if (room && room.observers) room.observers = room.observers.filter(c => c !== client);
+  client._observer = null;
 }
 
-function leaveRoom(client, notify = true) {
+function leaveRoom(client, notify = true) { allClients.delete(client);
   const room = rooms.get(client.roomId);
   if (!room) return;
   room.players[client.index] = null;
@@ -168,7 +200,9 @@ function handleMessage(client, raw) {
   else if (message.type === 'join_room') joinRoom(client, message.roomId);
   else if (message.type === 'ready') setReady(client, message.ready, message.deck);
   else if (message.type === 'action') forwardAction(client, message.action);
-  else if (message.type === 'leave_room') leaveRoom(client);
+  else if (message.type === 'leave_room') { leaveRoom(client); leaveObserve(client); }
+  else if (message.type === 'observe') observeRoom(client, message.roomId);
+  else if (message.type === 'chat') { const chat = require('./index').chatMessages; const msg = { uid: client._uid || '', nick: message.nick || '', text: message.text || '', time: new Date().toISOString() }; chat.push(msg); if (chat.length > 100) chat.shift(); broadcastAll(client, { type: 'chat', message: msg }); }
   else sendError(client, '未知消息类型');
 }
 
@@ -200,4 +234,15 @@ httpServer.on('upgrade', (req, socket) => {
 });
 }
 
-module.exports = { attachPvp };
+function handlePvpUpgrade(req, socket, head) {
+  // 复用同一个 HTTP server 做 WS 升级;不再单独起端口
+  const crypto = require('crypto');
+  const key = req.headers['sec-websocket-key'] || '';
+  const accept = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
+  socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n');
+  socket.client = { send(txt) { const b = Buffer.from(txt); const header = Buffer.alloc(2 + (b.length < 126 ? 0 : 2)); header[0] = 0x81; if (b.length < 126) header[1] = b.length; else { header[1] = 126; header.writeUInt16BE(b.length, 2); } socket.write(Buffer.concat([header, b])); } };
+  allClients.add(socket.client);
+  handleClient(socket.client);
+}
+
+module.exports = { handlePvpUpgrade };

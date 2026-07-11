@@ -57,8 +57,14 @@ FRUITS.forEach((f, i) => {
   [1, 2, 3].forEach((lv, j) => {
     const cx = cellX + (j - 1) * 44;
     const gy = cellY + 150;
+    // 与游戏 render 完全一致的双参数:身体固定(level-1),头随等级放大
+    const Z = 3.2;                       // 仅预览放大,保持一切比例不变
+    const rBase = 13 + 1 * 1.18;         // 身体永远按 1 级算
+    const r = 13 + lv * 1.18;            // 头按当前等级算
+    const scaleBody = rBase * 0.135 * Z;
+    const scaleHead = r * 0.80 * Z;
     draws.push({
-      cx, groundY: gy, scale: (0.6 + lv * 0.3) * 1.25,
+      cx, groundY: gy, scale: scaleBody, headScale: scaleHead,
       phase: (i * 0.13 + j * 0.33) % 1, dir: j === 1 ? -1 : 1,
       headColor: f.color, emoji: f.icon, weapon: stickWeaponForRole(f.role),
       fighting: lv === 3, atk: lv === 3, atkT: 0, _attacking: lv === 3, _off: (i * 0.17) % 1, ink: '#1b1b1b',

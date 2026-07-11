@@ -22,6 +22,7 @@ const STATUS = {
   burning:    { label:'点燃', priority:3 },
   armorBreak: { label:'破甲', priority:3 },
   invisible:  { label:'隐身', priority:3 },
+  provoke:    { label:'嘲讽', priority:2 }, // 坦克拉仇恨:强制附近敌人锁定自己
   // knockback is instantaneous; no persistent entry
 };
 
@@ -35,6 +36,7 @@ function ensureStatusEffects(s) {
     stunned:    { timer: 0 },
     armorBreak: { timer: 0, value: 0 },
     invisible:  { timer: 0 },
+    provoke:    { timer: 0 },                // 坦克嘲讽
     weakened:   { timer: 0, atkFull: 0 }, // 哈密瓜:降低目标 ATK
   };
 }
@@ -69,6 +71,7 @@ function tickStatus(s, dt) {
       // 点燃(DOT)也要能击杀:掉到 0 血立即结算死亡,否则单位卡在 hp<=0 仍存活
       if (s.hp <= 0 && s.alive && typeof killSoldier === 'function') {
         killSoldier(s, s.side === 'enemy' ? 'player' : 'enemy', burnDmg, 'burn');
+        se.burning.timer = 0; // 已击杀,防后续帧重入
       }
     }
   }
@@ -90,6 +93,8 @@ function tickStatus(s, dt) {
 
   // --- invisible timer ---
   if (se.invisible.timer > 0) se.invisible.timer = Math.max(0, se.invisible.timer - dt);
+  // --- provoke timer ---
+  if (se.provoke.timer > 0) se.provoke.timer = Math.max(0, se.provoke.timer - dt);
 }
 
 /* ---- apply a status to a target soldier (from a source soldier) ---- */
@@ -106,6 +111,7 @@ function applyStatus(target, source, type, duration, opts = {}) {
       break;
     case 'slowed':
       se.slowed.timer = Math.max(se.slowed.timer || 0, duration);
+      se.slowed.mul = opts.mul || se.slowed.mul || 0.7; // 新施加默认 0.7,已有值保留(迁移时可能设 0.52)
       break;
     case 'burning':
       se.burning.timer = Math.max(se.burning.timer || 0, duration);
@@ -124,7 +130,10 @@ function applyStatus(target, source, type, duration, opts = {}) {
       target.atk = Math.round((se.weakened.atkFull || target.atk) * 0.85);
       break;
     case 'invisible':
-      se.invisible.timer = Math.max(se.invisible.timer || 0, duration);
+      se.invisible.timer = Math.max(se.invisible.timer || 0, (typeof window !== 'undefined' && window.__pvpMode ? duration * 0.67 : duration)); // PvP:3s→2s
+      break;
+    case 'provoke':
+      se.provoke.timer = Math.max(se.provoke.timer || 0, duration);
       break;
     case 'knockback':
       // instantaneous: push target backward along lane (inline bounds)
@@ -148,7 +157,8 @@ function isInvisible(s) { ensureStatusEffects(s); return s.statusEffects.invisib
 function isDisabled(s) { return isFrozen(s) || isStunned(s); }
 function statusSlowMul(s) {
   ensureStatusEffects(s);
-  return s.statusEffects.slowed.timer > 0 ? 0.7 : 1.0;
+  if (s.statusEffects.slowed.timer <= 0) return 1.0;
+  return s.statusEffects.slowed.mul || 0.7; // 迁移保留原倍率(冰梨0.52),新施加用默认0.7
 }
 function statusArmorPenalty(s) {
   ensureStatusEffects(s);
@@ -161,6 +171,7 @@ function migrateOldStatus(s) {
   ensureStatusEffects(s);
   if ((s.slowTimer || 0) > 0 && s.statusEffects.slowed.timer <= 0) {
     s.statusEffects.slowed.timer = s.slowTimer;
+    s.statusEffects.slowed.mul = s.slowMul || 0.52; // 保留原减速倍率(冰梨 0.52),不弱化成默认 0.7
     s.slowTimer = 0;
   }
   if ((s._v17ArmorBreak || 0) > 0 && s.statusEffects.armorBreak.timer <= 0) {
@@ -174,45 +185,7 @@ function migrateOldStatus(s) {
    Integration hooks: installed in order by index.html load.
    ================================================================ */
 
-/* hook A: tick all soldiers each frame in updateCombat */
-(function installStatusTick() {
-  if (typeof updateCombat !== 'function' || updateCombat._statusV61) return;
-  const oldUpdateCombat = updateCombat;
-  updateCombat = function updateCombatStatusV61() {
-    if (state.phase === 'playing') {
-      // migrate old fields for any soldier that hasn't been touched yet
-      const all = [...state.playerSoldiers, ...state.enemySoldiers];
-      for (const s of all) {
-        migrateOldStatus(s);
-        // 橄榄刺客 Lv4+:出场进入战场后 3s 隐身(只触发一次)
-        if (s.type === 'olive_assassin' && (s.level || 1) >= 4 && s.battleReady && !s._stealthApplied) {
-          s._stealthApplied = true;
-          applyStatus(s, s, 'invisible', 3.0);
-        }
-        tickStatus(s, dt_global);
-      }
-    }
-    return oldUpdateCombat();
-  };
-  updateCombat._statusV61 = true;
-})();
-
-/* hook B: gating frozen/stunned units in the soldier update */
-(function installStatusGateSoldier() {
-  if (typeof updateSoldier !== 'function' || updateSoldier._statusV61) return;
-  const oldUpdateSoldier = updateSoldier;
-  updateSoldier = function updateSoldierStatusV61(s, enemies) {
-    if (!s.alive) return;
-    if (isDisabled(s)) {
-      // frozen or stunned: skip actions this frame, but still ensure positional integrity
-      ensureLane(s);
-      keepInsideBattlefield(s);
-      return;
-    }
-    return oldUpdateSoldier(s, enemies);
-  };
-  updateSoldier._statusV61 = true;
-})();
+/* hook B: updateSoldier frozen/stun gate merged into combat.js — layer removed */
 
 /* hook C: slow in movement (fruitMoveSpeed uses old slowTimer — shim it) */
 (function installStatusSlowMove() {
@@ -240,7 +213,10 @@ function migrateOldStatus(s) {
     // 牛油果力士 Lv4+:受击 30% 概率免疫本次伤害(状态效果仍可施加)
     const immune = target.type === 'avocado_brawler' && (target.level || 1) >= 4 && Math.random() < 0.3;
     // add status armor penalty before old function runs
-    const penalty = statusArmorPenalty(target);
+    // 合并旧 v17 破甲值,取大值不叠加(避免双重破甲)
+    const oldV17Val = target._v17ArmorBreakValue || 0;
+    const penalty = Math.max(statusArmorPenalty(target), oldV17Val);
+    if (oldV17Val > 0) target._v17ArmorBreakValue = 0; // 已并入 penalty,防止内层再减
     if (penalty > 0) target.armor = Math.max(0, (target.armor || 0) - penalty);
     const result = immune ? 0 : oldApplyDamage(target, raw, source);
     if (immune && typeof addFx === 'function') addFx(target.x, target.y - 18, '免疫', '#dfe7ff', 11);

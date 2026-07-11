@@ -26,7 +26,7 @@ function fruitMoveSpeed(s, base) {
   const t = TYPES[s.type] || {};
   const move = t.move || 86;
   const slow = s.slowTimer > 0 ? (s.slowMul || 0.55) : 1;
-  return base * (move / 92) * slow;
+  return Math.max(base * 0.78, base * (move / 92) * slow); // 不低于基准的 78%,防慢速单位在攻城/追击时像卡住
 }
 function applyFruitDamage(target, raw, source) {
   let dmg = Math.max(1, Math.round(raw));
@@ -73,6 +73,12 @@ function updateFruitPassiveSkills(dt) {
       s.skillTimer = 6.0;
       addFx(s.x, s.y - 26, '瓜皮盾', '#53c96a', 11);
       state.rings.push({ x: s.x, y: s.y, r: 7, life: 0.28, maxLife: 0.28, color: '#53c96a' });
+      // 嘲讽:强制同路敌人锁定自己(Lv3+,Lv6+延长时间)
+      const foes = s.side === 'player' ? state.enemySoldiers : state.playerSoldiers;
+      for (const e of foes) {
+        if (!isCombatant(e) || e.laneIndex !== s.laneIndex || Math.abs(e.y - s.y) > 80) continue;
+        if (typeof applyStatus === 'function') applyStatus(e, s, 'provoke', s.level >= 6 ? 3.0 : 2.0);
+      }
     }
 
     if (s.type === 'coconut_guard' && !s._firstShield && s.battleReady) {
@@ -141,110 +147,10 @@ function updateRollingPumpkins(dt) {
   }
 }
 
-function patchFruitAttackTarget() {
-  if (typeof attackTarget !== 'function' || attackTarget._fruitPatched) return;
-  attackTarget = function fruitAttackTarget(s, target) {
-    if (!isCombatant(s) || !isCombatant(target)) return;
-    const dx = s.x - target.x;
-    const dy = s.y - target.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const range = fruitRange(s);
+function patchFruitAttackTarget() { attackTarget._fruitPatched = true; }
+function patchFruitAttackWall() { attackWall._fruitPatched = true; }
 
-    if (fruitIsBackline(s) && dist < BOW_SAFE_MIN) kiteAsBackline(s, target);
-    else if (dist > range) { moveTowardEnemy(s, target); return; }
-    if (dist > range + 6) return;
-
-    s.mode = fruitIsBackline(s) ? 'backline' : 'fight';
-    s.atkTimer -= dt_global;
-    if (s.atkTimer > 0) return;
-
-    let dmg = s.atk;
-    const counterHit = target.type === COUNTER[s.type] || (COUNTER[s.type] === 'wall' && false);
-    if (counterHit) dmg = Math.round(dmg * COUNTER_DMG);
-    s.atkTimer = s.speed;
-
-    if (fruitIsBackline(s) && s.type !== 'peach_medic') {
-      playSfx('arrow');
-      state.projectiles.push({
-        x: s.x, y: s.y, targetX: target.x, targetY: target.y, targetId: target.id,
-        dmg, speed: s.type === 'blueberry_sniper' ? 315 : 245,
-        color: TYPES[s.type]?.color || '#ff6b4a', life: 1.15, side: s.side,
-        counterHit, ownerType: s.type, slow: s.type === 'pear_frost', firstHit: s.firstHit,
-      });
-      s.firstHit = false;
-      return;
-    }
-
-    playSfx('hit');
-    const dealt = applyFruitDamage(target, dmg, s);
-    trackDamage(s, dealt, false);
-    if (s.type === 'pear_frost') { target.slowTimer = 2.2 + s.level * 0.18; target.slowMul = 0.52; }
-    state.attackFx.push({ x1: s.x, y1: s.y, x2: target.x, y2: target.y, life: 0.22, maxLife: 0.22 });
-    addFx((s.x + target.x) / 2, (s.y + target.y) / 2 - 8, counterHit ? `克制 -${dealt}` : `-${dealt}`, counterHit ? THEME.gold : THEME.accent, counterHit ? 14 : 12);
-    s.firstHit = false;
-    if (target.hp <= 0) killSoldier(target, s.side, s.atk, s.type);
-  };
-  attackTarget._fruitPatched = true;
-}
-
-function patchFruitAttackWall() {
-  if (typeof attackWall !== 'function' || attackWall._fruitPatched) return;
-  attackWall = function fruitAttackWall(s) {
-    if (!isCombatant(s)) return;
-    const wall = wallDataFor(s);
-    const list = siegeListFor(s);
-    const idx = Math.max(0, list.findIndex(u => u.id === s.id));
-    const slotCount = laneSlotCount();
-    s.siegeSlot = idx;
-    if (idx >= slotCount) { moveToSiegeQueue(s, idx, wall); return; }
-
-    s.mode = 'siege';
-    const offset = (idx - (slotCount - 1) / 2) * 13;
-    s.x += ((s.laneX + offset) - s.x) * Math.min(1, dt_global * 8);
-    s.y = wall.attackY;
-    s.atkTimer -= dt_global;
-    if (s.atkTimer > 0) return;
-
-    const siegeMul = Math.max(0.2, s.siege || TYPES[s.type]?.siege || 1);
-    const base = s.side === 'player'
-      ? Math.round((s.level * 1.45 + s.atk * 0.105) * siegeMul)
-      : Math.round((s.level * 1.25 + s.atk * 0.075) * siegeMul);
-    const dmg = Math.max(1, base);
-
-    if (s.side === 'player') {
-      state.enemyWallHp = Math.max(0, state.enemyWallHp - dmg);
-      state.enemyWallDamageDealt += dmg;
-      state.wallDamageByLane[s.laneIndex] = (state.wallDamageByLane[s.laneIndex] || 0) + dmg;
-      trackDamage(s, dmg, true);
-      addFx(s.x, wall.wallY + wall.wallH + 4, s.type === 'orange_cannon' ? `橙炮 -${dmg}` : `破堡 -${dmg}`, THEME.gold, 13);
-    } else {
-      state.playerWallHp = Math.max(0, state.playerWallHp - dmg);
-      state.playerWallDamageTaken += dmg;
-      state.breachLane = s.laneIndex;
-      addFx(s.x, wall.wallY - 8, `-${dmg}`, THEME.accent, 13);
-    }
-    state.attackFx.push({ x1: s.x - 8, y1: wall.attackY, x2: s.x + 8, y2: s.side === 'player' ? wall.wallY + 2 : wall.wallY + wall.wallH - 2, life: 0.22, maxLife: 0.22 });
-    state.rings.push({ x: s.x, y: wall.attackY, r: 5, life: 0.24, maxLife: 0.24, color: THEME.gold });
-    s.atkTimer = WALL_ATTACK_INTERVAL;
-    state.shake = Math.max(state.shake, s.type === 'orange_cannon' ? 0.55 : 0.32);
-  };
-  attackWall._fruitPatched = true;
-}
-
-function patchFruitKillSoldier() {
-  if (typeof killSoldier !== 'function' || killSoldier._fruitPatched) return;
-  const oldKill = killSoldier;
-  killSoldier = function fruitKillSoldier(target, killerSide, killerAtk, killerType) {
-    if (target.type === 'pumpkin_roller' && !target.rolled) {
-      target.rolled = true;
-      if (!state.rollings) state.rollings = [];
-      state.rollings.push({ side: target.side, lane: target.laneIndex, laneX: target.laneX, x: target.x, y: target.y, speed: 185 + target.level * 12, dmg: Math.round(target.atk * (1.6 + target.level * 0.15)), life: 2.2 });
-      addFx(target.x, target.y - 20, '南瓜滚动!', '#ff7d35', 12);
-    }
-    return oldKill(target, killerSide, killerAtk, killerType);
-  };
-  killSoldier._fruitPatched = true;
-}
+function patchFruitKillSoldier() { killSoldier._fruitPatched = true; }
 
 function patchFruitUpdateCombat() {
   if (typeof updateCombat !== 'function' || updateCombat._fruitPatched) return;

@@ -1,0 +1,99 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>水果突击 · 全套 UI Mockup</title>
+<style>
+:root{--orange:#ff5c35;--green:#22c55e;--gold:#f59e0b;--purple:#8b5cf6;--pink:#ec4899;--blue:#38bdf8;--r:22px;--rs:14px;--rp:60px;--glass:rgba(255,255,255,0.72);--glass2:rgba(255,255,255,0.56);--bor:rgba(0,0,0,0.07);--t:#1a1c2a;--dim:rgba(26,28,42,0.42);--sh:0 4px 18px rgba(0,0,0,0.08);--sh2:0 8px 30px rgba(0,0,0,0.12)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:linear-gradient(175deg,#fef9e8 0%,#fdf0d5 28%,#fce8f0 55%,#e8f2fc 82%,#f5f0e4 100%);color:var(--t);font-family:"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:20px 16px 100px}
+.app{width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px}
+.tab{display:none;flex-direction:column;gap:14px}.tab.show{display:flex}
+.g{background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--bor);border-radius:var(--r);box-shadow:var(--sh)}
+.g2{background:var(--glass2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--bor);border-radius:var(--rs);box-shadow:var(--sh)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.top{display:flex;align-items:center;justify-content:space-between;padding:0 0 4px}
+.av{width:50px;height:50px;display:grid;place-items:center;border-radius:var(--rs);background:linear-gradient(135deg,var(--orange),var(--pink));font-size:28px;box-shadow:0 4px 14px rgba(255,92,53,0.22)}
+.res{display:flex;gap:12px;padding:6px 14px;border-radius:var(--rp);background:var(--glass2);border:1px solid var(--bor)}
+.res span{display:flex;align-items:center;gap:5px;font-size:14px;font-weight:700}
+.res i{font-size:17px;font-style:normal}
+.hero{min-height:210px;display:flex;flex-direction:column;justify-content:space-between;padding:20px;position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(255,255,255,0.84) 0%,rgba(255,245,235,0.78) 40%,rgba(245,235,255,0.76) 100%)}
+.hero::after{content:"";position:absolute;top:-50px;right:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(255,92,53,0.10),transparent 60%)}
+.hero h1{font-size:30px;font-weight:900;background:linear-gradient(135deg,var(--orange),var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--rp);background:rgba(255,92,53,0.08);font-size:11px;font-weight:700;color:var(--orange)}
+.strip{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:var(--rs);background:rgba(0,0,0,0.025);margin-top:auto}
+.strip strong{font-size:20px;color:var(--gold)}
+.team{display:flex;gap:8px;padding:2px 0}
+.team span{display:flex;align-items:center;gap:4px;padding:8px 14px;border-radius:var(--rp);border:1px solid var(--bor);background:var(--glass2);font-size:12px;font-weight:600;cursor:pointer}
+.stages{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.st{min-height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:var(--r);border:2px solid transparent;background:var(--glass2);box-shadow:var(--sh);font-weight:700;cursor:pointer;transition:0.15s}
+.st:active{transform:translateY(-3px);box-shadow:var(--sh2)}
+.st.boss{border-color:var(--orange);background:linear-gradient(135deg,rgba(255,92,53,0.06),var(--glass2))}
+.st.cur{border-color:var(--green);box-shadow:0 0 22px rgba(34,197,94,0.30),var(--sh)}
+.st.lock{opacity:0.26;pointer-events:none}
+.st big{font-size:20px;font-weight:800}.st small{font-size:10px;color:var(--gold)}
+.cta{display:block;width:100%;min-height:48px;margin:4px 0;padding:14px 24px;border:none;border-radius:var(--rp);background:linear-gradient(135deg,var(--orange) 0%,var(--pink) 45%,var(--purple) 100%);color:#fff;font-size:16px;font-weight:800;text-align:center;cursor:pointer;box-shadow:0 8px 28px rgba(139,92,246,0.28),inset 0 1px 0 rgba(255,255,255,0.14)}
+.btn2{display:block;width:100%;min-height:44px;margin:4px 0;padding:12px 18px;border:1.5px solid var(--bor);border-radius:var(--rp);background:var(--glass2);color:var(--t);font-size:14px;font-weight:600;text-align:center;cursor:pointer}
+.card{padding:16px}.card h3{font-size:18px;font-weight:800;margin-bottom:6px}
+.card p{color:var(--dim);font-size:13px;line-height:1.5}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:400px;height:66px;display:flex;justify-content:center;background:rgba(255,255,255,0.93);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--bor);padding:4px 8px max(4px,env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,0.05)}
+.nav button{flex:1;max-width:76px;min-width:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;color:var(--dim);font-size:10px;font-weight:600;cursor:pointer;border-radius:var(--rs);transition:0.15s}
+.nav button.on{color:var(--orange)}.nav .ico{font-size:22px}
+.hd{padding:0 0 8px}.hd h2{font-size:22px;font-weight:800}.hd small{color:var(--orange);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+</style></head><body>
+<div class="app">
+
+<div class="tab show" id="tab-home">
+<div class="top"><div class="av">🍉</div><div class="res"><span><i>🪙</i>12,450</span><span><i>💎</i>380</span></div></div>
+<div class="hero g"><h1>水果突击</h1><div class="badge">⚔️ 合成 · 塔防 · 自走棋</div><div class="strip"><span style="color:var(--dim);font-size:12px">当前关卡</span><strong>第 5 关 · Boss</strong><span>⭐⭐⭐</span></div></div>
+<div class="team"><span>🍉 Lv.5</span><span>🍇 Lv.4</span><span>🍌 Lv.4</span><span>🍍 Lv.3</span><span>🍊 Lv.5</span></div>
+<div class="stages">
+<div class="st"><small>★★★</small><big>1</big></div><div class="st"><small>★★★</small><big>2</big></div><div class="st"><small>★★☆</small><big>3</big></div><div class="st"><small>★★☆</small><big>4</big></div>
+<div class="st boss cur"><small>☆☆☆</small><big>5</big></div><div class="st lock"><big>6</big></div><div class="st lock"><big>7</big></div><div class="st lock"><big>8</big></div><div class="st lock"><big>9</big></div><div class="st boss lock"><big>10</big></div>
+</div>
+<div class="row"><span style="color:var(--dim);font-size:12px">⭐ 宝箱进度</span><span style="font-weight:700;color:var(--orange)">2/5 🎁</span></div>
+<button class="cta">⚔️ 开始挑战</button>
+</div>
+
+<div class="tab" id="tab-campaign">
+<div class="hd"><small>果园远征</small><h2>闯关</h2></div>
+<div class="res"><span><i>🪙</i>12,450</span><span><i>💎</i>380</span><span><i>🚩</i>关卡 5</span></div>
+<div class="card g2"><h3>📋 当前目标</h3><p>第 5 关 · Boss 腐坏西瓜王 — 推荐远程+攻城</p></div>
+<div class="stages">
+<div class="st"><small>★★★</small><big>1</big></div><div class="st"><small>★★★</small><big>2</big></div><div class="st"><small>★★☆</small><big>3</big></div><div class="st"><small>★★☆</small><big>4</big></div>
+<div class="st boss cur"><small>☆☆☆</small><big>5</big></div><div class="st lock"><big>6</big></div><div class="st lock"><big>7</big></div><div class="st lock"><big>8</big></div><div class="st lock"><big>9</big></div><div class="st boss lock"><big>10</big></div>
+<div class="st lock"><big>11</big></div><div class="st lock"><big>12</big></div><div class="st lock"><big>13</big></div><div class="st lock"><big>14</big></div>
+<div class="st boss lock"><big>15</big></div><div class="st lock"><big>16</big></div><div class="st lock"><big>17</big></div><div class="st lock"><big>18</big></div><div class="st lock"><big>19</big></div><div class="st boss lock"><big>20</big></div>
+</div>
+<button class="cta">⚔️ 出击 第 5 关</button>
+</div>
+
+<div class="tab" id="tab-squad">
+<div class="hd"><small>编队与成长</small><h2>阵容</h2></div>
+<div class="team"><span>🍉 Lv.5</span><span>🍇 Lv.4</span><span>🍌 Lv.4</span><span>🍍 Lv.3</span><span>🍊 Lv.5</span></div>
+<div class="card g" style="display:flex;align-items:center;gap:14px">
+<span style="font-size:44px">🍉</span><div><h3 style="margin:0">西瓜盾卫</h3><p style="margin:4px 0">主坦抗线 · Lv.5</p><p style="margin:0;color:var(--orange);font-weight:700">ATK 35 · HP 420 · 护甲 16</p></div>
+</div>
+<div class="stages" style="grid-template-columns:repeat(3,1fr)">
+<div class="st"><big>🍉</big><small>西瓜</small></div><div class="st"><big>🍇</big><small>葡萄</small></div><div class="st"><big>🍌</big><small>香蕉</small></div>
+<div class="st"><big>🍍</big><small>菠萝</small></div><div class="st"><big>🍊</big><small>橙子</small></div>
+<div class="st lock"><big>🥥</big><small>未解锁</small></div><div class="st lock"><big>🍐</big><small>未解锁</small></div><div class="st lock"><big>🍑</big><small>未解锁</small></div><div class="st lock"><big>🫐</big><small>未解锁</small></div>
+</div>
+</div>
+
+<div class="tab" id="tab-shop">
+<div class="hd"><small>资源补给</small><h2>商城</h2></div>
+<div class="res"><span><i>🪙</i>12,450</span><span><i>💎</i>380</span></div>
+<div class="card g"><h3>🎴 单抽 <span style="color:var(--purple);font-weight:800">N/R/E</span></h3><p>随机获得水果碎片,可能解锁新英雄</p><div class="row" style="margin-top:8px"><span style="font-weight:800;color:var(--orange)">5 💎</span><button class="cta" style="width:auto;min-width:80px;min-height:36px;padding:8px 16px;font-size:13px;margin:0">抽 1 次</button></div></div>
+<div class="card g"><h3>🌈 十连抽</h3><p>九折 · R 级保底 · 期望 78 碎片</p><div class="row" style="margin-top:8px"><span style="font-weight:800;color:var(--orange)">45 💎</span><button class="cta" style="width:auto;min-width:80px;min-height:36px;padding:8px 16px;font-size:13px;margin:0">抽 10 次</button></div></div>
+<div class="card g2"><h3>🎁 每日补给</h3><p>50 🪙 + 5 💎 · 每日刷新</p></div>
+<div class="card g2"><h3>🍒 全体攻击强化</h3><p>全部水果 ATK 科技 +1 · 180 🪙</p></div>
+</div>
+
+<div class="tab" id="tab-arena">
+<div class="hd"><small>竞技对战</small><h2>竞技</h2></div>
+<div class="card g"><h3>⚔️ 实时对战</h3><p>创建或加入房间,与好友 1v1 对战</p><input placeholder="输入房间码" style="width:100%;margin:8px 0;padding:10px 14px;border-radius:var(--rp);border:1.5px solid var(--bor);background:var(--glass2);font-size:14px;text-align:center"><button class="cta">创建房间</button><button class="btn2">加入房间</button></div>
+<div class="card g2"><h3>🏆 无尽天梯</h3><p>无限波次挑战,冲击最高纪录</p><div class="row" style="margin-top:8px"><span style="font-weight:800;color:var(--gold)">最佳: 0 波</span><button class="cta" style="width:auto;min-width:80px;min-height:36px;padding:8px 16px;font-size:13px;margin:0">挑战</button></div></div>
+</div>
+
+</div>
+
+<nav class="nav"><button class="on" data-tab="home"><span class="ico">🏠</span>首页</button><button data-tab="campaign"><span class="ico">🚩</span>闯关</button><button data-tab="squad"><span class="ico">🍉</span>阵容</button><button data-tab="shop"><span class="ico">🛒</span>商城</button><button data-tab="arena"><span class="ico">🏆</span>竞技</button></nav>
+<script>document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('show'));document.getElementById('tab-'+b.dataset.tab).classList.add('show')})</script>
+</body></html>

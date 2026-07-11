@@ -62,74 +62,13 @@ function nextActionCostV60() {
   return Math.max(1, Number(state.summonCostCounter || 1));
 }
 
-function drawOperationResourceStripV60() {
-  return drawOperationResourceStripV61();
-  const y = LAYOUT.operationY || (LAYOUT.playerWallY + LAYOUT.wallH + 16);
-  const x = BOARD_X;
-  const h = LAYOUT.operationH || 38;
-  const w = BOARD_W;
-  const cost = nextActionCostV60();
-  const juice = Number(state.sp || 0);
-  const canAct = juice >= cost;
-  const pulse = Math.max(0, Math.min(1, Number(state._juicePulse || 0) / 0.50));
-  const pulseKind = state._juicePulseKind || 'info';
-
-  ctx.save();
-  hudPanel(x, y, w, h, 12, 'rgba(255,255,255,.86)', pulseKind === 'lack' && pulse > 0 ? 'rgba(223,89,100,.48)' : 'rgba(38,82,57,.14)');
-
-  const juiceW = 118;
-  const juiceFill = canAct ? '#203629' : '#6f3a3d';
-  ctx.fillStyle = juiceFill;
-  hudRoundRect(x + 5, y + 5, juiceW, h - 10, 9);
-  ctx.fill();
-  if (pulse > 0) {
-    ctx.globalAlpha = 0.20 * pulse;
-    ctx.fillStyle = pulseKind === 'lack' ? '#df5964' : '#f4c64f';
-    hudRoundRect(x + 5, y + 5, juiceW, h - 10, 9);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.font = '800 10px sans-serif';
-  ctx.fillStyle = canAct ? '#d9f0dc' : '#ffd1d6';
-  ctx.fillText('果汁', x + 15, y + 14);
-  ctx.font = '950 20px sans-serif';
-  ctx.fillStyle = '#fff8cf';
-  ctx.fillText(String(juice), x + 62, y + 21);
-
-  const actionX = x + 132;
-  hudPanel(actionX, y + 5, 78, h - 10, 9, canAct ? 'rgba(47,184,104,.12)' : 'rgba(223,89,100,.10)', canAct ? 'rgba(47,184,104,.24)' : 'rgba(223,89,100,.28)');
-  ctx.textAlign = 'center';
-  ctx.font = '800 9px sans-serif';
-  ctx.fillStyle = '#6b7d68';
-  ctx.fillText('', actionX + 39, y + 14);
-  ctx.font = '950 15px sans-serif';
-  ctx.fillStyle = canAct ? '#167a48' : '#df5964';
-  ctx.fillText(String(cost), actionX + 39, y + 27);
-
-  ctx.textAlign = 'left';
-  ctx.font = '800 10px sans-serif';
-  ctx.fillStyle = '#6b7d68';
-  ctx.fillText(canAct ? '点空格召唤' : '击杀/等待回果汁', x + 224, y + 15);
-  ctx.fillText('双击营地急派', x + 224, y + 28);
-  ctx.restore();
-  ctx.textBaseline = 'alphabetic';
-}
-
+function drawOperationResourceStripV60() { return drawOperationResourceStripV61(); }
 function getJuiceSpawnButtonRectV60() {
   const y = LAYOUT.operationY || (LAYOUT.playerWallY + LAYOUT.wallH + 16);
-  const x = BOARD_X;
-  const h = LAYOUT.operationH || 38;
-  const w = BOARD_W;
-  return {
-    x: x + 128,
-    y: y + 4,
-    w: w - 133,
-    h: h - 8,
-  };
+  const x = BOARD_X; const h = LAYOUT.operationH || 38; const w = BOARD_W;
+  return { x: x + 132, y: y + 4, w: w - 133, h: h - 8 };
 }
+window.getJuiceSpawnButtonRectV60 = getJuiceSpawnButtonRectV60;
 window.getJuiceSpawnButtonRectV60 = getJuiceSpawnButtonRectV60;
 
 function drawOperationResourceStripV61() {

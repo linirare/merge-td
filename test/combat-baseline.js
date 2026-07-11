@@ -42,6 +42,9 @@ const FILES = [
   'js/lane_block_fix.js',
   'js/skill_system_v17.js',
   'js/combat_pacing_v19.js',
+  'js/status_engine_v61.js',
+  'js/boss_v63.js',
+  'js/dynamic_difficulty_v64.js',
 ];
 
 function mulberry32(seed) {
@@ -67,6 +70,7 @@ function buildSandbox() {
     localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
     document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], addEventListener: () => {}, createElement: () => ({ getContext: () => ({}), style: {}, classList: { add() {}, remove() {}, toggle() {} } }) },
     addFx: () => {}, playSfx: () => {}, onGameOver: () => {},
+    resetAI: () => {}, resetJuiceEconomyForLevel: () => {}, syncProgressUnlocks: () => {},
     dt_global: 1 / 60,
   };
   sandbox.window = sandbox;
@@ -152,6 +156,22 @@ const DRIVER = `
     pumpkin_600f: wallDps('pumpkin_roller', 3, 600),
   };
   R.skirmish_900f = skirmish(900);
+
+  // Boss L5 护盾脉冲:初始化 Boss 关,放一个敌方杂兵,tick 10s 看护盾
+  function bossShield(){ fresh(); meta.shardsTotal={}; const my=midY(); initLevel(5); state.phase='playing'; state.enemyWallHp=state.enemyWallMax=1e6; const ally=place('grape_archer',2,'enemy',2,my-30); ally.shield=0; state.enemySoldiers.push(ally); for(let f=0;f<105;f++) updateCombat(); return ally.shield||0; }
+  R.boss_melon_shield = bossShield();
+
+  // 状态:点燃击杀(低血敌人被 burn tick 杀死)
+  function burnKill(){ fresh(); const t=place('grape_archer','enemy',2,200,300); t.hp=5; t.alive=true; t.battleReady=true; t.protected=false; state.enemySoldiers=[t]; state.playerSoldiers=[]; state.enemyWallHp=state.enemyWallMax=1e6; state.playerWallHp=state.playerWallMax=1e6; applyStatus(t,{type:'lemon_assassin',level:3},'burning',3.0); for(let f=0;f<30;f++) updateCombat(); return t.alive; }
+  R.status_burn_kill = burnKill();
+
+  // 状态:冰冻封锁(受冻单位跳过 updateSoldier)
+  function frozenBlock(){ fresh(); const p=place('banana_raider','player',3,200,300); const e=place('grape_archer','enemy',2,200,340); state.playerSoldiers=[p]; state.enemySoldiers=[e]; state.playerWallHp=state.playerWallMax=1e6; state.enemyWallHp=state.enemyWallMax=1e6; applyStatus(p,{type:'pear_frost',level:6},'frozen',3.0); const y0=p.y; for(let f=0;f<20;f++) updateCombat(); return { moved: Math.round(Math.abs(p.y-y0)), eHp: Math.round(e.hp) }; }
+  R.status_frozen_block = frozenBlock();
+
+  // 隐身:不可被锁定(canSeeTarget 返回 false)
+  function invisTarget(){ fresh(); const e=place('olive_assassin','enemy',4,2,300); applyStatus(e,e,'invisible',3.0); const p=place('banana_raider','player',3,2,340); return canSeeTarget(p,e); }
+  R.status_invis_target = invisTarget();
 
   globalThis.__BASELINE__ = R;
 })();

@@ -41,50 +41,9 @@ function v15ClampBacklineY(s, desiredY) {
   s.y += (clamp(desiredY, top, bottom) - s.y) * Math.min(1, dt_global * 4.2);
 }
 
-function patchKillRewardV15() {
-  if (typeof killSoldier !== 'function' || killSoldier._balanceV15Patched) return;
-  killSoldier = function killSoldierV15(target, killerSide, killerAtk, killerType) {
-    if (!target || !target.alive) return;
-    target.alive = false;
-    target.mode = 'dead';
-    clearTargetReferences(target.id);
-    if (target.type === 'pumpkin_roller' && !target.rolled) {
-      target.rolled = true;
-      if (!state.rollings) state.rollings = [];
-      state.rollings.push({
-        side: target.side,
-        lane: target.laneIndex,
-        laneX: target.laneX,
-        x: target.x,
-        y: target.y,
-        speed: 185 + target.level * 12,
-        dmg: Math.round(target.atk * (1.45 + target.level * 0.12)),
-        life: 2.2,
-      });
-      addFx(target.x, target.y - 20, '南瓜滚动!', '#ff7d35', 12);
-    }
+function patchKillRewardV15() { killSoldier._balanceV15Patched = true; }
 
-    state.rings.push({ x: target.x, y: target.y, r: 4, life: 0.22, maxLife: 0.22, color: '#ff4a3a' });
-    addFx(target.x, target.y - 7, '击破', '#ff8a68', 10);
-
-    if (killerSide === 'player') {
-      state.kills++;
-      state.killSpProgress = (state.killSpProgress || 0) + 1;
-      state.killSpCd = Math.max(0, state.killSpCd || 0);
-      if (state.killSpProgress >= 4 && state.killSpCd <= 0 && state.sp < getSpRecoverCap(meta)) {
-        state.killSpProgress = 0;
-        state.killSpCd = 3.0;
-        state.sp = Math.min(state.sp + 1, getSpRecoverCap(meta), getSpMax(meta));
-        addFx(target.x, target.y - 22, '+1果汁', THEME.gold, 10);
-      }
-      if (killerAtk > state.maxSoldierAtk) {
-        state.maxSoldierAtk = killerAtk;
-        state.maxSoldierType = killerType;
-      }
-    }
-  };
-  killSoldier._balanceV15Patched = true;
-
+(function installKillSpCdV15() {
   if (typeof update !== 'function' || update._killSpCdV15Patched) return;
   const oldUpdate = update;
   update = function updateKillSpCdV15(dt) {
@@ -92,162 +51,21 @@ function patchKillRewardV15() {
     if (state && state.killSpCd > 0) state.killSpCd = Math.max(0, state.killSpCd - dt * (state.speed || 1));
   };
   update._killSpCdV15Patched = true;
-}
+})();
 
 function patchRoleTargetingV15() {
+  // findTarget 已合并到 combat.js(含城墙防守优先逻辑),不再需要此补丁层。
+  // 保留安装声明以防止重复调用,但不做任何赋值。
   if (typeof findTarget !== 'function' || findTarget._balanceV15Patched) return;
-  findTarget = function findTargetV15(s, enemies) {
-    if (!isCombatant(s)) return null;
-    ensureLane(s);
-
-    const sticky = soldierById(enemies, s.target);
-    if (sticky && canSeeTarget(s, sticky)) {
-      const d = Math.sqrt(dist2(s, sticky));
-      if (d <= TARGET_STICK_RANGE || v15IsBackRole(s)) return sticky;
-    } else if (!sticky) {
-      s.target = null; // 旧目标已死/消失:立即清理,避免残留锁定与 fight 姿态
-    }
-
-    let best = null;
-    let bestScore = Infinity;
-    // 城墙防守:只有靠近自家城墙的兵才回防(前线兵不回撤);逼近/正在打我方城墙的敌人优先清理。
-    const ownWallY = s.side === 'player' ? LAYOUT.playerWallY : LAYOUT.enemyWallY + LAYOUT.wallH;
-    const nearOwnWall = s.side === 'player' ? s.y >= ownWallY - 150 : s.y <= ownWallY + 150;
-    for (const e of enemies) {
-      if (!isCombatant(e)) continue;
-      ensureLane(e);
-
-      const dx = e.x - s.x;
-      const dy = e.y - s.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const laneGap = Math.abs(e.x - s.laneX);
-      const sameLane = laneGap <= LANE_TOLERANCE;
-      const forward = isForwardOf(s, e);
-      const eNearOwnWall = s.side === 'player' ? e.y >= ownWallY - 70 : e.y <= ownWallY + 70;
-      // 回防对象:靠近我墙且离本兵不远(本地威胁),允许越过普通可见性、不吃"非前方/跨路"惩罚
-      const wallThreat = nearOwnWall && eNearOwnWall && dist <= 150;
-
-      if (!wallThreat && !canSeeTarget(s, e)) continue;
-      const roleMul = typeof roleCounterMultiplier === 'function' ? roleCounterMultiplier(s.type, e.type) : 1;
-
-      let score = Math.abs(dy) + laneGap * (wallThreat ? 0.3 : 0.85) + dist * 0.22;
-      if (!sameLane) score += wallThreat ? 16 : 58;
-      if (!forward && dist > 52 && !wallThreat) score += 180;
-      if (wallThreat) score -= 200; // 强优先:先清理围攻/破坏我方城墙的敌人
-      if (roleMul >= 1.32) score -= 86;
-      else if (roleMul >= 1.15) score -= 40;
-      else if (roleMul <= 0.9) score += 36;
-      if (s.target && e.id === s.target) score -= 36;
-      if (v15Role(s.type) === 'rush' && ['back','support','siege','control'].includes(v15Role(e.type))) score -= 70;
-      if (v15Role(s.type) === 'front' && v15Role(e.type) === 'rush') score -= 70;
-
-      if (score < bestScore) { bestScore = score; best = e; }
-    }
-    s.target = best ? best.id : null; // 无合法目标时明确清空,交回推进/攻城决策
-    return best;
-  };
   findTarget._balanceV15Patched = true;
 }
 
 function patchBacklineAdvanceV15() {
-  if (typeof advanceTowardWall !== 'function' || advanceTowardWall._balanceV15Patched) return;
-  advanceTowardWall = function advanceTowardWallV15(s) {
-    s.target = null;
-    steerToLane(s, v15IsBackRole(s) ? 0.86 : 0.55);
-    const role = v15Role(s.type);
-
-    if (v15IsBackRole(s)) {
-      s.mode = 'backline';
-      const front = v15FrontAlly(s.side, s.laneIndex);
-      const spacing = role === 'siege' ? 78 : role === 'support' ? 70 : 58;
-      if (front) {
-        const desiredY = s.side === 'player' ? front.y + spacing : front.y - spacing;
-        v15ClampBacklineY(s, desiredY);
-      } else {
-        const safeAnchor = s.side === 'player' ? fieldBottom() - 42 : fieldTop() + 42;
-        const slowAdvance = s.side === 'player' ? -1 : 1;
-        const bss = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, SIEGE_SPEED) : SIEGE_SPEED;
-        s.y += slowAdvance * bss * 0.28 * dt_global;
-        v15ClampBacklineY(s, s.y + (safeAnchor - s.y) * 0.12);
-      }
-      return;
-    }
-
-    s.mode = 'march';
-    const ass = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, SIEGE_SPEED) : SIEGE_SPEED;
-    if (s.side === 'player') s.y -= ass * dt_global;
-    else s.y += ass * dt_global;
-  };
+  // advanceTowardWall 已合并到 combat.js(含后排跟随、攻速缩放),此层已移除。
   advanceTowardWall._balanceV15Patched = true;
 }
 
-function patchRoleDamageV15() {
-  if (typeof attackTarget !== 'function' || attackTarget._balanceV15Patched) return;
-  attackTarget = function attackTargetV15(s, target) {
-    if (!isCombatant(s) || !isCombatant(target)) return;
-    const dx = s.x - target.x;
-    const dy = s.y - target.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const range = typeof fruitRange === 'function' ? fruitRange(s) : 24;
-
-    if (v15IsBackRole(s) && dist < BOW_SAFE_MIN) kiteAsBackline(s, target);
-    else if (dist > range) { moveTowardEnemy(s, target); return; }
-    if (dist > range + 6) return;
-
-    s.mode = v15IsBackRole(s) ? 'backline' : 'fight';
-    s.atkTimer -= dt_global;
-    if (s.atkTimer > 0) return;
-
-    const mul = typeof roleCounterMultiplier === 'function' ? roleCounterMultiplier(s.type, target.type) : 1;
-    let dmg = Math.round(s.atk * mul);
-    const counterText = typeof roleCounterText === 'function' ? roleCounterText(s.type, target.type) : '';
-    s.atkTimer = s.speed;
-
-    if (v15IsBackRole(s) && s.type !== 'peach_medic') {
-      playSfx('arrow');
-      let cherryAoe = false; // 樱桃炸弹 Lv4+:每 5 次射击投一枚范围炸弹
-      if (s.type === 'cherry_bomber' && (s.level || 1) >= 4) {
-        s._cherryShot = (s._cherryShot || 0) + 1;
-        if (s._cherryShot % 5 === 0) cherryAoe = true;
-      }
-      state.projectiles.push({
-        x: s.x,
-        y: s.y,
-        targetX: target.x,
-        targetY: target.y,
-        targetId: target.id,
-        dmg,
-        speed: s.type === 'blueberry_sniper' ? 315 : 245,
-        color: TYPES[s.type]?.color || '#ff6b4a',
-        life: 1.15,
-        side: s.side,
-        counterHit: !!counterText && mul > 1,
-        ownerType: s.type,
-        ownerLevel: s.level,
-        slow: s.type === 'pear_frost',
-        aoe: cherryAoe,
-        firstHit: s.firstHit,
-      });
-      s.firstHit = false;
-      return;
-    }
-
-    playSfx('hit');
-    const dealt = typeof applyFruitDamage === 'function' ? applyFruitDamage(target, dmg, s) : dmg;
-    if (typeof applyFruitDamage !== 'function') {
-      target.hp -= dealt;
-      target.hitFlash = 0.28;
-    }
-    trackDamage(s, dealt, false);
-    if (s.type === 'pear_frost') { target.slowTimer = 2.2 + s.level * 0.18; target.slowMul = 0.52; }
-    state.attackFx.push({ x1: s.x, y1: s.y, x2: target.x, y2: target.y, life: 0.22, maxLife: 0.22 });
-    const label = counterText && mul > 1 ? `${counterText} -${dealt}` : counterText === '受制' ? `受制 -${dealt}` : `-${dealt}`;
-    addFx((s.x + target.x) / 2, (s.y + target.y) / 2 - 8, label, mul > 1 ? THEME.gold : THEME.accent, mul > 1 ? 13 : 11);
-    s.firstHit = false;
-    if (target.hp <= 0) killSoldier(target, s.side, s.atk, s.type);
-  };
-  attackTarget._balanceV15Patched = true;
-}
+function patchRoleDamageV15() { attackTarget._balanceV15Patched = true; }
 
 function patchBattleReportV15() {
   if (typeof counterForEnemy === 'function') {
