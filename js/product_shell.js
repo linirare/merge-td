@@ -90,16 +90,7 @@
   }
 
   function fruitUnitSprite(id, fallback = '') {
-    const key = normalizeTypeId(id);
-    const map = {
-      watermelon_guard: 0,
-      banana_raider: 1,
-      grape_archer: 2,
-      strawberry_knight: 3,
-      orange_cannon: 4,
-    };
-    const idx = map[key] ?? map[fallback] ?? 4;
-    return `<span class="td-unit td-unit-${idx}" aria-label="${fruit(key).name || key}"></span>`;
+    return fruitIcon(id); // 精灵层已废弃,直用 emoji
   }
 
   function fruitDisplay(id, fallback = '') {
