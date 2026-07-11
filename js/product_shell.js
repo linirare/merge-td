@@ -29,7 +29,7 @@
   }
 
   function loadShell() {
-    const base = { gems: 0, fragments: {}, fruitLv: {}, ladderBest: 0, lastDaily: '' };
+    const base = { gems: 0, fragments: {}, fruitLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0 };
     try {
       const raw = localStorage.getItem(SHELL_KEY);
       if (raw) return Object.assign(base, JSON.parse(raw));
@@ -397,18 +397,30 @@
     renderShop('pack');
   }
 
-  const tiers = [
-    { label:'普通', weight:40, frag:1, color:'#8aad6a', ids:['watermelon_guard','grape_archer','banana_raider','pineapple_lancer'] },
-    { label:'稀有', weight:30, frag:2, color:'#4db6ff', ids:['coconut_guard','orange_cannon','pear_frost','peach_medic'] },
-    { label:'史诗', weight:20, frag:3, color:'#b85cff', ids:['blueberry_sniper','lemon_assassin','pumpkin_roller'] },
-    { label:'传说', weight:10, frag:5, color:'#ffc93c', ids:['kiwi_wildcard','passion_copy'] },
+  // N/R/E 抽卡(设计档 §8.1):概率 65/25/10,十连保底 R+,30 抽保底 E,重复转碎片。
+  // 池按 TYPES.rarity 动态取(新水果自动纳入)。期望:0.65×5+0.25×10+0.10×20=7.75/抽 → 十连 77.5 碎片。
+  const GACHA_TIERS = [
+    { key: 'N', label: '普通', weight: 65, frag: 5,  color: '#8aad6a', rarities: ['normal'] },
+    { key: 'R', label: '稀有', weight: 25, frag: 10, color: '#4db6ff', rarities: ['rare'] },
+    { key: 'E', label: '史诗', weight: 10, frag: 20, color: '#ffc93c', rarities: ['epic'] },
   ];
-
-  function pickTier() {
-    let total = tiers.reduce((s, t) => s + t.weight, 0);
+  function gachaPool(tier) {
+    const ids = UNIT_POOL.filter(id => TYPES[id] && tier.rarities.includes(TYPES[id].rarity));
+    return ids.length ? ids : UNIT_POOL;
+  }
+  const tierByKey = k => GACHA_TIERS.find(t => t.key === k);
+  function rollTier() {
+    if ((shell.pityE || 0) >= 29) return tierByKey('E');                                        // 30 抽保底 E
+    if ((shell.pityR || 0) >= 9) return Math.random() < 0.15 ? tierByKey('E') : tierByKey('R');  // 10 抽保底 R+
+    const total = GACHA_TIERS.reduce((s, t) => s + t.weight, 0);
     let r = Math.random() * total;
-    for (const t of tiers) { r -= t.weight; if (r <= 0) return t; }
-    return tiers[tiers.length - 1];
+    for (const t of GACHA_TIERS) { r -= t.weight; if (r <= 0) return t; }
+    return GACHA_TIERS[0];
+  }
+  function bumpPity(key) {
+    if (key === 'E') { shell.pityE = 0; shell.pityR = 0; }
+    else if (key === 'R') { shell.pityR = 0; shell.pityE = (shell.pityE || 0) + 1; }
+    else { shell.pityR = (shell.pityR || 0) + 1; shell.pityE = (shell.pityE || 0) + 1; }
   }
 
   function doGacha(count) {
@@ -417,15 +429,20 @@
     shell.gems -= cost;
     const results = [];
     meta.unlocked = Array.isArray(meta.unlocked) ? meta.unlocked : [];
+    let gotRplus = false;
     for (let i = 0; i < count; i++) {
-      const tier = pickTier();
-      const pool = tier.ids.filter(id => TYPES[id]) || UNIT_POOL;
+      let tier = rollTier();
+      if (count === 10 && i === 9 && !gotRplus && tier.key === 'N') tier = tierByKey('R'); // 十连兜底 R+
+      if (tier.key !== 'N') gotRplus = true;
+      bumpPity(tier.key);
+      const pool = gachaPool(tier);
       const id = pool[Math.floor(Math.random() * pool.length)] || UNIT_POOL[0];
       const t = TYPES[id] || {};
       const isNew = !meta.unlocked.includes(id);
       if (isNew) meta.unlocked.push(id);
+      // 新 → 解锁 + 碎片;重复 → 转碎片(碎片即养成货币)
       shell.fragments[id] = (shell.fragments[id] || 0) + tier.frag;
-      results.push({ id, icon:t.icon || '?', name:t.name || id, tier, isNew, total:shell.fragments[id] });
+      results.push({ id, icon: t.icon || '?', name: t.name || id, tier, isNew, total: shell.fragments[id] });
     }
     saveAll();
     renderShop('gacha');
