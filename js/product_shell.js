@@ -136,7 +136,7 @@
   function stageRewardText(lv) {
     const cfg = typeof generateLevel === 'function' ? generateLevel(lv) : null;
     const reward = cfg?.reward ?? (typeof stageReward === 'function' ? stageReward(lv) : 20 + lv * 2);
-    return `${reward}🍋`;
+    return `${reward}🪙`;
   }
 
   function clearChildren(el) {
@@ -165,7 +165,7 @@
   function resourceBarHtml() {
     return `
       <div class="shell-resource-bar">
-        <span><i>🍋</i><b data-shell-gold>${meta.gold || 0}</b></span>
+        <span><i>🪙</i><b data-shell-gold>${meta.gold || 0}</b></span>
         <span><i>💎</i><b data-shell-gems>${shell.gems || 0}</b></span>
         <span><i>🚩</i><b>${highestLevel()}</b></span>
       </div>
@@ -476,9 +476,9 @@
         </div>
         <span>🎁</span>
       `;
-      list.appendChild(shopCard('每日果汁补给', `领取 ${DAILY_GOLD}🍋 + ${DAILY_GEMS}💎`, '🎁', claimed ? '已领取' : '领取', !claimed, claimDaily, '每日刷新'));
-      list.appendChild(shopCard('全体攻击强化', '全部水果攻击科技 +1 级。', '🍒', '180🍋', (meta.gold || 0) >= 180, () => buyUpgradePack('atk_all', 180), '全队成长'));
-      list.appendChild(shopCard('果堡+果汁礼包', '果堡加固 +1，果汁泵 +1。', '🏰', '150🍋', (meta.gold || 0) >= 150, () => buyUpgradePack('fort_sp', 150), '防守补强'));
+      list.appendChild(shopCard('每日果汁补给', `领取 ${DAILY_GOLD}🪙 + ${DAILY_GEMS}💎`, '🎁', claimed ? '已领取' : '领取', !claimed, claimDaily, '每日刷新'));
+      list.appendChild(shopCard('全体攻击强化', '全部水果攻击科技 +1 级。', '🍒', '180🪙', (meta.gold || 0) >= 180, () => buyUpgradePack('atk_all', 180), '全队成长'));
+      list.appendChild(shopCard('果堡+果汁礼包', '果堡加固 +1，果汁泵 +1。', '🏰', '150🪙', (meta.gold || 0) >= 150, () => buyUpgradePack('fort_sp', 150), '防守补强'));
     }
     refreshResourceNumbers();
   }
@@ -721,7 +721,7 @@
     if (!panelEl || !title || !detail || !retry || !menu) return;
     next?.classList.add('hide');
     title.textContent = '🏆 天梯挑战结束';
-    detail.innerHTML = `${cleared > best ? '🎉 新纪录！<br>' : ''}坚持 <b>${cleared}</b> 波<br>历史最好 ${Math.max(best, cleared)} 波<br>🍋 +${reward}<br>击破 ${state.kills || 0}`;
+    detail.innerHTML = `${cleared > best ? '🎉 新纪录！<br>' : ''}坚持 <b>${cleared}</b> 波<br>历史最好 ${Math.max(best, cleared)} 波<br>🪙 +${reward}<br>击破 ${state.kills || 0}`;
 
     const retryClone = retry.cloneNode(true);
     retry.parentNode.replaceChild(retryClone, retry);
