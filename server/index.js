@@ -11,6 +11,11 @@ const app = express();
 const PUBLIC_ROOT = path.join(__dirname, '..');
 const FRONTEND_STATIC = { dotfiles: 'deny', index: false, maxAge: '1h' };
 
+// 排行榜战力反作弊:computePower 是 UNIT_POOL 平均(atk·养成星级乘子),
+// 全员满养成(Lv20)满星(★7)的理论最大约 280。上限设 300(留极小余量),
+// 客户端上报超过即铁定作弊,夹到 300。见 test/power-cap.js(会校验此值 ≥ 实时理论最大值)。
+const POWER_MAX = 300;
+
 app.use(express.json({ limit: '128kb' }));
 app.use('/css', express.static(path.join(PUBLIC_ROOT, 'css'), FRONTEND_STATIC));
 app.use('/js', express.static(path.join(PUBLIC_ROOT, 'js'), FRONTEND_STATIC));
@@ -68,7 +73,7 @@ app.post('/api/auth/login', (req, res) => {
   const emailText = safeText(email, 120).toLowerCase();
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(emailText);
   if (!user || !bcrypt.compareSync(String(password || ''), user.password_hash)) return res.status(401).json({ error: 'wrong credentials' });
-  db.prepare("UPDATE users SET last_login = datetime('now') WHERE uid = ?").run(user.uid);
+  db.prepare("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE uid = ?").run(user.uid);
   const save = db.prepare('SELECT meta_json, shell_json FROM user_saves WHERE uid = ?').get(user.uid);
   res.json(publicUser({ uid: user.uid, token: signToken(user.uid), nickname: user.nickname, avatar: user.avatar, level: user.level, exp: user.exp, diamonds: user.diamonds, gold: user.gold, highest_stage: user.highest_stage, ladder_rank: user.ladder_rank, ladder_score: user.ladder_score, meta_json: save ? save.meta_json : '{}', shell_json: save ? save.shell_json : '{}' }));
 });
@@ -92,15 +97,15 @@ app.post('/api/save', authMiddleware, (req, res) => {
   if (metaJson === null || shellJson === null) {
     return res.status(413).json({ error: 'save payload invalid or too large' });
   }
-  db.prepare('UPDATE user_saves SET meta_json=?, shell_json=?, updated_at=datetime("now") WHERE uid=?').run(metaJson, shellJson, req.uid);
+  db.prepare('UPDATE user_saves SET meta_json=?, shell_json=?, updated_at=CURRENT_TIMESTAMP WHERE uid=?').run(metaJson, shellJson, req.uid);
 
   const current = db.prepare('SELECT power, highest_stage FROM users WHERE uid=?').get(req.uid) || {};
-  const reportedPower = clampInt(b.power, 0, 999999, current.power || 0);
+  const reportedPower = clampInt(b.power, 0, POWER_MAX, current.power || 0);
   const reportedStage = clampInt(b.highest_stage, 1, 999, current.highest_stage || 1);
   const power = Math.max(current.power || 0, reportedPower);
   const highestStage = Math.max(current.highest_stage || 1, reportedStage);
   db.prepare('UPDATE users SET power=?, highest_stage=? WHERE uid=?').run(power, highestStage, req.uid);
-  db.prepare('INSERT INTO leaderboard (uid, power, highest_stage) VALUES (?,?,?) ON CONFLICT(uid) DO UPDATE SET power=excluded.power, highest_stage=excluded.highest_stage, updated_at=datetime("now")').run(req.uid, power, highestStage);
+  db.prepare('INSERT INTO leaderboard (uid, power, highest_stage) VALUES (?,?,?) ON CONFLICT(uid) DO UPDATE SET power=excluded.power, highest_stage=excluded.highest_stage, updated_at=CURRENT_TIMESTAMP').run(req.uid, power, highestStage);
   return res.json({ ok: true, accepted: { power, highest_stage: highestStage } });
   // 同步 leaderboard 表(power/stage——ladder_score 由 /api/ladder/report 写)
 });
@@ -154,7 +159,7 @@ app.post('/api/ladder/report', authMiddleware, (req, res) => {
   else if (newScore >= 100) rank = '青铜';
   else rank = '新手';
   db.prepare('UPDATE users SET ladder_rank = ?, ladder_score = ? WHERE uid = ?').run(rank, newScore, req.uid);
-  db.prepare('INSERT INTO leaderboard (uid, ladder_score) VALUES (?,?) ON CONFLICT(uid) DO UPDATE SET ladder_score=excluded.ladder_score, updated_at=datetime("now")').run(req.uid, newScore);
+  db.prepare('INSERT INTO leaderboard (uid, ladder_score) VALUES (?,?) ON CONFLICT(uid) DO UPDATE SET ladder_score=excluded.ladder_score, updated_at=CURRENT_TIMESTAMP').run(req.uid, newScore);
   res.json({ rank, score: newScore });
 });
 
@@ -181,4 +186,4 @@ if (require.main === module) {
   server.listen(PORT, () => console.log(`Server :${PORT}`));
 }
 
-module.exports = { app, server, chatMessages, clampInt, safeText, safeJsonText };
+module.exports = { app, server, chatMessages, clampInt, safeText, safeJsonText, POWER_MAX };
