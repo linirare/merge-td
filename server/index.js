@@ -61,7 +61,6 @@ app.post('/api/auth/register', (req, res) => {
   db.prepare('INSERT INTO user_saves (uid) VALUES (?)').run(uid);
   db.prepare('INSERT INTO leaderboard (uid) VALUES (?)').run(uid);
   return res.json(publicUser({ uid, token: signToken(uid), nickname: nicknameText, avatar: '\uD83C\uDF49', level: 1, exp: 0, diamonds: 0, gold: 0 }));
-  return res.json(publicUser({ uid, token: signToken(uid), nickname: nicknameText, avatar: '🍉', level: 1, exp: 0, diamonds: 0, gold: 0 }));
 });
 
 app.post('/api/auth/login', (req, res) => {
