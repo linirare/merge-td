@@ -1,9 +1,19 @@
-/* Merge TD UI Redesign v2 - three-layer campaign header + page normalization */
-(function installUiRedesignV2() {
-  if (window.__uiRedesignV2Installed) return;
-  window.__uiRedesignV2Installed = true;
+/* Merge TD UI Redesign v2.1 - three-layer campaign header + page normalization */
+(function installUiRedesignV21() {
+  if (window.__uiRedesignV21Installed) return;
+  window.__uiRedesignV21Installed = true;
 
   const SHELL_KEY = 'merge_td_product_shell_v1';
+
+  function gameMeta() {
+    try { return typeof meta !== 'undefined' ? meta : (window.meta || {}); }
+    catch (err) { return window.meta || {}; }
+  }
+
+  function gameState() {
+    try { return typeof state !== 'undefined' ? state : (window.state || null); }
+    catch (err) { return window.state || null; }
+  }
 
   function addBodyClass() {
     document.body.classList.add('ui-redesign');
@@ -21,9 +31,7 @@
     style.id = 'campaignHeaderStyleV2';
     style.textContent = `
       body.ui-redesign #menuPanel .panel-inner.ui-campaign-page{
-        overflow-y:auto;
-        overscroll-behavior:contain;
-        scrollbar-width:none;
+        overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none
       }
       body.ui-redesign #menuPanel .panel-inner.ui-campaign-page::-webkit-scrollbar{display:none}
       body.ui-redesign #menuPanel .game-logo,
@@ -48,8 +56,12 @@
         display:block;max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
         color:var(--ui-ink);font-size:13px
       }
-      body.ui-redesign .campaign-player-copy small{display:block;margin-top:4px;color:var(--ui-muted);font-size:9px;white-space:nowrap}
-      body.ui-redesign .campaign-resources{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0}
+      body.ui-redesign .campaign-player-copy small{
+        display:block;margin-top:4px;color:var(--ui-muted);font-size:9px;white-space:nowrap
+      }
+      body.ui-redesign .campaign-resources{
+        display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0
+      }
       body.ui-redesign .campaign-resource{
         display:flex;align-items:center;gap:3px;min-height:28px;padding:4px 6px;border-radius:9px;
         background:#203629;color:#fff8cf;font-size:10px;font-weight:900;white-space:nowrap
@@ -66,18 +78,22 @@
       body.ui-redesign .campaign-shortcut:active{transform:translateY(1px)}
       body.ui-redesign .campaign-stage-head{
         display:flex;align-items:center;justify-content:space-between;gap:10px;
-        padding:10px 11px;border-radius:11px;background:linear-gradient(100deg,#203629,#2f6948);
-        color:#fff
+        padding:10px 11px;border-radius:11px;
+        background:linear-gradient(100deg,#203629,#2f6948);color:#fff
       }
       body.ui-redesign .campaign-stage-copy{min-width:0}
       body.ui-redesign .campaign-stage-label,
-      body.ui-redesign .campaign-stage-record span{display:block;color:rgba(255,255,255,.62);font-size:9px;font-weight:800}
+      body.ui-redesign .campaign-stage-record span{
+        display:block;color:rgba(255,255,255,.62);font-size:9px;font-weight:800
+      }
       body.ui-redesign .campaign-stage-title{
         display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
         color:#fff8cf;font-size:16px;font-weight:950
       }
       body.ui-redesign .campaign-stage-record{flex:0 0 auto;text-align:right}
-      body.ui-redesign .campaign-stage-record b{display:block;margin-top:3px;color:#fff;font-size:12px}
+      body.ui-redesign .campaign-stage-record b{
+        display:block;margin-top:3px;color:#fff;font-size:12px
+      }
       @media (max-width:380px){
         body.ui-redesign .campaign-player-copy small{display:none}
         body.ui-redesign .campaign-player-copy b{max-width:82px}
@@ -108,7 +124,8 @@
   }
 
   function currentCampaignStage() {
-    const metaStage = Number(window.meta?.highestLevel || 0);
+    const metaData = gameMeta();
+    const metaStage = Number(metaData.highestLevel || 0);
     const domStage = Number(document.getElementById('menuStage')?.textContent || 0);
     return Math.max(1, metaStage || domStage || 1);
   }
@@ -122,8 +139,10 @@
   }
 
   function campaignStageRecord(level) {
-    const stars = Number(window.meta?.stars?.[level] || 0);
-    if (stars > 0) return `最高记录：${'★'.repeat(Math.min(3, stars))}${'☆'.repeat(Math.max(0, 3 - stars))}`;
+    const stars = Number(gameMeta().stars?.[level] || 0);
+    if (stars > 0) {
+      return `最高记录：${'★'.repeat(Math.min(3, stars))}${'☆'.repeat(Math.max(0, 3 - stars))}`;
+    }
     return '最高记录：未通关';
   }
 
@@ -145,7 +164,9 @@
       if (action === 'tasks') {
         const grid = document.getElementById('stageGrid');
         if (!grid || grid.classList.contains('hide')) document.getElementById('btnStart')?.click();
-        setTimeout(() => document.getElementById('stageGrid')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }), 0);
+        setTimeout(() => {
+          document.getElementById('stageGrid')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+        }, 0);
       } else if (action === 'guide') {
         document.getElementById('helpPanel')?.classList.remove('hide');
       } else if (action === 'events') {
@@ -200,13 +221,14 @@
 
   function refreshCampaignTop() {
     const shell = readShellData();
+    const metaData = gameMeta();
     const level = currentCampaignStage();
-    const gold = Number(window.meta?.gold ?? document.getElementById('menuGold')?.textContent ?? 0) || 0;
+    const gold = Number(metaData.gold ?? document.getElementById('menuGold')?.textContent ?? 0) || 0;
     const gems = Number(shell.gems || 0);
     const energy = Math.max(0, Number(shell.energy ?? 30));
     const energyMax = Math.max(1, Number(shell.energyMax ?? 30));
-    const playerName = window.meta?.playerName || localStorage.getItem('merge_td_player_name') || '果园指挥官';
-    const serverName = window.meta?.serverName || localStorage.getItem('merge_td_server_name') || 'S1 · 新芽果园';
+    const playerName = metaData.playerName || localStorage.getItem('merge_td_player_name') || '果园指挥官';
+    const serverName = metaData.serverName || localStorage.getItem('merge_td_server_name') || 'S1 · 新芽果园';
 
     text('campaignPlayerName', playerName);
     text('campaignServerName', serverName);
@@ -287,14 +309,14 @@
   }
 
   function wrapShellTab() {
-    if (typeof window.productShellShowTab !== 'function' || window.productShellShowTab._uiRedesignV2) return;
+    if (typeof window.productShellShowTab !== 'function' || window.productShellShowTab._uiRedesignV21) return;
     const old = window.productShellShowTab;
     window.productShellShowTab = function showTabUiRedesign(tab) {
       const result = old(tab);
       setTimeout(normalizeAll, 0);
       return result;
     };
-    window.productShellShowTab._uiRedesignV2 = true;
+    window.productShellShowTab._uiRedesignV21 = true;
   }
 
   function installObservers() {
@@ -318,7 +340,8 @@
       }
     });
     window.setInterval(() => {
-      if (!window.state || state.phase === 'menu') refreshCampaignTop();
+      const currentState = gameState();
+      if (!currentState || currentState.phase === 'menu') refreshCampaignTop();
     }, 1000);
   }
 
