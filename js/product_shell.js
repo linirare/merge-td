@@ -52,7 +52,7 @@
     for (const id of UNIT_POOL) {
       if (!shell.fragments[id]) shell.fragments[id] = 0;
       if (!shell.fruitLv[id]) shell.fruitLv[id] = 1;
-      if (!meta.shardsTotal[id]) meta.shardsTotal[id] = shell.fragments[id] || 0;
+      meta.shardsTotal[id] = Math.max(meta.shardsTotal[id] || 0, shell.fragments[id] || 0);
     }
     meta.unlocked = Array.isArray(meta.unlocked) ? meta.unlocked : UNIT_POOL.slice(0, 5);
     saveShell();

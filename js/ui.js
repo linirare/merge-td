@@ -140,6 +140,7 @@ function loadMeta() {
       meta.highestLevel = Math.max(1, saved.highestLevel || 1);
       meta.totalWins = saved.totalWins || 0;
       meta.stars = saved.stars || {};
+      meta.shardsTotal = saved.shardsTotal || {};
       meta.deck = normalizeDeck(saved.deck || saved.activeDeck || DEFAULT_DECK);
       meta.unlocked = Array.isArray(saved.unlocked) && saved.unlocked.length ? saved.unlocked.map(normalizeTypeId).filter(id => TYPES[id]) : UNIT_POOL.slice();
     } else {

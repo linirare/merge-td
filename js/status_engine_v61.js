@@ -237,15 +237,13 @@ function migrateOldStatus(s) {
   const oldApplyDamage = applyFruitDamage;
   applyFruitDamage = function applyFruitDamageV61(target, raw, source) {
     migrateOldStatus(target);
-    // 牛油果力士 Lv4+:受击 30% 概率免疫本次伤害
-    if (target.type === 'avocado_brawler' && (target.level || 1) >= 4 && Math.random() < 0.3) {
-      if (typeof addFx === 'function') addFx(target.x, target.y - 18, '免疫', '#dfe7ff', 11);
-      return 0;
-    }
+    // 牛油果力士 Lv4+:受击 30% 概率免疫本次伤害(状态效果仍可施加)
+    const immune = target.type === 'avocado_brawler' && (target.level || 1) >= 4 && Math.random() < 0.3;
     // add status armor penalty before old function runs
     const penalty = statusArmorPenalty(target);
     if (penalty > 0) target.armor = Math.max(0, (target.armor || 0) - penalty);
-    const result = oldApplyDamage(target, raw, source);
+    const result = immune ? 0 : oldApplyDamage(target, raw, source);
+    if (immune && typeof addFx === 'function') addFx(target.x, target.y - 18, '免疫', '#dfe7ff', 11);
     // restore armor (old function already used the reduced value)
     if (penalty > 0) target.armor += penalty;
 
