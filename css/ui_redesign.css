@@ -71,6 +71,28 @@ body.shell-v65 .td-avatar{width:50px;height:50px;display:grid;place-items:center
 body.shell-v65 .td-resources{display:flex;gap:12px}
 body.shell-v65 .td-team-strip{display:flex;gap:8px;flex-wrap:wrap;padding:2px 0}
 body.shell-v65 .td-team-strip button{display:flex;align-items:center;gap:5px;padding:8px 14px;border-radius:var(--rp);border:1px solid var(--bor);background:var(--glass2);font-size:12px;font-weight:600;cursor:pointer}
-body.shell-v65 .td-battle-preview{min-height:110px;border-radius:var(--r);background:var(--glass);border:1px solid var(--bor);overflow:hidden}
+body.shell-v65 .td-battle-preview{min-height:130px;border-radius:var(--r);background:linear-gradient(135deg,rgba(255,255,255,0.84),rgba(255,245,235,0.78),rgba(245,235,255,0.76));border:1px solid var(--bor);overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
+/* battle preview "果堡/敌堡" title → gradient */
+body.shell-v65 .td-battle-preview .td-castle b{font-size:20px;font-weight:900;background:linear-gradient(135deg,var(--orange),var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+/* CTA button use game class */
+body.shell-v65 .td-start-btn{display:block;width:100%;min-height:48px;margin:6px 0;padding:14px 24px;border:none;border-radius:var(--rp);background:linear-gradient(135deg,var(--orange) 0%,var(--pink) 45%,var(--purple) 100%);color:#fff;font-size:16px;font-weight:800;text-align:center;cursor:pointer;box-shadow:0 8px 28px rgba(139,92,246,0.28),inset 0 1px 0 rgba(255,255,255,0.14);transition:0.15s}
+body.shell-v65 .td-start-btn:active{transform:scale(0.97);filter:brightness(1.06)}
+/* resource bar use game class */
+body.shell-v65 .td-resources{display:flex;justify-content:center;gap:14px;padding:8px 16px;border-radius:var(--rp);background:var(--glass2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--bor);box-shadow:var(--sh)}
+body.shell-v65 .td-resources span{display:flex;align-items:center;gap:5px;font-size:14px;font-weight:700}
+body.shell-v65 .td-resources i{font-size:18px;font-style:normal}
+body.shell-v65 .td-resources b{font-size:15px}
+/* menu btn */
+body.shell-v65 .td-menu-btn{width:42px;height:42px;display:grid;place-items:center;border-radius:var(--rs);border:1px solid var(--bor);background:var(--glass2);font-size:18px;cursor:pointer;color:var(--t)}
+/* chest row */
+body.shell-v65 .td-chest-row{display:flex;align-items:center;gap:10px;padding:6px 0;color:var(--t)}
+
+body.shell-v65 .td-sky{display:none}
+body.shell-v65 .td-castle{position:static!important;background:none!important;border:none!important;padding:4px 12px}
+body.shell-v65 .td-castle::before,.td-castle::after{display:none}
+body.shell-v65 .td-road,.td-hp-bar{display:none}
+body.shell-v65 .td-army span{font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.08))}
+body.shell-v65 .td-army-left{left:16px!important}
+body.shell-v65 .td-army-right{right:16px!important}
 
 @media(max-width:380px){body.shell-v65 .stage-grid,body.shell-v65 .td-stage-grid{grid-template-columns:repeat(3,1fr)}body.shell-v65 .bnav-tab{font-size:9px}}
