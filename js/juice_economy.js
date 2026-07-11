@@ -1,6 +1,6 @@
 /* ============================================================
    水果突击 · Juice Economy v59
-   果汁闭环：无上限 / 开局10点 / 每5秒+1 / 击杀返还等级 / 主动行动递增成本。
+   果汁闭环：无上限 / 开局8点 / 每5秒+1 / 击杀返还等级 / 主动行动递增成本。
    v59：只做轻反馈，不再制造战场遮挡；果汁栏闪烁由 state._juicePulse 驱动。
    ============================================================ */
 (function installJuiceEconomyV59() {
@@ -31,9 +31,32 @@
 
   window.nextJuiceActionCost = actionCost;
 
+  function juiceSpawnButtonRect() {
+    if (typeof window.getJuiceSpawnButtonRectV60 === 'function') return window.getJuiceSpawnButtonRectV60();
+    const y = LAYOUT.operationY || (LAYOUT.playerWallY + LAYOUT.wallH + 16);
+    const x = BOARD_X;
+    const h = LAYOUT.operationH || 38;
+    const w = BOARD_W;
+    return { x: x + 128, y: y + 4, w: w - 133, h: h - 8 };
+  }
+
+  function pointInRect(p, rect) {
+    return p.x >= rect.x && p.x <= rect.x + rect.w && p.y >= rect.y && p.y <= rect.y + rect.h;
+  }
+
+  function firstEmptyPlayerSlot() {
+    if (!state || !state.playerSlots) return null;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (!state.playerSlots[r][c]) return { r, c };
+      }
+    }
+    return null;
+  }
+
   if (typeof getSpStart === 'function' && !getSpStart._juiceV59) {
     getSpStart = function getJuiceStartV59(m) {
-      return 10 + Math.floor(((m && m.spLv) || 0) / 2);
+      return 8 + Math.floor(((m && m.spLv) || 0) / 2);
     };
     getSpStart._juiceV59 = true;
   }
@@ -50,9 +73,10 @@
 
   function resetJuiceEconomyForLevel() {
     state.sp = typeof getSpStart === 'function' ? getSpStart(meta) : 10;
-    state.enemySp = 10;
+    state.enemySp = 8;
     state.summonCostCounter = 1;
     state.enemySummonCostCounter = 1;
+    state._wallPityTriggers = 0;
     state._juicePlayerTimer = 0;
     state._juiceEnemyTimer = 0;
     state.enemySpCheckTimer = 0;
@@ -140,6 +164,23 @@
     }
   }
 
+  function updateWallPityJuice() {
+    if (!state || state.phase !== 'playing') return;
+    const max = Math.max(1, Number(state.playerWallMax || 1));
+    const ratio = Math.max(0, Number(state.playerWallHp || 0)) / max;
+    let triggers = Math.max(0, Math.min(4, Number(state._wallPityTriggers || 0)));
+    let gained = 0;
+    while (triggers < 4 && ratio <= 1 - (triggers + 1) * 0.2 + 1e-9) {
+      triggers++;
+      gained += 3;
+    }
+    if (gained <= 0) return;
+    state._wallPityTriggers = triggers;
+    state.sp = (state.sp || 0) + gained;
+    pulseJuice(gained, 'gain');
+    addFx(BOARD_X + BOARD_W - 44, (LAYOUT.operationY || 570) - 6, `保底 +${gained}果汁`, THEME.gold, 11);
+  }
+
   if (typeof update === 'function' && !update._juiceV59) {
     const oldUpdate = update;
     update = function updateWithJuiceEconomyV59(dt) {
@@ -153,6 +194,7 @@
         state._spTimer = oldSpTimer || 0;
         state.enemyBallTimer = oldEnemyBallTimer || 0;
         updateJuiceTimers(dt);
+        updateWallPityJuice();
       } else {
         oldUpdate(dt);
       }
@@ -191,6 +233,25 @@
     return true;
   }
 
+  function autoSummonFruitFromButton() {
+    const rect = juiceSpawnButtonRect();
+    const fx = rect.x + rect.w / 2;
+    const fy = rect.y - 6;
+    const target = firstEmptyPlayerSlot();
+    const cost = actionCost();
+    if (!target) {
+      pulseJuice(0, 'lack');
+      addFx(fx, fy, '\u8425\u5730\u5df2\u6ee1', THEME.accent, 11);
+      return false;
+    }
+    if ((state.sp || 0) < cost) {
+      pulseJuice(0, 'lack');
+      addFx(fx, fy, `\u679c\u6c41\u4e0d\u8db3 \u00b7 \u9700${cost}`, THEME.accent, 11);
+      return false;
+    }
+    return summonFruitAtV59(target.r, target.c);
+  }
+
   summonFruitAt = summonFruitAtV59;
 
   let juiceLastTap = { time: 0, r: -1, c: -1 };
@@ -221,6 +282,12 @@
     }
     if (state.pendingPlace) return;
 
+    if (pointInRect(p, juiceSpawnButtonRect())) {
+      juiceLastTap.time = 0;
+      autoSummonFruitFromButton();
+      return;
+    }
+
     const s = slotAt(p.x, p.y, false);
     if (!s) { juiceLastTap.time = 0; return; }
     const [r, c] = s;
@@ -228,7 +295,6 @@
 
     if (!ball) {
       juiceLastTap.time = 0;
-      summonFruitAtV59(r, c);
       return;
     }
 
