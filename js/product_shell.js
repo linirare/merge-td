@@ -1,9 +1,9 @@
 /* ============================================================
-   水果突击 · Product Shell v53
-   产品闭环：关卡选择 / 底部导航 / 商城抽卡 / 碎片初始等级 / 天梯。
-   只做 DOM 产品层和成长系统，不覆盖 Canvas 战场视觉。
+   Fruit Assault - Mobile Game Product Shell v65
+   Rebuilds the out-of-battle product shell without changing combat,
+   economy numbers, gacha odds, stage rules, or PVP contracts.
    ============================================================ */
-(function installProductShellV53() {
+(function installProductShellV65() {
   const SHELL_KEY = 'merge_td_product_shell_v1';
   const DAILY_GOLD = 50;
   const DAILY_GEMS = 5;
@@ -13,19 +13,22 @@
   const INIT_COST = { 1: 3, 2: 10, 3: 25 };
 
   const tabs = [
+    { id: 'home', icon: '🏡', label: '首页' },
     { id: 'battle', icon: '🚩', label: '闯关' },
-    { id: 'arena', icon: '🏆', label: '竞技' },
-    { id: 'upgrade', icon: '🍉', label: '养成' },
+    { id: 'upgrade', icon: '🍉', label: '阵容' },
     { id: 'shop', icon: '🛒', label: '商城' },
+    { id: 'arena', icon: '🏆', label: '竞技' },
   ];
 
   let shell = loadShell();
-  let activeTab = 'battle';
+  let activeTab = 'home';
   let prevPhase = '';
+  let selectedFruit = '';
+  let selectedShopTab = 'gacha';
 
   function todayKey() {
     const d = new Date();
-    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   }
 
   function loadShell() {
@@ -49,9 +52,9 @@
     for (const id of UNIT_POOL) {
       if (!shell.fragments[id]) shell.fragments[id] = 0;
       if (!shell.fruitLv[id]) shell.fruitLv[id] = 1;
-      // 迁移:老存档只有可花费碎片,用它给养成累计打底(取两者较大值,单调不减)
       if (!meta.shardsTotal[id]) meta.shardsTotal[id] = shell.fragments[id] || 0;
     }
+    meta.unlocked = Array.isArray(meta.unlocked) ? meta.unlocked : UNIT_POOL.slice(0, 5);
     saveShell();
   }
 
@@ -78,252 +81,494 @@
     return Array.isArray(meta.unlocked) && meta.unlocked.includes(id);
   }
 
-  function injectStyle() {
-    if (document.getElementById('productShellStyle')) return;
-    const st = document.createElement('style');
-    st.id = 'productShellStyle';
-    st.textContent = `
-      #bottomNav{position:fixed;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(440px,calc(100vw - 22px));height:58px;z-index:40;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:6px;border-radius:18px;background:rgba(255,255,255,.82);backdrop-filter:blur(8px);box-shadow:0 10px 28px rgba(50,120,40,.22);border:1px solid rgba(111,207,112,.30)}
-      #bottomNav.shell-hidden{display:none}
-      .bnav-tab{border:0;border-radius:14px;background:rgba(236,255,222,.68);color:#5b7c37;font-weight:900;font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;box-shadow:inset 0 -2px 0 rgba(69,160,74,.10)}
-      .bnav-tab.active{background:linear-gradient(180deg,#fff3a8,#9bea8d);color:#315c25;box-shadow:0 4px 12px rgba(90,190,80,.24),inset 0 -2px 0 rgba(47,143,55,.22)}
-      .bnav-icon{font-size:18px;line-height:18px}
-      .stage-grid{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 8px;max-height:236px;overflow:auto;padding:2px 2px 4px}
-      .stage-card{border:1px solid rgba(92,180,82,.22);background:rgba(255,255,255,.56);border-radius:14px;min-height:58px;color:#416329;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;box-shadow:inset 0 -2px 0 rgba(87,166,72,.12)}
-      .stage-card small{font-size:10px;color:#83a061;font-weight:800}.stage-card.current{border-color:#ffcf52;background:linear-gradient(180deg,#fff6be,#e9ffc7)}.stage-card.locked{opacity:.42;filter:grayscale(.35);cursor:not-allowed}.stage-card.boss{border-color:rgba(255,92,108,.42)}
-      .shell-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(255,255,255,.52);border:1px solid rgba(92,180,82,.18);border-radius:14px;padding:10px 12px;margin:8px 0;color:#416329}.shell-row b{color:#2f5f26}.shell-row small{display:block;color:#82a060;font-size:11px;margin-top:2px}.shell-btn{border:0;border-radius:12px;background:#53c96a;color:#fff;font-weight:900;padding:8px 12px;cursor:pointer;white-space:nowrap}.shell-btn:disabled,.shell-row.disabled{opacity:.46;cursor:not-allowed}.shop-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.shop-tabs button{border:0;border-radius:12px;padding:9px 0;font-weight:900;background:rgba(255,255,255,.62);color:#6e8c4e}.shop-tabs button.active{background:linear-gradient(180deg,#fff0a3,#96e98b);color:#315c25}.shell-currency{display:flex;gap:8px;justify-content:center;margin:6px 0 8px}.shell-chip{border-radius:999px;background:rgba(255,255,255,.62);padding:5px 10px;color:#416329;font-weight:900}.arena-list{width:100%;display:flex;flex-direction:column;gap:10px}.arena-card{width:100%;background:rgba(255,255,255,.54);border:1px solid rgba(92,180,82,.20);border-radius:16px;padding:12px;color:#416329}.arena-card h3{color:#2c8d3f;font-size:15px;margin-bottom:4px}.arena-card small{display:block;color:#7d9b5d;font-size:11px;line-height:1.45}.pvp-code{width:100%;border:1px solid rgba(92,180,82,.22);border-radius:12px;background:rgba(255,255,255,.76);padding:10px;color:#315326;font-weight:900;text-align:center;margin:8px 0}.pvp-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.pvp-status{background:rgba(255,201,60,.16);border-radius:12px;padding:8px 10px;margin-top:8px;font-size:12px;font-weight:900;color:#8a6200;line-height:1.55}.ladder-hero{text-align:center;background:linear-gradient(180deg,rgba(255,246,190,.82),rgba(224,255,194,.78));border:1px solid rgba(92,180,82,.22);border-radius:18px;padding:14px 12px;margin:10px 0;color:#416329}.ladder-hero b{font-size:28px;color:#e89518}.gacha-overlay{position:fixed;inset:0;background:rgba(38,62,25,.58);z-index:120;display:flex;align-items:center;justify-content:center}.gacha-box{width:min(390px,90vw);max-height:78vh;overflow:auto;background:linear-gradient(180deg,#fffbe4,#eaffc3);border-radius:22px;padding:18px;box-shadow:0 18px 45px rgba(32,70,25,.28);text-align:center}.gacha-result{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.68);border-radius:14px;padding:9px 10px;margin:7px 0;text-align:left}.gacha-result .ico{font-size:28px}.gacha-result .frag{margin-left:auto;font-weight:900}.lab-list{max-height:58vh;overflow:auto;padding-right:2px}.lab-row{align-items:flex-start}.lab-main{display:flex;gap:8px;align-items:flex-start}.lab-icon{font-size:30px;line-height:32px}.lab-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end}.deck-badge{font-size:10px;border-radius:999px;padding:2px 6px;background:rgba(255,207,82,.36);color:#8a5a09;font-weight:900}.locked-note{color:#a08060!important}`;
-    document.head.appendChild(st);
+  function fruit(id) {
+    return TYPES[id] || { icon: '🍏', name: id || '水果', role: 'front', desc: '' };
   }
 
-  function fixedStage(k) {
-    const boss = k % 5 === 0;
-    const enemyLv = Number((1 + (k - 1) * 0.18 + (boss ? 0.20 : 0)).toFixed(2));
-    const wallBase = boss ? 96 : 58;
-    const wallGrow = boss ? 1.125 : 1.088;
-    return {
-      id: k,
-      isBoss: boss,
-      enemyInitLevel: enemyLv,
-      enemyWallHp: Math.round(wallBase * Math.pow(wallGrow, k - 1)),
-      enemySpawnInterval: Math.max(4.15, 6.05 - k * 0.12),
-      reward: stageReward(k) + (boss ? 28 : 0),
-      desc: boss ? `第 ${k} 关 · 腐坏果堡Boss · 星级奖励更高` : `第 ${k} 关 · 腐坏水果 Lv${enemyLv.toFixed(1)} · 推倒果堡`,
+  function fruitIcon(id) {
+    return fruit(id).icon || fruit(id).emoji || '🍏';
+  }
+
+  function fruitUnitSprite(id, fallback = '') {
+    const key = normalizeTypeId(id);
+    const map = {
+      watermelon_guard: 0,
+      banana_raider: 1,
+      grape_archer: 2,
+      strawberry_knight: 3,
+      orange_cannon: 4,
     };
+    const idx = map[key] ?? map[fallback] ?? 4;
+    return `<span class="td-unit td-unit-${idx}" aria-label="${fruit(key).name || key}"></span>`;
   }
 
-  function installSystemHooks() {
-    if (typeof generateLevel === 'function' && !generateLevel._shellStagesV53) {
-      const oldGenerate = generateLevel;
-      generateLevel = function generateLevelV53(k) {
-        if (k >= 1 && k <= 20) return fixedStage(k);
-        return oldGenerate(k);
-      };
-      generateLevel._shellStagesV53 = true;
-    }
-
-    if (typeof createBall === 'function' && !createBall._shellInitLvV53) {
-      const oldCreateBall = createBall;
-      createBall = function createBallWithInitialLevel(typeId, level = 1) {
-        const finalLevel = state && state._shellCreatingPlayerBall ? applyInitLevel(typeId, level) : level;
-        return oldCreateBall(typeId, finalLevel);
-      };
-      createBall._shellInitLvV53 = true;
-    }
-
-    if (typeof initPlayerOpening === 'function' && !initPlayerOpening._shellInitLvV53) {
-      const oldInitPlayerOpening = initPlayerOpening;
-      initPlayerOpening = function initPlayerOpeningV53(k) {
-        state._shellCreatingPlayerBall = true;
-        try { return oldInitPlayerOpening(k); }
-        finally { state._shellCreatingPlayerBall = false; }
-      };
-      initPlayerOpening._shellInitLvV53 = true;
-    }
-
-    if (typeof summonFruitAt === 'function' && !summonFruitAt._shellInitLvV53) {
-      const oldSummon = summonFruitAt;
-      summonFruitAt = function summonFruitAtV53(r, c) {
-        state._shellCreatingPlayerBall = true;
-        try { return oldSummon(r, c); }
-        finally { state._shellCreatingPlayerBall = false; }
-      };
-      summonFruitAt._shellInitLvV53 = true;
-    }
-
-    if (typeof autoSpawnBall === 'function' && !autoSpawnBall._shellInitLvV53) {
-      const oldAutoSpawn = autoSpawnBall;
-      autoSpawnBall = function autoSpawnBallV53(slots, level = 1, enemy = false) {
-        if (!enemy && slots === state.playerSlots) {
-          state._shellCreatingPlayerBall = true;
-          try { return oldAutoSpawn(slots, level, enemy); }
-          finally { state._shellCreatingPlayerBall = false; }
-        }
-        return oldAutoSpawn(slots, level, enemy);
-      };
-      autoSpawnBall._shellInitLvV53 = true;
-    }
+  function fruitDisplay(id, fallback = '') {
+    const key = normalizeTypeId(id);
+    const mapped = ['watermelon_guard', 'banana_raider', 'grape_archer', 'strawberry_knight', 'orange_cannon'];
+    if (mapped.includes(key) || fallback) return fruitUnitSprite(key, fallback);
+    return `<span class="td-emoji-unit">${fruitIcon(key)}</span>`;
   }
 
-  function ensureStageGrid() {
-    if (document.getElementById('stageGrid')) return document.getElementById('stageGrid');
-    const start = document.getElementById('btnStart');
-    const grid = document.createElement('div');
-    grid.id = 'stageGrid';
-    grid.className = 'stage-grid hide';
-    if (start && start.parentNode) start.parentNode.insertBefore(grid, start.nextSibling);
-    return grid;
+  function fruitName(id) {
+    return fruit(id).name || id || '水果';
+  }
+
+  function roleText(id) {
+    const t = fruit(id);
+    return typeof roleLabel === 'function' ? roleLabel(t.role) : (t.role || '单位');
+  }
+
+  function deck() {
+    const fallback = UNIT_POOL.slice(0, Math.min(DECK_SIZE || 5, UNIT_POOL.length));
+    const next = typeof normalizeDeck === 'function' ? normalizeDeck(meta.deck || fallback) : (meta.deck || fallback);
+    meta.deck = next.slice();
+    return next;
+  }
+
+  function highestLevel() {
+    return Math.max(1, Number(meta.highestLevel || 1));
+  }
+
+  function currentStage() {
+    return highestLevel();
+  }
+
+  function stageStars(lv) {
+    return Math.max(0, Math.min(3, Number(meta.stars?.[lv] || 0)));
+  }
+
+  function starsText(lv) {
+    const n = stageStars(lv);
+    return '★'.repeat(n) + '☆'.repeat(3 - n);
+  }
+
+  function stageRewardText(lv) {
+    const cfg = typeof generateLevel === 'function' ? generateLevel(lv) : null;
+    const reward = cfg?.reward ?? (typeof stageReward === 'function' ? stageReward(lv) : 20 + lv * 2);
+    return `${reward}🍋`;
+  }
+
+  function clearChildren(el) {
+    if (el) el.innerHTML = '';
+  }
+
+  function panel(id, className = '') {
+    let p = document.getElementById(id);
+    if (!p) {
+      p = document.createElement('div');
+      p.id = id;
+      p.className = 'panel hide';
+      p.innerHTML = `<div class="panel-inner ${className}"></div>`;
+      document.body.appendChild(p);
+    }
+    const inner = p.querySelector('.panel-inner');
+    if (inner && className) inner.className = `panel-inner ${className}`;
+    return p;
+  }
+
+  function shellPage(id, className = '') {
+    const p = panel(id, `shell-page ${className}`);
+    return p.querySelector('.panel-inner');
+  }
+
+  function resourceBarHtml() {
+    return `
+      <div class="shell-resource-bar">
+        <span><i>🍋</i><b data-shell-gold>${meta.gold || 0}</b></span>
+        <span><i>💎</i><b data-shell-gems>${shell.gems || 0}</b></span>
+        <span><i>🚩</i><b>${highestLevel()}</b></span>
+      </div>
+    `;
+  }
+
+  function pageHeadHtml(kicker, title, sub = '') {
+    return `
+      <div class="shell-page-head">
+        <div>
+          <small>${kicker}</small>
+          <h2>${title}</h2>
+          ${sub ? `<p>${sub}</p>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function makeButton(className, text, onClick, disabled = false) {
+    const btn = document.createElement('button');
+    btn.className = className;
+    btn.textContent = text;
+    btn.disabled = !!disabled;
+    if (!disabled && onClick) btn.addEventListener('click', onClick);
+    return btn;
+  }
+
+  function ensureStaticPanels() {
+    const menu = document.getElementById('menuPanel');
+    if (menu) {
+      menu.className = 'panel hide';
+      menu.innerHTML = '<div class="panel-inner shell-page shell-home-page"></div>';
+    }
+    shellPage('campaignPanel', 'shell-campaign-page');
+    shellPage('shellLabPanel', 'shell-squad-page');
+    shellPage('shopPanel', 'shell-shop-page');
+    shellPage('arenaPanel', 'shell-arena-page');
   }
 
   function ensureBottomNav() {
-    if (document.getElementById('bottomNav')) return;
-    const nav = document.createElement('div');
-    nav.id = 'bottomNav';
-    nav.className = 'shell-hidden';
-    nav.innerHTML = tabs.map(t => `<button class="bnav-tab" data-tab="${t.id}"><span class="bnav-icon">${t.icon}</span><span>${t.label}</span></button>`).join('');
-    document.body.appendChild(nav);
+    let nav = document.getElementById('bottomNav');
+    if (!nav) {
+      nav = document.createElement('div');
+      nav.id = 'bottomNav';
+      document.body.appendChild(nav);
+    }
+    nav.className = 'shell-hidden shell-v65-nav';
+    nav.innerHTML = tabs.map(t => `
+      <button class="bnav-tab" data-tab="${t.id}">
+        <span class="bnav-icon">${t.icon}</span>
+        <span>${t.label}</span>
+      </button>
+    `).join('');
     nav.querySelectorAll('.bnav-tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
   }
 
-  function panelHtml(id, innerClass, html) {
-    if (document.getElementById(id)) return;
-    const p = document.createElement('div');
-    p.id = id;
-    p.className = 'panel hide';
-    p.innerHTML = `<div class="panel-inner ${innerClass || ''}">${html}</div>`;
-    document.body.appendChild(p);
-  }
-
-  function ensureShopPanel() {
-    panelHtml('shopPanel', 'wide', `
-      <h2>🛒 果园商城</h2>
-      <p class="sub">每日补给 · 碎片抽卡 · 成长礼包</p>
-      <div class="shell-currency"><span class="shell-chip">💎 <b id="shellGems">0</b></span><span class="shell-chip">🍋 <b id="shellGold">0</b></span></div>
-      <div class="shop-tabs"><button id="shopTabGacha" class="active">🎴 抽卡</button><button id="shopTabPack">🎁 礼包</button></div>
-      <div id="shopList"></div>
-    `);
-    document.getElementById('shopTabGacha')?.addEventListener('click', () => renderShop('gacha'));
-    document.getElementById('shopTabPack')?.addEventListener('click', () => renderShop('pack'));
-  }
-
-  function ensureLabPanel() {
-    panelHtml('shellLabPanel', 'wide', `
-      <h2>🍉 水果实验室</h2>
-      <p class="sub">抽卡碎片提升初始等级；召唤时直接以更高等级入场。</p>
-      <div class="shell-currency"><span class="shell-chip">上阵 <b id="labDeckCount">0/5</b></span><span class="shell-chip">💎 <b id="labGems">0</b></span></div>
-      <div id="shellLabList" class="lab-list"></div>
-    `);
-  }
-
-  function ensureArenaPanel() {
-    panelHtml('arenaPanel', 'wide', `
-      <h2>🏆 竞技</h2>
-      <p class="sub">实时房间对战 · 无尽天梯</p>
-      <div class="arena-list">
-        <div class="arena-card">
-          <h3>⚔️ 实时对战</h3>
-          <small>创建房间或输入房间码加入。双方准备后进入同一局。</small>
-          <div class="pvp-status" id="pvpStatus">未连接</div>
-          <input id="pvpRoomInput" class="pvp-code" placeholder="输入房间码" maxlength="6">
-          <div class="pvp-actions">
-            <button class="shell-btn" id="btnPvpCreate">创建房间</button>
-            <button class="shell-btn" id="btnPvpJoin">加入房间</button>
-            <button class="shell-btn" id="btnPvpReady">准备</button>
-            <button class="shell-btn" id="btnPvpLeave">离开</button>
-          </div>
-        </div>
-        <div class="arena-card">
-          <h3>🏁 无尽天梯</h3>
-          <small>连续波次挑战，失败后按坚持波数结算。</small>
-          <div class="ladder-hero"><span>历史最佳</span><br><b id="ladderBest">0</b><br><small>波</small></div>
-          <button id="btnLadderStart" class="btn-primary">开始天梯挑战</button>
-        </div>
-      </div>
-    `);
-    document.getElementById('btnPvpCreate')?.addEventListener('click', () => window.pvpClient?.createRoom());
-    document.getElementById('btnPvpJoin')?.addEventListener('click', () => window.pvpClient?.joinRoom(document.getElementById('pvpRoomInput')?.value || ''));
-    document.getElementById('btnPvpReady')?.addEventListener('click', () => {
-      const ready = !window.pvpClient?.getStatus().ready;
-      window.pvpClient?.setReady(ready);
-    });
-    document.getElementById('btnPvpLeave')?.addEventListener('click', () => window.pvpClient?.leaveRoom());
-    document.getElementById('btnLadderStart')?.addEventListener('click', startLadder);
-    window.pvpClient?.onStatus(renderPvpStatus);
-  }
-
   function hidePanels() {
-    ['menuPanel', 'upgradePanel', 'shopPanel', 'arenaPanel', 'ladderPanel', 'resultPanel', 'overflowPopup', 'helpPanel', 'simPanel', 'fruitLabPanel', 'shellLabPanel'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.add('hide');
-    });
+    [
+      'menuPanel', 'campaignPanel', 'upgradePanel', 'shopPanel', 'arenaPanel',
+      'ladderPanel', 'resultPanel', 'overflowPopup', 'helpPanel', 'simPanel',
+      'fruitLabPanel', 'shellLabPanel', 'deckPanel', 'flowGuidePanel',
+    ].forEach(id => document.getElementById(id)?.classList.add('hide'));
   }
 
   function updateNav() {
     document.querySelectorAll('.bnav-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === activeTab));
   }
 
-  function showTab(tab) {
-    activeTab = tab || 'battle';
-    hidePanels();
-    if (activeTab === 'battle') {
-      document.getElementById('menuPanel')?.classList.remove('hide');
-      renderStages(false);
-      refreshAllShellNumbers();
-    } else if (activeTab === 'arena') {
-      document.getElementById('arenaPanel')?.classList.remove('hide');
-      renderArena();
-    } else if (activeTab === 'upgrade') {
-      document.getElementById('shellLabPanel')?.classList.remove('hide');
-      renderLab();
-    } else if (activeTab === 'shop') {
-      document.getElementById('shopPanel')?.classList.remove('hide');
-      renderShop('gacha');
-    }
-    updateNav();
+  function refreshResourceNumbers() {
+    if (typeof refreshGold === 'function') refreshGold();
+    document.querySelectorAll('[data-shell-gold]').forEach(el => { el.textContent = meta.gold || 0; });
+    document.querySelectorAll('[data-shell-gems]').forEach(el => { el.textContent = shell.gems || 0; });
   }
 
-  function syncNavVisibility() {
-    const nav = document.getElementById('bottomNav');
-    if (!nav) return;
-    const show = state.phase === 'menu';
-    nav.classList.toggle('shell-hidden', !show);
-    if (show && prevPhase && prevPhase !== 'menu') showTab('battle');
-    prevPhase = state.phase;
+  function renderHome() {
+    ensureShellData();
+    const root = shellPage('menuPanel', 'shell-home-page');
+    const lv = currentStage();
+    const d = deck();
+    const isBoss = lv % 5 === 0;
+    const dailyReady = shell.lastDaily !== todayKey();
+    const nextReward = stageRewardText(lv);
+    const stars = starsText(lv);
+    root.innerHTML = `
+      <section class="td-home">
+        <header class="td-topbar">
+          <button class="td-avatar" data-go="upgrade">${fruitUnitSprite(d[0])}</button>
+          <div class="td-resources">
+            <span><i>🪙</i><b data-shell-gold>${meta.gold || 0}</b></span>
+            <span><i>💎</i><b data-shell-gems>${shell.gems || 0}</b></span>
+          </div>
+          <button class="td-menu-btn" data-go="shop">☰</button>
+        </header>
+
+        <section class="td-battle-preview">
+          <div class="td-sky"></div>
+          <div class="td-hp-bar"><i style="width:${Math.max(24, Math.min(82, 40 + lv * 6))}%"></i></div>
+          <div class="td-castle td-player-castle"><b>果堡</b></div>
+          <div class="td-castle td-enemy-castle"><b>${isBoss ? 'Boss' : '敌堡'}</b></div>
+          <div class="td-road"></div>
+          <div class="td-army td-army-left">
+            ${d.slice(0, 5).map((id, i) => `<span style="--i:${i}">${fruitUnitSprite(id)}</span>`).join('')}
+          </div>
+          <div class="td-army td-army-right">
+            ${['strawberry_knight','strawberry_knight','grape_archer','strawberry_knight','strawberry_knight'].map((id, i) => `<span style="--i:${i}">${fruitUnitSprite(id, 'strawberry_knight')}</span>`).join('')}
+          </div>
+        </section>
+
+        <section class="td-team-strip">
+          ${d.slice(0, 5).map(id => `<button data-go="upgrade">${fruitUnitSprite(id)}<b>Lv.${initLv(id)}</b></button>`).join('')}
+        </section>
+
+        <section class="td-stage-panel">
+          <div class="td-stage-grid">
+            ${Array.from({ length: 10 }, (_, i) => {
+              const n = i + 1;
+              const open = n <= highestLevel();
+              const current = n === lv;
+              const boss = n % 5 === 0;
+              return `<button class="td-stage-node${current ? ' current' : ''}${boss ? ' boss' : ''}${open ? '' : ' locked'}" data-stage="${n}" ${open ? '' : 'disabled'}><small>${starsText(n)}</small><b>${n}</b></button>`;
+            }).join('')}
+          </div>
+          <div class="td-chest-row">
+            <span>⭐</span>
+            <div><i style="width:${Math.min(100, 20 + lv * 7)}%"></i></div>
+            <button data-go="shop">🎁</button>
+          </div>
+          <button class="td-start-btn" id="homeStartBtn"><span>⚔️</span>开始挑战</button>
+        </section>
+      </section>
+    `;
+    root.querySelector('#homeStartBtn')?.addEventListener('click', () => startCampaign(lv));
+    root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
+    root.querySelectorAll('[data-stage]').forEach(btn => btn.addEventListener('click', () => startCampaign(Number(btn.dataset.stage || lv))));
+    refreshResourceNumbers();
   }
 
-  function replaceStartButton() {
-    const old = document.getElementById('btnStart');
-    if (!old || old._shellReplaced) return;
-    const btn = old.cloneNode(true);
-    btn.id = 'btnStart';
-    btn.textContent = '选择关卡';
-    btn._shellReplaced = true;
-    old.parentNode.replaceChild(btn, old);
-    btn.addEventListener('click', () => {
-      const grid = ensureStageGrid();
-      const isHidden = grid.classList.contains('hide');
-      renderStages(isHidden);
-      btn.textContent = isHidden ? '收起关卡' : '选择关卡';
-    });
-  }
-
-  function renderStages(expand) {
-    const grid = ensureStageGrid();
-    if (!grid) return;
-    if (!expand) { grid.classList.add('hide'); return; }
-    grid.classList.remove('hide');
-    const highest = Math.max(1, meta.highestLevel || 1);
+  function renderCampaign() {
+    const root = shellPage('campaignPanel', 'shell-campaign-page');
+    const highest = highestLevel();
+    const current = currentStage();
     const maxShow = Math.max(20, highest + 3);
-    grid.innerHTML = '';
+    root.innerHTML = `
+      ${resourceBarHtml()}
+      ${pageHeadHtml('CAMPAIGN', '果园远征', '选择已解锁关卡，直接开战')}
+      <section class="campaign-current-card">
+        <div>
+          <small>${current % 5 === 0 ? 'BOSS STAGE' : 'NEXT STAGE'}</small>
+          <h3>第 ${current} 关</h3>
+          <p>奖励 ${stageRewardText(current)} · ${starsText(current)}</p>
+        </div>
+        <button class="shell-primary-cta compact" id="campaignStartBtn">挑战</button>
+      </section>
+      <section class="campaign-map" id="campaignMap"></section>
+    `;
+    root.querySelector('#campaignStartBtn')?.addEventListener('click', () => startCampaign(current));
+    const map = root.querySelector('#campaignMap');
     for (let lv = 1; lv <= maxShow; lv++) {
       const open = lv <= highest;
       const boss = lv % 5 === 0;
-      const stars = meta.stars?.[lv] || 0;
-      const card = document.createElement('button');
-      card.className = 'stage-card' + (lv === highest ? ' current' : '') + (boss ? ' boss' : '') + (open ? '' : ' locked');
-      card.innerHTML = `<span>${boss ? '🏰' : '🍓'} 第${lv}关</span><small>${open ? ('⭐'.repeat(stars) + '☆'.repeat(3 - stars)) : '未解锁'}</small>`;
-      if (open) card.addEventListener('click', () => startCampaign(lv));
-      grid.appendChild(card);
+      const btn = document.createElement('button');
+      btn.className = `map-node${lv === current ? ' current' : ''}${boss ? ' boss' : ''}${open ? '' : ' locked'}`;
+      btn.disabled = !open;
+      btn.innerHTML = `<b>${boss ? '🏰' : '🍓'} ${lv}</b><small>${open ? starsText(lv) : '未解锁'}</small>`;
+      if (open) btn.addEventListener('click', () => startCampaign(lv));
+      map.appendChild(btn);
     }
+    refreshResourceNumbers();
+  }
+
+  function ensureSelectedFruit() {
+    const d = deck();
+    if (!selectedFruit || !UNIT_POOL.includes(selectedFruit)) selectedFruit = d[0] || UNIT_POOL[0];
+    return selectedFruit;
+  }
+
+  function renderSquad() {
+    ensureShellData();
+    const root = shellPage('shellLabPanel', 'shell-squad-page');
+    const d = deck();
+    const selected = ensureSelectedFruit();
+    const selectedInDeck = d.includes(selected);
+    const t = fruit(selected);
+    const lv = initLv(selected);
+    const frags = shell.fragments[selected] || 0;
+    const cost = initUpgradeCost(selected);
+    const unlocked = isUnlocked(selected);
+    const canUpgrade = unlocked && lv < INIT_MAX && frags >= cost;
+    const canDeck = unlocked && (selectedInDeck || d.length < DECK_SIZE);
+
+    root.innerHTML = `
+      ${resourceBarHtml()}
+      ${pageHeadHtml('SQUAD', '水果阵容', '编队、升级、查看水果职责')}
+      <section class="deck-slots" id="deckSlots">
+        ${Array.from({ length: DECK_SIZE }, (_, i) => {
+          const id = d[i];
+          return `<button class="deck-slot${id === selected ? ' selected' : ''}" data-fruit="${id || ''}">${id ? `${fruitDisplay(id)}<b>Lv.${initLv(id)}</b>` : '<span class="td-emoji-unit">+</span><b>空位</b>'}</button>`;
+        }).join('')}
+      </section>
+      <section class="fruit-detail-card">
+        <div class="fruit-portrait">
+          ${fruitDisplay(selected)}
+          <i>${roleText(selected)}</i>
+        </div>
+        <div class="fruit-detail-main">
+          <small>${unlocked ? '已解锁' : `第 ${typeof unlockLevelFor === 'function' ? unlockLevelFor(selected) : '?'} 关解锁`}</small>
+          <h3>${fruitName(selected)}</h3>
+          <p>${t.desc || '水果单位'}</p>
+          <div class="fruit-progress"><span>初始 Lv.${lv}</span><b>${lv >= INIT_MAX ? 'MAX' : `碎片 ${frags}/${cost}`}</b></div>
+        </div>
+        <div class="fruit-actions" id="fruitActions"></div>
+      </section>
+      <section class="fruit-codex" id="fruitCodex"></section>
+    `;
+
+    const actions = root.querySelector('#fruitActions');
+    actions.appendChild(makeButton('shell-btn', lv >= INIT_MAX ? '已满级' : `${cost}碎片升级`, () => {
+      if (!canUpgrade) return;
+      shell.fragments[selected] -= cost;
+      shell.fruitLv[selected] = Math.min(INIT_MAX, lv + 1);
+      saveAll();
+      renderSquad();
+    }, !canUpgrade));
+    actions.appendChild(makeButton('shell-btn secondary', selectedInDeck ? '下阵' : '上阵', () => {
+      if (!canDeck) return;
+      let next = d.slice();
+      if (selectedInDeck) {
+        if (next.length <= 1) return;
+        next = next.filter(x => x !== selected);
+      } else if (next.length < DECK_SIZE) {
+        next.push(selected);
+      }
+      meta.deck = next;
+      saveAll();
+      renderSquad();
+      renderHome();
+    }, !canDeck || (selectedInDeck && d.length <= 1)));
+
+    root.querySelectorAll('.deck-slot[data-fruit]').forEach(btn => {
+      const id = btn.dataset.fruit;
+      if (id) btn.addEventListener('click', () => { selectedFruit = id; renderSquad(); });
+    });
+
+    const codex = root.querySelector('#fruitCodex');
+    for (const id of UNIT_POOL) {
+      const open = isUnlocked(id);
+      const btn = document.createElement('button');
+      btn.className = `fruit-tile${id === selected ? ' selected' : ''}${open ? '' : ' locked'}${d.includes(id) ? ' in-deck' : ''}`;
+      btn.dataset.fruit = id;
+      btn.innerHTML = `${fruitDisplay(id)}<b>${fruitName(id)}</b><small>${open ? `Lv.${initLv(id)} · ${shell.fragments[id] || 0}片` : '未解锁'}</small>`;
+      btn.addEventListener('click', () => { selectedFruit = id; renderSquad(); });
+      codex.appendChild(btn);
+    }
+    refreshResourceNumbers();
+  }
+
+  function shopCard(title, desc, icon, price, enabled, onClick, extra = '') {
+    const card = document.createElement('article');
+    card.className = `shop-card${enabled ? '' : ' disabled'}`;
+    card.innerHTML = `
+      <div class="shop-card-icon">${icon}</div>
+      <div class="shop-card-main">
+        <h3>${title}</h3>
+        <p>${desc}</p>
+        ${extra ? `<small>${extra}</small>` : ''}
+      </div>
+    `;
+    card.appendChild(makeButton('shell-btn', price, onClick, !enabled));
+    return card;
+  }
+
+  function renderShop(tab = selectedShopTab) {
+    selectedShopTab = tab || 'gacha';
+    const root = shellPage('shopPanel', 'shell-shop-page');
+    root.innerHTML = `
+      ${resourceBarHtml()}
+      ${pageHeadHtml('SHOP', '果园商城', '补强水果、领取资源')}
+      <div class="shop-tabs">
+        <button id="shopTabGacha" class="${selectedShopTab === 'gacha' ? 'active' : ''}">碎片补强</button>
+        <button id="shopTabPack" class="${selectedShopTab === 'pack' ? 'active' : ''}">每日补给</button>
+      </div>
+      <section class="shop-feature" id="shopFeature"></section>
+      <section class="shop-grid" id="shopList"></section>
+    `;
+    root.querySelector('#shopTabGacha')?.addEventListener('click', () => renderShop('gacha'));
+    root.querySelector('#shopTabPack')?.addEventListener('click', () => renderShop('pack'));
+
+    const feature = root.querySelector('#shopFeature');
+    const list = root.querySelector('#shopList');
+    if (selectedShopTab === 'gacha') {
+      feature.innerHTML = `
+        <div>
+          <small>FRUIT POOL</small>
+          <h3>水果补给池</h3>
+          <p>重复水果转化为碎片，用于阵容页提升初始等级。</p>
+        </div>
+        <span>🎴</span>
+      `;
+      list.appendChild(shopCard('单抽', '随机获得水果碎片，可能解锁新水果。', '🎴', `${GACHA_COST_1}💎`, shell.gems >= GACHA_COST_1, () => doGacha(1), 'N/R/E 碎片池'));
+      list.appendChild(shopCard('十连抽', '十次连续抽取，九折并带 R+ 保底。', '🌈', `${GACHA_COST_10}💎`, shell.gems >= GACHA_COST_10, () => doGacha(10), `R保底 ${Math.max(0, 10 - (shell.pityR || 0))} 抽`));
+    } else {
+      const claimed = shell.lastDaily === todayKey();
+      feature.innerHTML = `
+        <div>
+          <small>DAILY SUPPLY</small>
+          <h3>${claimed ? '今日补给已领取' : '今日补给待领取'}</h3>
+          <p>补给和礼包都只消耗游戏内资源。</p>
+        </div>
+        <span>🎁</span>
+      `;
+      list.appendChild(shopCard('每日果汁补给', `领取 ${DAILY_GOLD}🍋 + ${DAILY_GEMS}💎`, '🎁', claimed ? '已领取' : '领取', !claimed, claimDaily, '每日刷新'));
+      list.appendChild(shopCard('全体攻击强化', '全部水果攻击科技 +1 级。', '🍒', '180🍋', (meta.gold || 0) >= 180, () => buyUpgradePack('atk_all', 180), '全队成长'));
+      list.appendChild(shopCard('果堡+果汁礼包', '果堡加固 +1，果汁泵 +1。', '🏰', '150🍋', (meta.gold || 0) >= 150, () => buyUpgradePack('fort_sp', 150), '防守补强'));
+    }
+    refreshResourceNumbers();
+  }
+
+  function renderArena() {
+    const root = shellPage('arenaPanel', 'shell-arena-page');
+    root.innerHTML = `
+      ${resourceBarHtml()}
+      ${pageHeadHtml('ARENA', '果园竞技', '房间对战与无尽天梯')}
+      <section class="arena-mode-card pvp-mode">
+        <div>
+          <small>REALTIME</small>
+          <h3>实时对战</h3>
+          <p>创建房间或输入房间码，对手准备后同步开局。</p>
+        </div>
+        <div class="pvp-status" id="pvpStatus">未连接</div>
+        <input id="pvpRoomInput" class="pvp-code" placeholder="输入房间码" maxlength="6">
+        <div class="pvp-actions">
+          <button class="shell-btn" id="btnPvpCreate">创建房间</button>
+          <button class="shell-btn" id="btnPvpJoin">加入房间</button>
+          <button class="shell-btn secondary" id="btnPvpReady">准备</button>
+          <button class="shell-btn secondary" id="btnPvpLeave">离开</button>
+        </div>
+      </section>
+      <section class="arena-mode-card ladder-mode">
+        <div>
+          <small>LADDER</small>
+          <h3>无尽天梯</h3>
+          <p>连续波次挑战，失败后按坚持波数结算。</p>
+        </div>
+        <div class="ladder-score"><span>历史最好</span><b id="ladderBest">${shell.ladderBest || 0}</b><small>波</small></div>
+        <button id="btnLadderStart" class="shell-primary-cta compact">开始天梯</button>
+      </section>
+    `;
+    root.querySelector('#btnPvpCreate')?.addEventListener('click', () => window.pvpClient?.createRoom());
+    root.querySelector('#btnPvpJoin')?.addEventListener('click', () => window.pvpClient?.joinRoom(root.querySelector('#pvpRoomInput')?.value || ''));
+    root.querySelector('#btnPvpReady')?.addEventListener('click', () => {
+      const ready = !window.pvpClient?.getStatus().ready;
+      window.pvpClient?.setReady(ready);
+    });
+    root.querySelector('#btnPvpLeave')?.addEventListener('click', () => window.pvpClient?.leaveRoom());
+    root.querySelector('#btnLadderStart')?.addEventListener('click', startLadder);
+    renderPvpStatus();
+    refreshResourceNumbers();
+  }
+
+  function renderPvpStatus(status = null) {
+    const s = status || window.pvpClient?.getStatus?.() || {};
+    const el = document.getElementById('pvpStatus');
+    const readyBtn = document.getElementById('btnPvpReady');
+    const input = document.getElementById('pvpRoomInput');
+    if (input && s.roomId) input.value = s.roomId;
+    if (readyBtn) readyBtn.textContent = s.ready ? '取消准备' : '准备';
+    if (!el) return;
+    const seat = s.playerIndex >= 0 ? `P${s.playerIndex + 1}` : '未入座';
+    const peer = s.peerJoined ? (s.peerReady ? '对手已准备' : '对手未准备') : '等待对手';
+    el.innerHTML = `${s.status || '未连接'} · ${seat}<br>房间 ${s.roomId || '----'} · ${s.ready ? '我方已准备' : '我方未准备'} · ${peer}`;
+  }
+
+  function showTab(tab) {
+    activeTab = tab || 'home';
+    hidePanels();
+    if (activeTab === 'home') {
+      document.getElementById('menuPanel')?.classList.remove('hide');
+      renderHome();
+    } else if (activeTab === 'battle') {
+      document.getElementById('campaignPanel')?.classList.remove('hide');
+      renderCampaign();
+    } else if (activeTab === 'upgrade') {
+      document.getElementById('shellLabPanel')?.classList.remove('hide');
+      renderSquad();
+    } else if (activeTab === 'shop') {
+      document.getElementById('shopPanel')?.classList.remove('hide');
+      renderShop(selectedShopTab);
+    } else if (activeTab === 'arena') {
+      document.getElementById('arenaPanel')?.classList.remove('hide');
+      renderArena();
+    }
+    const activePanel = document.querySelector('.panel:not(.hide) .panel-inner');
+    if (activePanel) activePanel.scrollTop = 0;
+    updateNav();
   }
 
   function startCampaign(level) {
@@ -336,45 +581,6 @@
     syncNavVisibility();
   }
 
-  function refreshAllShellNumbers() {
-    if (typeof refreshGold === 'function') refreshGold();
-    const gold = meta.gold || 0;
-    const gems = shell.gems || 0;
-    ['shellGold'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = gold; });
-    ['shellGems','labGems'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = gems; });
-  }
-
-  function shopRow(name, desc, action, enabled, onClick) {
-    const row = document.createElement('div');
-    row.className = 'shell-row' + (enabled ? '' : ' disabled');
-    row.innerHTML = `<div><b>${name}</b><small>${desc}</small></div><button class="shell-btn" ${enabled ? '' : 'disabled'}>${action}</button>`;
-    if (enabled && onClick) row.querySelector('button').addEventListener('click', onClick);
-    return row;
-  }
-
-  function renderShop(tab) {
-    tab = tab || 'gacha';
-    const list = document.getElementById('shopList');
-    if (!list) return;
-    document.getElementById('shopTabGacha')?.classList.toggle('active', tab === 'gacha');
-    document.getElementById('shopTabPack')?.classList.toggle('active', tab === 'pack');
-    refreshAllShellNumbers();
-    list.innerHTML = '';
-    if (tab === 'gacha') {
-      list.appendChild(shopRow('🎴 单抽', '随机获得水果碎片，概率解锁新水果。', GACHA_COST_1 + '💎', shell.gems >= GACHA_COST_1, () => doGacha(1)));
-      list.appendChild(shopRow('🌈 十连抽', '十次连续抽取，九折。', GACHA_COST_10 + '💎', shell.gems >= GACHA_COST_10, () => doGacha(10)));
-      const hint = document.createElement('div');
-      hint.className = 'shell-row';
-      hint.innerHTML = '<div><b>碎片用途</b><small>抽到重复水果会获得碎片；碎片在“养成”页提升初始等级。</small></div>';
-      list.appendChild(hint);
-    } else {
-      const claimed = shell.lastDaily === todayKey();
-      list.appendChild(shopRow('🎁 每日果汁补给', `领取 ${DAILY_GOLD}🍋 + ${DAILY_GEMS}💎`, claimed ? '已领取' : '领取', !claimed, claimDaily));
-      list.appendChild(shopRow('🍒 全体攻击强化', '全部水果攻击科技 +1 级。', '180🍋', (meta.gold || 0) >= 180, () => buyUpgradePack('atk_all', 180)));
-      list.appendChild(shopRow('🏰 果堡+果汁礼包', '果堡加固 +1，果汁泵 +1。', '150🍋', (meta.gold || 0) >= 150, () => buyUpgradePack('fort_sp', 150)));
-    }
-  }
-
   function claimDaily() {
     if (shell.lastDaily === todayKey()) return;
     shell.lastDaily = todayKey();
@@ -382,6 +588,7 @@
     meta.gold = (meta.gold || 0) + DAILY_GOLD;
     saveAll();
     renderShop('pack');
+    renderHome();
   }
 
   function buyUpgradePack(kind, cost) {
@@ -389,7 +596,7 @@
     meta.gold -= cost;
     if (kind === 'atk_all') {
       for (const id of UNIT_POOL) {
-        const key = typeof upgradeKey === 'function' ? upgradeKey(id, 'atk') : id + '_atk';
+        const key = typeof upgradeKey === 'function' ? upgradeKey(id, 'atk') : `${id}_atk`;
         meta.upgrades[key] = Math.min(UPGRADE_MAX, (meta.upgrades[key] || 0) + 1);
       }
     } else {
@@ -400,30 +607,44 @@
     renderShop('pack');
   }
 
-  // N/R/E 抽卡(设计档 §8.1):概率 65/25/10,十连保底 R+,30 抽保底 E,重复转碎片。
-  // 池按 TYPES.rarity 动态取(新水果自动纳入)。期望:0.65×5+0.25×10+0.10×20=7.75/抽 → 十连 77.5 碎片。
   const GACHA_TIERS = [
-    { key: 'N', label: '普通', weight: 65, frag: 5,  color: '#8aad6a', rarities: ['normal'] },
+    { key: 'N', label: '普通', weight: 65, frag: 5, color: '#8aad6a', rarities: ['normal'] },
     { key: 'R', label: '稀有', weight: 25, frag: 10, color: '#4db6ff', rarities: ['rare'] },
     { key: 'E', label: '史诗', weight: 10, frag: 20, color: '#ffc93c', rarities: ['epic'] },
   ];
+
   function gachaPool(tier) {
     const ids = UNIT_POOL.filter(id => TYPES[id] && tier.rarities.includes(TYPES[id].rarity));
     return ids.length ? ids : UNIT_POOL;
   }
-  const tierByKey = k => GACHA_TIERS.find(t => t.key === k);
+
+  function tierByKey(k) {
+    return GACHA_TIERS.find(t => t.key === k);
+  }
+
   function rollTier() {
-    if ((shell.pityE || 0) >= 29) return tierByKey('E');                                        // 30 抽保底 E
-    if ((shell.pityR || 0) >= 9) return Math.random() < 0.15 ? tierByKey('E') : tierByKey('R');  // 10 抽保底 R+
+    if ((shell.pityE || 0) >= 29) return tierByKey('E');
+    if ((shell.pityR || 0) >= 9) return Math.random() < 0.15 ? tierByKey('E') : tierByKey('R');
     const total = GACHA_TIERS.reduce((s, t) => s + t.weight, 0);
     let r = Math.random() * total;
-    for (const t of GACHA_TIERS) { r -= t.weight; if (r <= 0) return t; }
+    for (const t of GACHA_TIERS) {
+      r -= t.weight;
+      if (r <= 0) return t;
+    }
     return GACHA_TIERS[0];
   }
+
   function bumpPity(key) {
-    if (key === 'E') { shell.pityE = 0; shell.pityR = 0; }
-    else if (key === 'R') { shell.pityR = 0; shell.pityE = (shell.pityE || 0) + 1; }
-    else { shell.pityR = (shell.pityR || 0) + 1; shell.pityE = (shell.pityE || 0) + 1; }
+    if (key === 'E') {
+      shell.pityE = 0;
+      shell.pityR = 0;
+    } else if (key === 'R') {
+      shell.pityR = 0;
+      shell.pityE = (shell.pityE || 0) + 1;
+    } else {
+      shell.pityR = (shell.pityR || 0) + 1;
+      shell.pityE = (shell.pityE || 0) + 1;
+    }
   }
 
   function doGacha(count) {
@@ -435,18 +656,17 @@
     let gotRplus = false;
     for (let i = 0; i < count; i++) {
       let tier = rollTier();
-      if (count === 10 && i === 9 && !gotRplus && tier.key === 'N') tier = tierByKey('R'); // 十连兜底 R+
+      if (count === 10 && i === 9 && !gotRplus && tier.key === 'N') tier = tierByKey('R');
       if (tier.key !== 'N') gotRplus = true;
       bumpPity(tier.key);
       const pool = gachaPool(tier);
       const id = pool[Math.floor(Math.random() * pool.length)] || UNIT_POOL[0];
-      const t = TYPES[id] || {};
+      const t = fruit(id);
       const isNew = !meta.unlocked.includes(id);
       if (isNew) meta.unlocked.push(id);
-      // 新 → 解锁 + 碎片;重复 → 转碎片(碎片即养成货币)
-      shell.fragments[id] = (shell.fragments[id] || 0) + tier.frag;      // 可花费余额
+      shell.fragments[id] = (shell.fragments[id] || 0) + tier.frag;
       meta.shardsTotal = meta.shardsTotal || {};
-      meta.shardsTotal[id] = (meta.shardsTotal[id] || 0) + tier.frag;    // 单调累计 → 驱动养成/星级
+      meta.shardsTotal[id] = (meta.shardsTotal[id] || 0) + tier.frag;
       results.push({ id, icon: t.icon || '?', name: t.name || id, tier, isNew, total: shell.fragments[id] });
     }
     saveAll();
@@ -463,80 +683,11 @@
     for (const r of results) {
       const item = document.createElement('div');
       item.className = 'gacha-result';
-      item.style.border = '2px solid ' + r.tier.color;
+      item.style.border = `2px solid ${r.tier.color}`;
       item.innerHTML = `<span class="ico">${r.icon}</span><div><b>${r.name}</b><small style="color:${r.tier.color};display:block;font-weight:900;">${r.tier.label}${r.isNew ? ' · 新解锁' : ''}</small><small style="display:block;color:#7d9b5d;">累计 ${r.total} 碎片</small></div><span class="frag">+${r.tier.frag}</span>`;
       box.appendChild(item);
     }
     overlay.querySelector('#closeGacha').addEventListener('click', () => overlay.remove());
-  }
-
-  function renderLab() {
-    ensureShellData();
-    refreshAllShellNumbers();
-    const list = document.getElementById('shellLabList');
-    const count = document.getElementById('labDeckCount');
-    if (!list) return;
-    const deck = typeof normalizeDeck === 'function' ? normalizeDeck(meta.deck) : (meta.deck || []);
-    if (count) count.textContent = deck.length + '/5';
-    list.innerHTML = '';
-    for (const id of UNIT_POOL) {
-      const t = TYPES[id];
-      const unlocked = isUnlocked(id);
-      const lv = initLv(id);
-      const frags = shell.fragments[id] || 0;
-      const cost = initUpgradeCost(id);
-      const inDeck = deck.includes(id);
-      const row = document.createElement('div');
-      row.className = 'shell-row lab-row' + (unlocked ? '' : ' disabled');
-      const canUpgrade = unlocked && lv < INIT_MAX && frags >= cost;
-      const canDeck = unlocked && (inDeck || deck.length < DECK_SIZE);
-      row.innerHTML = `
-        <div class="lab-main"><span class="lab-icon">${t.icon}</span><div><b>${t.name} <span class="deck-badge">初始Lv.${lv}</span>${inDeck ? ' <span class="deck-badge">上阵</span>' : ''}</b><small>${roleLabel(t.role)} · ${t.desc}</small><small class="${unlocked ? '' : 'locked-note'}">${unlocked ? `碎片 ${frags}/${lv < INIT_MAX ? cost : 'MAX'} · 召唤直接 Lv.${lv}` : `第${unlockLevelFor(id)}关或抽卡解锁`}</small></div></div>
-        <div class="lab-actions"><button class="shell-btn lab-up" ${canUpgrade ? '' : 'disabled'}>${lv >= INIT_MAX ? 'MAX' : cost + '碎片升级'}</button><button class="shell-btn lab-deck" ${canDeck ? '' : 'disabled'}>${inDeck ? '下阵' : '上阵'}</button></div>`;
-      row.querySelector('.lab-up').addEventListener('click', () => {
-        if (!canUpgrade) return;
-        shell.fragments[id] -= cost;
-        shell.fruitLv[id] = Math.min(INIT_MAX, lv + 1);
-        saveAll();
-        renderLab();
-      });
-      row.querySelector('.lab-deck').addEventListener('click', () => {
-        if (!canDeck) return;
-        let next = deck.slice();
-        if (inDeck) {
-          if (next.length <= 1) return;
-          next = next.filter(x => x !== id);
-        } else if (next.length < DECK_SIZE) next.push(id);
-        meta.deck = next;
-        saveAll();
-        renderLab();
-        refreshAllShellNumbers();
-      });
-      list.appendChild(row);
-    }
-  }
-
-  function renderLadder() {
-    const el = document.getElementById('ladderBest');
-    if (el) el.textContent = shell.ladderBest || 0;
-  }
-
-  function renderPvpStatus(status = null) {
-    const s = status || window.pvpClient?.getStatus?.() || {};
-    const el = document.getElementById('pvpStatus');
-    const readyBtn = document.getElementById('btnPvpReady');
-    const input = document.getElementById('pvpRoomInput');
-    if (input && s.roomId) input.value = s.roomId;
-    if (readyBtn) readyBtn.textContent = s.ready ? '取消准备' : '准备';
-    if (!el) return;
-    const seat = s.playerIndex >= 0 ? `P${s.playerIndex + 1}` : '未入座';
-    const peer = s.peerJoined ? (s.peerReady ? '对手已准备' : '对手未准备') : '等待对手';
-    el.innerHTML = `${s.status || '未连接'} · ${seat}<br>房间 ${s.roomId || '----'} · ${s.ready ? '我方已准备' : '我方未准备'} · ${peer}`;
-  }
-
-  function renderArena() {
-    renderLadder();
-    renderPvpStatus();
   }
 
   function startLadder() {
@@ -562,40 +713,43 @@
   function showLadderResult() {
     const cleared = Math.max(0, (state.endlessWave || 1) - 1);
     const best = shell.ladderBest || 0;
-    if (cleared > best) { shell.ladderBest = cleared; saveShell(); }
+    if (cleared > best) {
+      shell.ladderBest = cleared;
+      saveShell();
+    }
     const reward = cleared * 8;
     meta.gold = (meta.gold || 0) + reward;
     if (typeof saveMeta === 'function') saveMeta();
 
-    const panel = document.getElementById('resultPanel');
+    const panelEl = document.getElementById('resultPanel');
     const title = document.getElementById('resultTitle');
     const detail = document.getElementById('resultDetail');
     let retry = document.getElementById('btnRetry');
     let next = document.getElementById('btnNext');
     let menu = document.getElementById('btnMenu');
-    if (!panel || !title || !detail || !retry || !menu) return;
+    if (!panelEl || !title || !detail || !retry || !menu) return;
     next?.classList.add('hide');
-    title.textContent = '🏁 天梯挑战结束';
-    detail.innerHTML = `${cleared > best ? '🎉 新纪录！<br>' : ''}坚持 <b>${cleared}</b> 波<br>历史最佳 ${Math.max(best, cleared)} 波<br>🍋 +${reward}<br>⚔ 击破 ${state.kills || 0}`;
+    title.textContent = '🏆 天梯挑战结束';
+    detail.innerHTML = `${cleared > best ? '🎉 新纪录！<br>' : ''}坚持 <b>${cleared}</b> 波<br>历史最好 ${Math.max(best, cleared)} 波<br>🍋 +${reward}<br>击破 ${state.kills || 0}`;
 
     const retryClone = retry.cloneNode(true);
     retry.parentNode.replaceChild(retryClone, retry);
     retry = retryClone;
     retry.textContent = '再来一次';
     retry.classList.remove('hide');
-    retry.addEventListener('click', () => { panel.classList.add('hide'); startLadder(); });
+    retry.addEventListener('click', () => { panelEl.classList.add('hide'); startLadder(); });
 
     const menuClone = menu.cloneNode(true);
     menu.parentNode.replaceChild(menuClone, menu);
     menu = menuClone;
     menu.textContent = '返回竞技';
     menu.addEventListener('click', () => {
-      panel.classList.add('hide');
+      panelEl.classList.add('hide');
       state.phase = 'menu';
       showTab('arena');
       syncNavVisibility();
     });
-    panel.classList.remove('hide');
+    panelEl.classList.remove('hide');
   }
 
   function hookGameOver() {
@@ -611,21 +765,92 @@
     onGameOver._productShellWrapped = true;
   }
 
+  function installSystemHooks() {
+    if (typeof generateLevel === 'function' && !generateLevel._shellStagesV65) {
+      const oldGenerate = generateLevel;
+      generateLevel = function generateLevelV65(k) {
+        if (k >= 1 && k <= 20) {
+          const boss = k % 5 === 0;
+          const enemyLv = Number((1 + (k - 1) * 0.18 + (boss ? 0.20 : 0)).toFixed(2));
+          const wallBase = boss ? 96 : 58;
+          const wallGrow = boss ? 1.125 : 1.088;
+          return {
+            id: k,
+            isBoss: boss,
+            enemyInitLevel: enemyLv,
+            enemyWallHp: Math.round(wallBase * Math.pow(wallGrow, k - 1)),
+            enemySpawnInterval: Math.max(4.15, 6.05 - k * 0.12),
+            reward: stageReward(k) + (boss ? 28 : 0),
+            desc: boss ? `第 ${k} 关 · 腐坏果堡 Boss` : `第 ${k} 关 · 腐坏水果 Lv${enemyLv.toFixed(1)}`,
+          };
+        }
+        return oldGenerate(k);
+      };
+      generateLevel._shellStagesV65 = true;
+    }
+
+    if (typeof createBall === 'function' && !createBall._shellInitLvV65) {
+      const oldCreateBall = createBall;
+      createBall = function createBallWithInitialLevel(typeId, level = 1) {
+        const finalLevel = state && state._shellCreatingPlayerBall ? applyInitLevel(typeId, level) : level;
+        return oldCreateBall(typeId, finalLevel);
+      };
+      createBall._shellInitLvV65 = true;
+    }
+
+    if (typeof initPlayerOpening === 'function' && !initPlayerOpening._shellInitLvV65) {
+      const oldInitPlayerOpening = initPlayerOpening;
+      initPlayerOpening = function initPlayerOpeningV65(k) {
+        state._shellCreatingPlayerBall = true;
+        try { return oldInitPlayerOpening(k); }
+        finally { state._shellCreatingPlayerBall = false; }
+      };
+      initPlayerOpening._shellInitLvV65 = true;
+    }
+
+    if (typeof summonFruitAt === 'function' && !summonFruitAt._shellInitLvV65) {
+      const oldSummon = summonFruitAt;
+      summonFruitAt = function summonFruitAtV65(r, c) {
+        state._shellCreatingPlayerBall = true;
+        try { return oldSummon(r, c); }
+        finally { state._shellCreatingPlayerBall = false; }
+      };
+      summonFruitAt._shellInitLvV65 = true;
+    }
+
+    if (typeof autoSpawnBall === 'function' && !autoSpawnBall._shellInitLvV65) {
+      const oldAutoSpawn = autoSpawnBall;
+      autoSpawnBall = function autoSpawnBallV65(slots, level = 1, enemy = false) {
+        if (!enemy && slots === state.playerSlots) {
+          state._shellCreatingPlayerBall = true;
+          try { return oldAutoSpawn(slots, level, enemy); }
+          finally { state._shellCreatingPlayerBall = false; }
+        }
+        return oldAutoSpawn(slots, level, enemy);
+      };
+      autoSpawnBall._shellInitLvV65 = true;
+    }
+  }
+
+  function syncNavVisibility() {
+    const nav = document.getElementById('bottomNav');
+    if (!nav) return;
+    const show = state.phase === 'menu';
+    nav.classList.toggle('shell-hidden', !show);
+    if (show && prevPhase && prevPhase !== 'menu') showTab('home');
+    prevPhase = state.phase;
+  }
+
   function init() {
     ensureShellData();
+    document.body.classList.add('shell-v65');
     installSystemHooks();
-    injectStyle();
-    ensureStageGrid();
+    ensureStaticPanels();
     ensureBottomNav();
-    ensureShopPanel();
-    ensureLabPanel();
-    ensureArenaPanel();
-    replaceStartButton();
     hookGameOver();
-    const deckBtn = document.getElementById('btnDeck');
-    if (deckBtn) deckBtn.style.display = 'none';
     window.productShellShowTab = showTab;
-    showTab('battle');
+    window.pvpClient?.onStatus(renderPvpStatus);
+    showTab('home');
     setInterval(syncNavVisibility, 180);
     syncNavVisibility();
   }

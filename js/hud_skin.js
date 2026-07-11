@@ -63,6 +63,7 @@ function nextActionCostV60() {
 }
 
 function drawOperationResourceStripV60() {
+  return drawOperationResourceStripV61();
   const y = LAYOUT.operationY || (LAYOUT.playerWallY + LAYOUT.wallH + 16);
   const x = BOARD_X;
   const h = LAYOUT.operationH || 38;
@@ -103,7 +104,7 @@ function drawOperationResourceStripV60() {
   ctx.textAlign = 'center';
   ctx.font = '800 9px sans-serif';
   ctx.fillStyle = '#6b7d68';
-  ctx.fillText('下次消耗', actionX + 39, y + 14);
+  ctx.fillText('', actionX + 39, y + 14);
   ctx.font = '950 15px sans-serif';
   ctx.fillStyle = canAct ? '#167a48' : '#df5964';
   ctx.fillText(String(cost), actionX + 39, y + 27);
