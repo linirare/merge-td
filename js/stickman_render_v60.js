@@ -18,11 +18,12 @@
 /* ---------- 1) 纯几何(无游戏依赖) ---------- */
 
 // contact 帧:前脚跟着地/后脚蹬地/手开/身最低;passing 帧:双脚交错/手近身/身最高
+// 手臂与"对侧腿"同摆(右腿前↔左臂前),自然步态。
 const STICK_KEYS = [
-  { rf: 1,    lf: -0.9, ra: 0.8,  la: -0.8, body: -1 },
-  { rf: 0,    lf: 0,    ra: 0,    la: 0,    body: 1 },
-  { rf: -0.9, lf: 1,    ra: -0.8, la: 0.8,  body: -1 },
-  { rf: 0,    lf: 0,    ra: 0,    la: 0,    body: 1 },
+  { rf: 1,    lf: -0.9, ra: -0.8, la: 0.8,  body: -1 }, // contact R: 右腿前 + 左臂前
+  { rf: 0,    lf: 0,    ra: 0,    la: 0,    body: 1 },  // passing
+  { rf: -0.9, lf: 1,    ra: 0.8,  la: -0.8, body: -1 }, // contact L: 左腿前 + 右臂前
+  { rf: 0,    lf: 0,    ra: 0,    la: 0,    body: 1 },  // passing
 ];
 
 function stickLerpK(phase) {
@@ -47,20 +48,50 @@ function stickWeaponForRole(role) {
 
 /* o = { cx, groundY, scale(s), phase, dir(±1), headColor, emoji, weapon,
         atk, atkT, ink, sideColor, hitFlash } */
+function stickPaletteV60(o) {
+  const enemy = o.sideColor === '#ff4a5f';
+  const player = o.sideColor === '#22c55e';
+  if (enemy) {
+    return {
+      ink: '#7f2635',
+      soft: 'rgba(255,108,126,0.18)',
+      rim: 'rgba(255,194,203,0.82)',
+      headBase: 'rgba(255,246,232,0.74)',
+    };
+  }
+  if (player) {
+    return {
+      ink: '#22663e',
+      soft: 'rgba(74,211,114,0.18)',
+      rim: 'rgba(218,255,225,0.86)',
+      headBase: 'rgba(255,250,226,0.76)',
+    };
+  }
+  return {
+    ink: '#40513c',
+    soft: 'rgba(132,173,107,0.17)',
+    rim: 'rgba(255,250,226,0.78)',
+    headBase: 'rgba(255,250,226,0.72)',
+  };
+}
+
 function drawStickmanShape(ctx, o) {
   const s = o.scale;
   const cx = o.cx, GROUND = o.groundY, dir = o.dir >= 0 ? 1 : -1;
-  const ink = o.hitFlash > 0 ? '#ffffff' : (o.ink || '#1b1b1b');
+  const pal = stickPaletteV60(o);
+  const baseInk = o.ink && o.ink !== '#1b1b1b' ? o.ink : pal.ink;
+  const ink = o.hitFlash > 0 ? '#ffffff' : baseInk;
   const k = stickLerpK(o.phase || 0);
   const lean = 0.28 * dir;               // ~16° 前倾
-  const stride = s * 9;
+  const stride = s * 7.8;
   const bob = s * 2.5;
 
   const hipX = cx, hipY = GROUND - s * 12 + k.body * bob;
-  const bodyLen = s * 10;
-  const shX = hipX + Math.sin(lean) * bodyLen, shY = hipY - Math.cos(lean) * bodyLen;
+  const bodyLen = s * 7.6;                // 躯干缩短(更 Q 版)
+  const lungeX = dir * (o.atkT || 0) * s * 2.4; // 出手时上半身前刺(腿不动)
+  const shX = hipX + Math.sin(lean) * bodyLen + lungeX, shY = hipY - Math.cos(lean) * bodyLen;
   const neck = s * 4;
-  const hx = shX + Math.sin(lean) * neck, hy = shY - Math.cos(lean) * neck - s * 3.5;
+  const hx = shX + Math.sin(lean) * neck, hy = shY - Math.cos(lean) * neck - s * 2.6; // 头更贴肩
 
   // 腿(远腿半透明模拟纵深)
   function leg(fn, alpha) {
@@ -68,7 +99,7 @@ function drawStickmanShape(ctx, o) {
     const fx = hipX + dir * fn * stride, fy = GROUND;
     const lift = Math.abs(fn) > 0.3 ? Math.abs(fn) * s * 3 : 0;
     const kx = hipX + dir * fn * stride * 0.3 + dir * s * 2.5, ky = hipY + (fy - hipY) * 0.4 - lift;
-    ctx.strokeStyle = ink; ctx.lineWidth = s * 1.5; ctx.lineCap = 'round';
+    ctx.strokeStyle = ink; ctx.lineWidth = s * 1.75; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(hipX, hipY);
     ctx.quadraticCurveTo(kx, ky, fx, fy - lift * 0.6); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(fx - s * 1.5, fy - lift * 0.6); ctx.lineTo(fx + s * 1.5, fy - lift * 0.6); ctx.stroke();
@@ -77,77 +108,133 @@ function drawStickmanShape(ctx, o) {
   ctx.globalAlpha = 1;
 
   // 躯干
-  ctx.strokeStyle = ink; ctx.lineWidth = s * 1.8; ctx.lineCap = 'round';
+  ctx.save();
+  ctx.translate((hipX + shX) / 2, (hipY + shY) / 2);
+  ctx.rotate(lean * 0.72);
+  ctx.fillStyle = pal.soft;
+  ctx.strokeStyle = pal.rim;
+  ctx.lineWidth = Math.max(0.8, s * 0.34);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, s * 3.2, s * 5.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.strokeStyle = ink; ctx.lineWidth = s * 2.05; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(hipX, hipY); ctx.lineTo(shX, shY); ctx.stroke();
 
   // 手臂(交替摆)
   const arm = s * 9;
   const rAng = 0.4 + k.ra * 0.8 + lean, rx = shX + Math.cos(rAng) * arm, ry = shY + Math.sin(rAng) * arm;
   const lAng = -2.8 + k.la * 0.8 + lean, lx = shX + Math.cos(lAng) * arm, ly = shY + Math.sin(lAng) * arm;
-  ctx.lineWidth = s * 1.3; ctx.strokeStyle = ink;
+  ctx.lineWidth = s * 1.55; ctx.strokeStyle = ink;
   ctx.beginPath(); ctx.moveTo(shX, shY); ctx.lineTo(rx, ry); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(shX, shY); ctx.lineTo(lx, ly); ctx.stroke();
 
-  // 武器
-  drawStickWeapon(ctx, o.weapon, s, dir, { rx, ry, lx, ly }, o.atk, o.atkT || 0, o.sideColor || '#888');
+  // 武器(传入肩点做连接、果色做点缀、ink 做描边、fighting 决定备战姿态)
+  drawStickWeapon(ctx, o.weapon, s, dir, { rx, ry, lx, ly, shX, shY }, o.atkT || 0, o.fighting, o.sideColor || '#888', o.headColor || '#8a6b46', ink);
 
-  // 水果头:原色圆盘 + 侧色描边 + 眼睛 + emoji
-  const headR = s * 3.6;
-  ctx.fillStyle = o.hitFlash > 0 ? '#ffffff' : (o.headColor || '#34c96b');
-  ctx.beginPath(); ctx.arc(hx, hy, headR, 0, Math.PI * 2); ctx.fill();
-  if (o.sideColor) { ctx.strokeStyle = o.sideColor; ctx.lineWidth = s * 0.7; ctx.stroke(); }
-  // 眼睛(朝 dir)
-  ctx.fillStyle = '#141414';
-  ctx.beginPath(); ctx.arc(hx + dir * s * 0.4, hy - s * 0.2, s * 0.85, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(hx + dir * s * 1.9, hy - s * 0.2, s * 0.85, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(hx + dir * s * 0.5, hy - s * 0.5, s * 0.26, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(hx + dir * s * 2.1, hy - s * 0.5, s * 0.26, 0, Math.PI * 2); ctx.fill();
+  // 水果头 = emoji 本体(放大,成为视觉主体);不叠彩色脸+眼睛
+  const headR = s * 7.15;
+  if (o.hitFlash > 0) {
+    ctx.save(); ctx.globalAlpha = 0.8; ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(hx, hy, headR * 1.05, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  }
+  ctx.save();
+  ctx.fillStyle = pal.headBase;
+  ctx.strokeStyle = pal.rim;
+  ctx.lineWidth = Math.max(1, s * 0.42);
+  ctx.beginPath();
+  ctx.arc(hx, hy, headR * 1.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+  // 淡淡的果色光晕(仅托底,不喧宾夺主)
+  ctx.save();
+  ctx.globalAlpha = 0.22; ctx.fillStyle = o.headColor || '#34c96b';
+  ctx.beginPath(); ctx.arc(hx, hy, headR * 0.98, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // 侧色细环(敌我识别)
+  if (o.sideColor) {
+    ctx.strokeStyle = o.sideColor; ctx.lineWidth = Math.max(1, s * 0.58);
+    ctx.beginPath(); ctx.arc(hx, hy, headR * 1.02, 0, Math.PI * 2); ctx.stroke();
+  }
+  // emoji 头
   if (o.emoji) {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `${Math.round(headR * 1.35)}px sans-serif`;
-    ctx.globalAlpha = 0.9;
-    ctx.fillText(o.emoji, hx, hy - headR - s * 2.2);
-    ctx.globalAlpha = 1;
+    ctx.font = `${Math.round(headR * 2.15)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
+    ctx.fillText(o.emoji, hx, hy);
+  } else {
+    ctx.fillStyle = o.headColor || '#34c96b';
+    ctx.beginPath(); ctx.arc(hx, hy, headR, 0, Math.PI * 2); ctx.fill();
   }
   ctx.textBaseline = 'alphabetic';
   return { hx, hy, headR, shX, shY };
 }
 
-function drawStickWeapon(ctx, weapon, s, dir, hands, atk, atkT, tint) {
-  const { rx, ry, lx, ly } = hands;
-  if (weapon === 'bow') {
-    const bx = lx + dir * 2, by = ly - 2 * s, pull = (atk ? atkT : 0) * s * 8;
-    ctx.strokeStyle = '#8a6b46'; ctx.lineWidth = s; ctx.beginPath(); ctx.arc(bx + pull * 0.2, by, s * 5, -1.1, 1.1); ctx.stroke();
-    ctx.strokeStyle = '#6f5636'; ctx.lineWidth = s * 0.5;
-    ctx.beginPath(); ctx.moveTo(bx + s * 4, by - s); ctx.lineTo(bx - pull, by + pull * 0.1); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(bx + s * 4, by + s); ctx.lineTo(bx - pull, by - pull * 0.1); ctx.stroke();
-    if (atk && atkT > 0.5) { ctx.strokeStyle = '#fff'; ctx.lineWidth = s * 1.1; ctx.beginPath(); ctx.moveTo(bx + 2, by); ctx.lineTo(bx + dir * s * 6, by); ctx.stroke(); }
+function drawStickWeapon(ctx, weapon, s, dir, hands, strike, fighting, tint, accent, ink) {
+  const { rx, ry, lx, ly, shX, shY } = hands;
+  accent = accent || '#8a6b46';
+  ink = ink || '#40513c';
+  const metal = 'rgba(255,250,226,0.9)';
+  const cord = 'rgba(90,74,48,0.6)';
+  const k = strike || 0;              // 出手进度 1→0(1=刚打出那一下)
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // 块头填充助手:低透明填色(果色/银) + 粗 ink 描边 —— 粗线条 Q 版大武器
+  function chunk(fill, lw) { ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = fill; ctx.fill(); ctx.restore(); ctx.strokeStyle = ink; ctx.lineWidth = lw; ctx.stroke(); }
+
+  if (weapon === 'sword') {
+    // 宽刃大刀:横向前劈(绝不举过头,避开放大的水果头)。k=1 后引 → k=0 前劈
+    const ang = 0.15 + k * 2.2;
+    ctx.save(); ctx.translate(rx, ry); ctx.scale(dir, 1); ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 1.5); ctx.lineTo(s * 9, -s * 0.8); ctx.lineTo(s * 11.5, 0); ctx.lineTo(s * 9, s * 0.8); ctx.lineTo(0, s * 1.5); ctx.closePath();
+    chunk(metal, s * 1.9);
+    ctx.strokeStyle = accent; ctx.lineWidth = s * 2.6; ctx.beginPath(); ctx.moveTo(-s * 0.7, -s * 2.4); ctx.lineTo(-s * 0.7, s * 2.4); ctx.stroke();
+    if (k > 0.3) { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = s * 1.3; ctx.beginPath(); ctx.arc(0, 0, s * 11.5, -0.5, 1.1); ctx.stroke(); }
+    ctx.restore();
   } else if (weapon === 'spear') {
-    ctx.save(); ctx.translate(rx, ry); ctx.rotate(0.15 * dir + (atk ? -0.25 * atkT : 0)); ctx.scale(dir, 1);
-    ctx.strokeStyle = '#a08060'; ctx.lineWidth = s; ctx.beginPath(); ctx.moveTo(-s * 2, 0); ctx.lineTo(s * 9, 0); ctx.stroke();
-    ctx.fillStyle = '#dfe3e8'; ctx.beginPath(); ctx.moveTo(s * 9, 0); ctx.lineTo(s * 5, -s * 1.8); ctx.lineTo(s * 6.5, 0); ctx.lineTo(s * 5, s * 1.8); ctx.fill();
+    // 长杆 + 宽枪头,向前突刺
+    const thrust = k * s * 7;
+    ctx.save(); ctx.translate(rx, ry); ctx.rotate(0.1 * dir); ctx.scale(dir, 1); ctx.translate(thrust, 0);
+    ctx.strokeStyle = accent; ctx.lineWidth = s * 2.1; ctx.beginPath(); ctx.moveTo(-s * 4, 0); ctx.lineTo(s * 9, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s * 8, -s * 2); ctx.lineTo(s * 13, 0); ctx.lineTo(s * 8, s * 2); ctx.closePath();
+    chunk(metal, s * 1.7);
     ctx.restore();
   } else if (weapon === 'cannon') {
-    ctx.save(); ctx.translate(rx, ry); ctx.scale(dir, 1); ctx.rotate(-0.12);
-    ctx.fillStyle = '#5a5f6b'; ctx.strokeStyle = '#33373f'; ctx.lineWidth = s * 0.6;
-    ctx.beginPath(); ctx.moveTo(0, -s * 1.8); ctx.lineTo(s * 7, -s * 2.4); ctx.lineTo(s * 7, s * 2.4); ctx.lineTo(0, s * 1.8); ctx.closePath(); ctx.fill(); ctx.stroke();
-    if (atk && atkT > 0.6) { ctx.fillStyle = 'rgba(255,180,80,0.85)'; ctx.beginPath(); ctx.arc(s * 8, 0, s * 2.2, 0, Math.PI * 2); ctx.fill(); }
+    // 胖炮管双手扛,后坐 + 大炮口冲击
+    const recoil = k * s * 3;
+    const mx = (rx + lx) / 2 - dir * recoil, my = (ry + ly) / 2 + s * 1.5;
+    ctx.strokeStyle = ink; ctx.lineWidth = s * 1.6; ctx.beginPath(); ctx.moveTo(shX, shY); ctx.lineTo(mx, my); ctx.stroke();
+    ctx.save(); ctx.translate(mx, my); ctx.scale(dir, 1); ctx.rotate(-0.08);
+    ctx.beginPath(); ctx.moveTo(-s * 2, -s * 2.8); ctx.lineTo(s * 6, -s * 2.4); ctx.arc(s * 6, 0, s * 2.4, -Math.PI / 2, Math.PI / 2); ctx.lineTo(-s * 2, s * 2.8); ctx.closePath();
+    chunk(accent, s * 2.0);
+    if (k > 0.5) { ctx.strokeStyle = 'rgba(255,170,60,0.95)'; ctx.lineWidth = s * 1.3; ctx.beginPath(); ctx.arc(s * 9, 0, s * (2.2 + (1 - k) * 6), 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
   } else if (weapon === 'shield') {
+    // 大圆盾在身前(dir 侧,胸高);出手前顶(盾击/格挡)
+    const bash = (fighting ? s * 1 : 0) + k * s * 3.6;
+    ctx.save(); ctx.translate(shX + dir * (s * 3 + bash), shY + s * 4); ctx.scale(dir, 1);
+    ctx.beginPath(); ctx.arc(0, 0, s * 5, 0, Math.PI * 2); chunk(accent, s * 2.2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = s * 0.9; ctx.beginPath(); ctx.arc(0, 0, s * 2.9, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(0, 0, s * 1.0, 0, Math.PI * 2); ctx.fill();
+    if (k > 0.4) { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = s * 0.9; ctx.beginPath(); ctx.arc(s * 6.5, 0, s * (1.6 + (1 - k) * 4), -0.9, 0.9); ctx.stroke(); }
+    ctx.restore();
+  } else if (weapon === 'bow') {
+    // 厚弓横持;满弦 → 松弦 + 箭飞出
     ctx.save(); ctx.translate(lx, ly); ctx.scale(dir, 1);
-    ctx.fillStyle = tint; ctx.strokeStyle = '#2b2b2b'; ctx.lineWidth = s * 0.6;
-    ctx.beginPath(); ctx.moveTo(0, -s * 4); ctx.lineTo(s * 3.2, -s * 2.4); ctx.lineTo(s * 3.2, s * 2.4); ctx.lineTo(0, s * 4); ctx.lineTo(-s * 1.2, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    const draw = fighting ? (k > 0.05 ? (1 - k) * s * 3 : s * 4) : s * 1;
+    ctx.strokeStyle = accent; ctx.lineWidth = s * 2.1; ctx.beginPath(); ctx.arc(0, 0, s * 7, -1.15, 1.15); ctx.stroke();
+    ctx.strokeStyle = cord; ctx.lineWidth = s * 0.7;
+    ctx.beginPath(); ctx.moveTo(Math.cos(-1.15) * s * 7, Math.sin(-1.15) * s * 7); ctx.lineTo(-draw, 0); ctx.lineTo(Math.cos(1.15) * s * 7, Math.sin(1.15) * s * 7); ctx.stroke();
+    if (k > 0.05) { const ax = s * 5 + (1 - k) * s * 20; ctx.strokeStyle = ink; ctx.lineWidth = s * 1.1; ctx.beginPath(); ctx.moveTo(ax, 0); ctx.lineTo(ax + s * 5, 0); ctx.stroke(); ctx.beginPath(); ctx.moveTo(ax + s * 5, 0); ctx.lineTo(ax + s * 3.3, -s * 1.4); ctx.moveTo(ax + s * 5, 0); ctx.lineTo(ax + s * 3.3, s * 1.4); ctx.stroke(); }
     ctx.restore();
   } else if (weapon === 'staff') {
-    ctx.save(); ctx.translate(rx, ry); ctx.scale(dir, 1); ctx.rotate(-0.05);
-    ctx.strokeStyle = '#9a7b52'; ctx.lineWidth = s * 0.9; ctx.beginPath(); ctx.moveTo(0, s * 2); ctx.lineTo(0, -s * 7); ctx.stroke();
-    ctx.fillStyle = tint; ctx.beginPath(); ctx.arc(0, -s * 7.5, s * 1.7, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-  } else if (weapon === 'sword') {
-    ctx.save(); ctx.translate(rx, ry); ctx.scale(dir, 1); ctx.rotate(-0.1 + (atk ? -0.5 * atkT : 0));
-    ctx.strokeStyle = '#c9ccd2'; ctx.lineWidth = s * 1.2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(s * 6.5, 0); ctx.stroke();
-    ctx.strokeStyle = '#8a6b46'; ctx.lineWidth = s * 1.2; ctx.beginPath(); ctx.moveTo(-s * 0.4, -s); ctx.lineTo(-s * 0.4, s); ctx.stroke();
+    // 长杖前斜 + 大宝珠(果色);出手放大法术环。杖朝前下,珠不碰头
+    ctx.save(); ctx.translate(rx, ry); ctx.scale(dir, 1); ctx.rotate(0.5 - k * 0.25);
+    ctx.strokeStyle = ink; ctx.lineWidth = s * 1.5; ctx.beginPath(); ctx.moveTo(-s * 2, 0); ctx.lineTo(s * 8, 0); ctx.stroke();
+    ctx.beginPath(); ctx.arc(s * 9, 0, s * 2.6, 0, Math.PI * 2); chunk(accent, s * 1.7);
+    if (k > 0.3) { ctx.strokeStyle = accent; ctx.globalAlpha = k; ctx.lineWidth = s * 0.9; ctx.beginPath(); ctx.arc(s * 9, 0, s * (3.4 + (1 - k) * 6), 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
     ctx.restore();
   }
   // 'none' -> 空手
@@ -258,7 +345,12 @@ function drawStatusFX(ctx, g, se, s, time) {
     const scale = r * 0.13;
     const groundY = vis.y + r * 0.72;
     const fighting = s.mode === 'fight' || s.mode === 'siege' || s.mode === 'siege_support';
-    const atkT = fighting ? (((state.time || 0) * 1.7) % 1) : 0;
+    // 攻击动作:检测 atkTimer 复位(即刚打出一下),触发 1→0 衰减的出手进度
+    const prevT = s._prevAtkTimerV60;
+    if (prevT !== undefined && (s.atkTimer || 0) > prevT + 0.02) s._strikeV60 = 1;
+    s._prevAtkTimerV60 = s.atkTimer || 0;
+    if ((s._strikeV60 || 0) > 0) s._strikeV60 = Math.max(0, s._strikeV60 - (dt_global || 0.016) / 0.30); // ~0.3s 动作
+    const strike = s._strikeV60 || 0;
 
     ctx.save();
     const invis = typeof isInvisible === 'function' && isInvisible(s);
@@ -274,7 +366,7 @@ function drawStatusFX(ctx, g, se, s, time) {
       cx: vis.x, groundY, scale, phase, dir,
       headColor: t.color || st.main, emoji: t.icon,
       weapon: stickWeaponForRole(t.role),
-      atk: fighting, atkT,
+      atk: fighting, atkT: strike, fighting,
       sideColor: s.side === 'enemy' ? '#ff4a5f' : '#22c55e',
       hitFlash: s.hitFlash || 0,
     });
@@ -284,7 +376,9 @@ function drawStatusFX(ctx, g, se, s, time) {
     if (s.statusEffects) drawStatusFX(ctx, geom, s.statusEffects, scale, state.time || 0);
 
     if (typeof drawBattleUnitHpV59 === 'function') {
-      drawBattleUnitHpV59(s, vis.x, groundY - scale * 29 - 8, Math.max(24, r * 1.7));
+      // 血条放到"头顶之上"(用 geom 返回的头位置,避免放大后的 emoji 头压住血条)
+      const hpY = (geom ? geom.hy - geom.headR : groundY - scale * 29) - 7;
+      drawBattleUnitHpV59(s, vis.x, hpY, Math.max(24, r * 1.7));
     }
     ctx.restore();
   };

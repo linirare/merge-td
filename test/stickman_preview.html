@@ -11,7 +11,7 @@ canvas{display:block;margin:0 auto;border-radius:8px;background:#ede8d5}
 <body>
 <h1>水果突击 · 火柴人渲染器 v60 预览</h1>
 <p class="sub">每种水果三个等级(Lv1/2/3,越高越大)。红边=敌方朝向,绿边=我方朝向;Lv3 展示攻击姿态。直接双击本文件即可在浏览器打开。</p>
-<canvas id="c" width="1040" height="1560"></canvas>
+<canvas id="c" width="1040" height="1900"></canvas>
 <!-- 真渲染器:定义 drawStickmanShape / stickWeaponForRole,IIFE 因无 drawSoldier 自动空转 -->
 <script src="../js/stickman_render_v60.js"></script>
 <script>
@@ -47,7 +47,7 @@ const FRUITS = [
 
 const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
-const colW = 172, rowH = 250, startX = 70, startY = 60;
+const colW = 172, rowH = 250, startX = 70, startY = 360;
 
 const draws = [];
 FRUITS.forEach((f, i) => {
@@ -61,7 +61,7 @@ FRUITS.forEach((f, i) => {
       cx, groundY: gy, scale: (0.6 + lv * 0.3) * 1.25,
       phase: (i * 0.13 + j * 0.33) % 1, dir: j === 1 ? -1 : 1,
       headColor: f.color, emoji: f.icon, weapon: stickWeaponForRole(f.role),
-      atk: lv === 3, atkT: lv === 3 ? 0.6 : 0, ink: '#1b1b1b',
+      fighting: lv === 3, atk: lv === 3, atkT: 0, _attacking: lv === 3, _off: (i * 0.17) % 1, ink: '#1b1b1b',
       sideColor: j === 1 ? '#ff4a5f' : '#22c55e', hitFlash: 0,
     });
     if (lv === 2) draws[draws.length - 1]._label = `${f.icon} ${f.name}`;
@@ -69,6 +69,94 @@ FRUITS.forEach((f, i) => {
 });
 
 // 状态效果 FX 演示行(底部)
+const fieldDraws = [
+  { fruit: FRUITS[0], x: 250, y: 260, scale: 2.3, sideColor: '#22c55e', dir: 1, weapon: 'shield' },
+  { fruit: FRUITS[3], x: 385, y: 220, scale: 2.0, sideColor: '#22c55e', dir: 1, weapon: 'bow', fighting: true },
+  { fruit: FRUITS[14], x: 640, y: 215, scale: 2.15, sideColor: '#ff4a5f', dir: -1, weapon: 'shield' },
+  { fruit: FRUITS[16], x: 775, y: 265, scale: 2.35, sideColor: '#ff4a5f', dir: -1, weapon: 'spear', fighting: true },
+].map((d, i) => ({
+  cx: d.x, groundY: d.y, scale: d.scale,
+  phase: i * 0.22, dir: d.dir,
+  headColor: d.fruit.color, emoji: d.fruit.icon,
+  weapon: d.weapon || stickWeaponForRole(d.fruit.role),
+  fighting: !!d.fighting, atk: !!d.fighting, atkT: 0,
+  _attacking: !!d.fighting, _off: i * 0.19,
+  sideColor: d.sideColor, hitFlash: 0,
+  _fieldLabel: d.fruit.name,
+}));
+
+function previewRoundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawBattlefieldPreview() {
+  ctx.save();
+  const x = 70, y = 48, w = W - 140, h = 260;
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, '#f9edc6');
+  g.addColorStop(0.5, '#f4e5b6');
+  g.addColorStop(1, '#ead89f');
+  ctx.fillStyle = g;
+  previewRoundRect(x, y, w, h, 22);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(210,184,125,0.66)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  for (let i = 0; i < 5; i++) {
+    const lx = x + 120 + i * ((w - 240) / 4);
+    ctx.strokeStyle = 'rgba(92,160,98,0.14)';
+    ctx.lineWidth = i === 2 ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.moveTo(lx, y + 34);
+    ctx.lineTo(lx, y + h - 34);
+    ctx.stroke();
+  }
+  ctx.setLineDash([8, 9]);
+  ctx.strokeStyle = 'rgba(224,178,88,0.20)';
+  ctx.beginPath();
+  ctx.moveTo(x + 28, y + h / 2);
+  ctx.lineTo(x + w - 28, y + h / 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#C97984';
+  previewRoundRect(x + 32, y + 22, w - 64, 18, 8);
+  ctx.fill();
+  ctx.fillStyle = '#78C783';
+  previewRoundRect(x + 32, y + h - 40, w - 64, 18, 8);
+  ctx.fill();
+
+  ctx.fillStyle = '#556';
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 15px sans-serif';
+  ctx.fillText('Battlefield tone check', x, y - 14);
+  ctx.font = '12px sans-serif';
+  ctx.fillStyle = '#7b7f87';
+  ctx.fillText('Cream field, soft lanes, red/green wall colors', x + 180, y - 14);
+
+  for (const d of fieldDraws) {
+    ctx.save();
+    drawStickmanShape(ctx, d);
+    ctx.restore();
+  }
+  ctx.fillStyle = '#556';
+  ctx.textAlign = 'center';
+  ctx.font = '11px sans-serif';
+  for (const d of fieldDraws) ctx.fillText(d._fieldLabel, d.cx, d.groundY + 28);
+  ctx.restore();
+}
+
 const STATUS_DEMO = [
   { name: '冰冻', se: { frozen: { timer: 1 } } },
   { name: '点燃', se: { burning: { timer: 1 } } },
@@ -92,9 +180,14 @@ let clock = 0;
 function loop(ts) {
   const dt = Math.min(0.05, (ts - (loop._p || ts)) / 1000); loop._p = ts; clock += dt;
   ctx.fillStyle = '#ede8d5'; ctx.fillRect(0, 0, W, H);
+  drawBattlefieldPreview();
   ctx.fillStyle = '#556'; ctx.textAlign = 'left'; ctx.font = 'bold 13px sans-serif';
   ctx.fillText('▼ 状态效果 FX', startX - 20, demoY - 10);
   for (const d of draws) d.phase += dt * 0.42;
+  for (const d of fieldDraws) d.phase += dt * 0.42;
+  // 攻击演示:让 Lv3 的兵循环出手(锯齿 1→0,每 ~1.1s 打一下)
+  for (const d of draws) if (d._attacking) { const t = (clock * 0.9 + d._off) % 1; d.atkT = t < 0.25 ? 1 - t / 0.25 : 0; }
+  for (const d of fieldDraws) if (d._attacking) { const t = (clock * 0.9 + d._off) % 1; d.atkT = t < 0.25 ? 1 - t / 0.25 : 0; }
   for (const d of draws) {
     ctx.save();
     if (d._invisible) ctx.globalAlpha = 0.4;
