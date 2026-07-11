@@ -69,6 +69,32 @@ function initPlayerOpening(k) {
   if (k >= 4) placeBall(state.playerSlots, 2, 2, randomType(deck), 2);
 }
 function initEnemyOpening(k, level) {
+  const plan = state.levelConfig && state.levelConfig.enemyPlan;
+  if (plan) {
+    const positions = [[1, 2], [0, 2], [2, 2], [1, 1], [1, 3], [0, 1], [2, 3], [0, 0], [2, 4], [0, 4]];
+    const opening = Array.isArray(plan.opening) ? plan.opening : [];
+    const targetCount = Math.max(opening.length, Math.min(positions.length, Number(plan.count || 0)));
+    const enemyLevel = Math.max(1, level);
+    let placed = 0;
+    for (; placed < Math.min(opening.length, positions.length); placed++) {
+      const [r, c] = positions[placed];
+      const id = normalizeTypeId(opening[placed]);
+      placeBall(state.enemySlots, r, c, TYPES[id] ? id : randomEnemyType(), enemyLevel);
+    }
+    while (placed < targetCount) {
+      const [r, c] = positions[placed];
+      placeBall(state.enemySlots, r, c, randomEnemyType(), enemyLevel);
+      placed++;
+    }
+    if (k % 5 === 0) {
+      const empties = emptySlots(state.enemySlots);
+      if (empties.length) {
+        const [r, c] = empties[0];
+        state.enemySlots[r][c] = createBall(randomEnemyType(), Math.min(MAX_LEVEL, enemyLevel + 1));
+      }
+    }
+    return;
+  }
   const enemyCount = k === 1 ? 3 : k <= 3 ? 4 : 5;
   initBalls(state.enemySlots, enemyCount, Math.max(1, level), true);
   if (k % 5 === 0) {

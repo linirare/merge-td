@@ -7,13 +7,22 @@
   if (window.__juiceEconomyV59Installed) return;
   window.__juiceEconomyV59Installed = true;
 
-  const JUICE_PASSIVE_INTERVAL = 5.0;
-  const ENEMY_ACTION_INTERVAL = 4.0;
+  function juiceTuning() {
+    return (typeof TUNING !== 'undefined' && TUNING.juice) ? TUNING.juice : {};
+  }
+
+  function juiceNumber(key, fallback) {
+    const value = Number(juiceTuning()[key]);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  const JUICE_PASSIVE_INTERVAL = juiceNumber('passiveInterval', 5.0);
+  const ENEMY_ACTION_INTERVAL = juiceNumber('enemyActionInterval', 4.0);
 
   function actionCost() {
     if (!state) return 1;
     state.summonCostCounter = Math.max(1, Number(state.summonCostCounter || 1));
-    return Math.min(12, state.summonCostCounter); // 设计 §3.2:操作次数表到 12 为止
+    return Math.min(juiceNumber('maxActionCost', 12), state.summonCostCounter); // 设计 §3.2:操作次数表到 12 为止
   }
 
   function enemyActionCost() {
@@ -56,7 +65,7 @@
 
   if (typeof getSpStart === 'function' && !getSpStart._juiceV59) {
     getSpStart = function getJuiceStartV59(m) {
-      return 8 + Math.floor(((m && m.spLv) || 0) / 2);
+      return juiceNumber('start', 8) + Math.floor(((m && m.spLv) || 0) / 2);
     };
     getSpStart._juiceV59 = true;
   }
@@ -76,7 +85,7 @@
     const maxStar = Math.max(...((meta && meta.shardsTotal) ? Object.values(meta.shardsTotal).map(s => typeof starLevelFromShards === 'function' ? starLevelFromShards(s) : 1) : [1]), 1);
     const starSp = (typeof starStartSpBonusPvp === 'function' && typeof window !== 'undefined' && window.__pvpMode ? starStartSpBonusPvp(maxStar) : (typeof starStartSpBonus === 'function' ? starStartSpBonus(maxStar) : 0));
     state.sp = (typeof getSpStart === 'function' ? getSpStart(meta) : 10) + starSp;
-    state.enemySp = 8;
+    state.enemySp = juiceNumber('enemyStart', 8);
     state.summonCostCounter = 1;
     state.enemySummonCostCounter = 1;
     state._wallPityTriggers = 0;
@@ -169,11 +178,13 @@
     if (!state || state.phase !== 'playing') return;
     const max = Math.max(1, Number(state.playerWallMax || 1));
     const ratio = Math.max(0, Number(state.playerWallHp || 0)) / max;
-    let triggers = Math.max(0, Math.min(4, Number(state._wallPityTriggers || 0)));
+    const pitySteps = Math.max(1, Math.floor(juiceNumber('wallPitySteps', 4)));
+    const pityGain = Math.max(0, Math.floor(juiceNumber('wallPityGain', 3)));
+    let triggers = Math.max(0, Math.min(pitySteps, Number(state._wallPityTriggers || 0)));
     let gained = 0;
-    while (triggers < 4 && ratio <= 1 - (triggers + 1) * 0.2 + 1e-9) {
+    while (triggers < pitySteps && ratio <= 1 - (triggers + 1) / (pitySteps + 1) + 1e-9) {
       triggers++;
-      gained += 3;
+      gained += pityGain;
     }
     if (gained <= 0) return;
     state._wallPityTriggers = triggers;

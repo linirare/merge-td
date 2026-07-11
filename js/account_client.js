@@ -43,13 +43,8 @@
       const data = {
         meta_json: JSON.stringify(meta),
         shell_json: JSON.stringify(shell),
-        level: this.user.level || 1,
-        exp: this.user.exp || 0,
         power: typeof computePower === 'function' ? computePower() : 0,
-        diamonds: shell.gems || 0,
-        gold: meta.gold || 0,
         highest_stage: meta.highestLevel || 1,
-        ladder_score: shell.ladderBest || 0,
       };
       await this.api('POST', '/api/save', data);
     },
@@ -107,8 +102,8 @@
         account.addExp(k * 8).catch(() => {});
         if (meta.highestLevel) account.api('POST', '/api/save', {
           meta_json: JSON.stringify(meta), shell_json: JSON.stringify(shell),
-          level: account.user ? account.user.level : 1, power: typeof computePower === 'function' ? computePower() : 0,
-          diamonds: shell.gems || 0, gold: meta.gold || 0, highest_stage: meta.highestLevel || 1,
+          power: typeof computePower === 'function' ? computePower() : 0,
+          highest_stage: meta.highestLevel || 1,
         }).catch(() => {});
       }
     };

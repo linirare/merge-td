@@ -17,8 +17,8 @@
 .hifi button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit;}
 
 /* ---- 壳屏面板全屏化:覆盖 shell-v65 的 .panel 定位(ID+class 特异性 > body.shell-v65 .panel) ---- */
-#menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi{position:fixed;inset:0;padding:0;overflow:hidden;background:#14100b;display:block;z-index:10;}
-#menuPanel.hifi .panel-inner,#shopPanel.hifi .panel-inner,#shellLabPanel.hifi .panel-inner,#arenaPanel.hifi .panel-inner,#rankPanel.hifi .panel-inner{width:100%;max-width:none;height:100%;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:0;display:block;transform:none;}
+#menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi,#campaignPanel.hifi{position:fixed;inset:0;padding:0;overflow:hidden;background:#14100b;display:block;z-index:10;}
+#menuPanel.hifi .panel-inner,#shopPanel.hifi .panel-inner,#shellLabPanel.hifi .panel-inner,#arenaPanel.hifi .panel-inner,#rankPanel.hifi .panel-inner,#campaignPanel.hifi .panel-inner{width:100%;max-width:none;height:100%;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:0;display:block;transform:none;}
 
 /* ---- 首页容器 ---- */
 .hifi-home{position:absolute;inset:0;overflow:hidden;font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;color:#fff;}
@@ -111,7 +111,7 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 /* 桌面下给壳屏加个手机边框(与原型一致) */
 /* 桌面下把整个 app 收成居中 430px 全高一列(壳屏 + 底栏对齐),避免底栏满屏 */
 @media(min-width:470px){
-  #menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi{left:50%;right:auto;transform:translateX(-50%);width:430px;box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);}
+  #menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi,#campaignPanel.hifi{left:50%;right:auto;transform:translateX(-50%);width:430px;box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);}
   body.shell-v65 #bottomNav.hifi,#bottomNav.hifi{left:50%;right:auto;transform:translateX(-50%);width:430px;}
 }
 
@@ -333,3 +333,25 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 body.hifi-menu #wrap{display:none;}
 body.hifi-menu{background:#0c0a06;}
 body.hifi-menu::before{display:none;}
+
+/* ---- 统一收尾:关卡选择节点 + 结算/帮助金皮 ---- */
+.hifi .lvmap{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
+.hifi .lvnode{position:relative;aspect-ratio:1;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:linear-gradient(160deg,#4a3016,#241206);border:2px solid #7A4E08;box-shadow:0 3px 8px rgba(0,0,0,.35);color:#F3E3C0;font-family:'ZCOOL KuaiLe';cursor:pointer;}
+.hifi .lvnode b{font-family:'Fredoka';font-weight:700;font-size:15px;color:#FFE9A8;}
+.hifi .lvnode small{font-size:9px;color:#C9B48A;}
+.hifi .lvnode.current{border-color:#F5C242;box-shadow:0 0 12px rgba(245,194,66,.5);}
+.hifi .lvnode.boss{border-color:#E23B4E;background:linear-gradient(160deg,#5a1a22,#2a0e12);}
+.hifi .lvnode.boss b{color:#F3A3AC;}
+.hifi .lvnode.locked{filter:grayscale(.7);opacity:.5;cursor:default;}
+
+/* 结算 / 帮助:旧 .panel 金皮(#id 作用域压过 shell-v65/style;深遮罩 + 金卡 + 金按钮) */
+#resultPanel.hifi,#helpPanel.hifi{background:rgba(10,6,3,.66);}
+#resultPanel.hifi .result-card,#helpPanel.hifi .help-panel{background:linear-gradient(180deg,#3E2716,#241206);border:2px solid #F5C242;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.6);color:#F3E3C0;}
+#resultPanel.hifi .result-card h2,#helpPanel.hifi .help-panel h2{color:#FFE9A8;font-family:'ZCOOL KuaiLe';-webkit-text-stroke:1px #6B0F0F;paint-order:stroke fill;text-shadow:0 2px 0 #8B1A1A;}
+#resultPanel.hifi .result-card p,#resultPanel.hifi #resultDetail{color:#F3E3C0;}
+#helpPanel.hifi .help-section{background:rgba(0,0,0,.28);border:1px solid rgba(245,194,66,.22);border-radius:12px;}
+#helpPanel.hifi .help-section h3{color:#F5C242;}
+#helpPanel.hifi .help-section p,#helpPanel.hifi .help-section b{color:#F3E3C0;}
+#resultPanel.hifi .btn-primary,#helpPanel.hifi .btn-primary{background:linear-gradient(180deg,#FFE9A8,#F5C242 45%,#E8A317 62%,#D18A0E);color:#5A0E0E;border:2px solid #7A4E08;box-shadow:inset 0 -3px 0 rgba(122,78,8,.4),0 5px 0 #7A4E08;font-weight:900;}
+#resultPanel.hifi .btn-secondary,#helpPanel.hifi .btn-secondary{background:linear-gradient(180deg,#8f897c,#6b665b);color:#e8e4d8;border:2px solid #4c483f;box-shadow:0 4px 0 #4c483f;font-weight:900;}

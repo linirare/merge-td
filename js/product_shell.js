@@ -117,6 +117,16 @@
   }
   window.saveAll = saveAll; // account_client 云存档钩子需要
 
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[ch]);
+  }
+
   function initLv(id) {
     id = normalizeTypeId(id);
     return Math.max(1, Math.min(INIT_MAX, Number(shell.fruitLv?.[id] || 1)));
@@ -347,39 +357,47 @@
   }
 
   function renderCampaign() {
+    document.getElementById('campaignPanel')?.classList.add('hifi');
     const root = shellPage('campaignPanel', 'shell-campaign-page');
     const highest = highestLevel();
     const current = currentStage();
     const maxShow = Math.max(20, highest + 3);
+    const boss = current % 5 === 0;
     root.innerHTML = `
-      ${resourceBarHtml()}
-      ${pageHeadHtml('CAMPAIGN', '果园远征', '选择已解锁关卡，直接开战')}
-      <section class="campaign-current-card">
-        <div>
-          <small>${current % 5 === 0 ? 'BOSS STAGE' : 'NEXT STAGE'}</small>
-          <h3>第 ${current} 关</h3>
-          <p>奖励 ${stageRewardText(current)} · ${starsText(current)}</p>
+      <div class="hifi-screen shop-bg">
+        <div class="bg"></div><div class="scrim"></div>
+        ${hifiTopBarHtml()}
+        <div class="hifi-scroll">
+          <div class="shead"><h2 class="display">果园远征</h2><span class="line"></span></div>
+          <div class="gpanel" style="display:flex;align-items:center;gap:12px">
+            <div style="flex:1;position:relative;z-index:1">
+              <small style="font-size:11px;font-weight:800;color:#F5C242">${boss ? 'BOSS 关' : '下一关'}</small>
+              <h3 style="font-family:'ZCOOL KuaiLe';font-size:22px;color:#FFE9A8;margin:2px 0">第 ${current} 关</h3>
+              <p style="font-size:12px;color:#C9B48A;font-weight:700">奖励 ${stageRewardText(current)} · ${starsText(current)}</p>
+            </div>
+            <button class="gbtn" id="campaignStartBtn" style="position:relative;z-index:1">挑战</button>
+          </div>
+          <button class="gbtn blk" id="campaignTrainBtn" style="margin-bottom:14px;background:linear-gradient(180deg,#8f897c,#6b665b);border-color:#4c483f;box-shadow:0 4px 0 #4c483f;color:#e8e4d8;text-shadow:none">🧪 训练模式(不耗资源 / 不结算)</button>
+          <div class="shead" style="margin-top:4px"><h2 class="display" style="font-size:18px">关卡</h2><span class="line"></span></div>
+          <div class="lvmap" id="campaignMap"></div>
         </div>
-        <button class="shell-primary-cta compact" id="campaignStartBtn">挑战</button>
-      </section>
-      <section class="campaign-map" id="campaignMap"></section>
+      </div>
     `;
     root.querySelector('#campaignStartBtn')?.addEventListener('click', () => startCampaign(current));
-    // 训练模式:不消耗资源,不加经验,不给奖励
-    const trainBtn = document.createElement('button'); trainBtn.className = 'btn-secondary'; trainBtn.textContent = '🧪 训练模式'; trainBtn.style.cssText = 'margin-top:8px';
-    trainBtn.addEventListener('click', () => { state.trainingMode = true; startCampaign(current); });
-    root.querySelector('#campaignStartBtn')?.parentNode?.appendChild(trainBtn);
+    root.querySelector('#campaignTrainBtn')?.addEventListener('click', () => { state.trainingMode = true; startCampaign(current); });
     const map = root.querySelector('#campaignMap');
     for (let lv = 1; lv <= maxShow; lv++) {
       const open = lv <= highest;
-      const boss = lv % 5 === 0;
+      const isBoss = lv % 5 === 0;
       const btn = document.createElement('button');
-      btn.className = `map-node${lv === current ? ' current' : ''}${boss ? ' boss' : ''}${open ? '' : ' locked'}`;
+      btn.className = `lvnode${lv === current ? ' current' : ''}${isBoss ? ' boss' : ''}${open ? '' : ' locked'}`;
       btn.disabled = !open;
-      btn.innerHTML = `<b>${boss ? '🏰' : '🍓'} ${lv}</b><small>${open ? starsText(lv) : '未解锁'}</small>`;
+      btn.innerHTML = `<b>${isBoss ? '🏰' : '🍓'} ${lv}</b><small>${open ? starsText(lv) : '未解锁'}</small>`;
       if (open) btn.addEventListener('click', () => startCampaign(lv));
       map.appendChild(btn);
     }
+    root.querySelectorAll('[data-help]').forEach(b => b.addEventListener('click', () => { hidePanels(); document.getElementById('helpPanel')?.classList.remove('hide'); }));
+    root.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.go)));
     refreshResourceNumbers();
   }
 
@@ -716,7 +734,7 @@
     document.getElementById('rankPanel')?.classList.add('hifi');
     const root = shellPage('rankPanel', 'shell-rank-page');
     const power = typeof computePower === 'function' ? computePower() : 0;
-    const myName = (window.account && account.user && account.user.nickname) || '果园园长';
+    const myName = escapeHtml((window.account && account.user && account.user.nickname) || '果园园长');
     const myScore = rankTab === 'power' ? power : (rankTab === 'stage' ? highestLevel() : (shell.ladderBest || 0));
     root.innerHTML = `
       <div class="hifi-screen shop-bg">
@@ -757,9 +775,9 @@
         const r = top3[i]; const rank = i + 1;
         const h = rank === 1 ? 86 : (rank === 2 ? 64 : 50);
         const avS = rank === 1 ? 64 : 52;
-        return `<div class="pod">${rank === 1 ? '<svg class="icon" style="width:26px;height:26px;color:#F5C242;margin-bottom:-2px"><use href="#i-crown"/></svg>' : ''}<div class="av" style="width:${avS}px;height:${avS}px${rank === 1 ? ';border-color:#FFE9A8' : ''}"><svg class="icon" style="width:${Math.round(avS * 0.5)}px;height:${Math.round(avS * 0.5)}px"><use href="#i-user"/></svg></div><span class="nm">${r.nickname || '玩家'}</span><div class="base" style="height:${h}px${rank === 1 ? ';background:linear-gradient(180deg,#FFE9A8,#E8A317)' : ''}"><svg class="icon"><use href="#i-star"/></svg>${rank}</div></div>`;
+        return `<div class="pod">${rank === 1 ? '<svg class="icon" style="width:26px;height:26px;color:#F5C242;margin-bottom:-2px"><use href="#i-crown"/></svg>' : ''}<div class="av" style="width:${avS}px;height:${avS}px${rank === 1 ? ';border-color:#FFE9A8' : ''}"><svg class="icon" style="width:${Math.round(avS * 0.5)}px;height:${Math.round(avS * 0.5)}px"><use href="#i-user"/></svg></div><span class="nm">${escapeHtml(r.nickname || '玩家')}</span><div class="base" style="height:${h}px${rank === 1 ? ';background:linear-gradient(180deg,#FFE9A8,#E8A317)' : ''}"><svg class="icon"><use href="#i-star"/></svg>${rank}</div></div>`;
       }).join('');
-      rlist.innerHTML = list.slice(3).map((r, idx) => `<div class="rrow"><span class="no">${idx + 4}</span><span class="av"><svg class="icon"><use href="#i-user"/></svg></span><span class="nm">${r.nickname || '玩家'}</span><span class="pw"><svg class="icon"><use href="#i-flame"/></svg>${(r.score || 0).toLocaleString()}${scoreLabel}</span></div>`).join('');
+      rlist.innerHTML = list.slice(3).map((r, idx) => `<div class="rrow"><span class="no">${idx + 4}</span><span class="av"><svg class="icon"><use href="#i-user"/></svg></span><span class="nm">${escapeHtml(r.nickname || '玩家')}</span><span class="pw"><svg class="icon"><use href="#i-flame"/></svg>${(r.score || 0).toLocaleString()}${scoreLabel}</span></div>`).join('');
     };
     if (!(window.account && typeof account.leaderboard === 'function')) { empty(); return; }
     empty('加载中…');
@@ -838,7 +856,7 @@
       <div class="pf-top">
         <div class="pf-av"><svg class="icon"><use href="#i-user"/></svg></div>
         <div style="flex:1">
-          <input class="linput" id="pfName" value="${u.nickname || '果园园长'}" maxlength="12" style="margin-bottom:6px">
+          <input class="linput" id="pfName" value="${escapeHtml(u.nickname || '果园园长')}" maxlength="12" style="margin-bottom:6px">
           <div class="uid">UID ${u.uid || '--------'}</div>
         </div>
       </div>
@@ -866,7 +884,7 @@
     if (!(loggedIn() && account.getMail)) { showEmpty('登录后查看邮件'); return; }
     account.getMail().then(mails => {
       if (!Array.isArray(mails) || !mails.length) { showEmpty(); return; }
-      list.innerHTML = mails.map(m => `<div class="mail-item">${m.is_read ? '' : '<span class="dot"></span>'}<span class="mi"><svg class="icon"><use href="#i-gift"/></svg></span><div class="mc"><h4>${m.title || '邮件'}</h4><p>${m.body || ''}</p></div><button class="gbtn" data-mailid="${m.id}" style="min-height:40px;padding:8px 12px;font-size:14px">领取</button></div>`).join('');
+      list.innerHTML = mails.map(m => `<div class="mail-item">${m.is_read ? '' : '<span class="dot"></span>'}<span class="mi"><svg class="icon"><use href="#i-gift"/></svg></span><div class="mc"><h4>${escapeHtml(m.title || '邮件')}</h4><p>${escapeHtml(m.body || '')}</p></div><button class="gbtn" data-mailid="${escapeHtml(m.id)}" style="min-height:40px;padding:8px 12px;font-size:14px">领取</button></div>`).join('');
       list.querySelectorAll('[data-mailid]').forEach(b => b.addEventListener('click', () => { if (account.readMail) account.readMail(b.dataset.mailid).catch(() => {}); b.textContent = '已领'; b.classList.add('gray'); }));
     }).catch(() => showEmpty('邮件加载失败'));
   }
@@ -878,7 +896,7 @@
     if (!(window.account && account.chatMessages)) { showEmpty('登录联网后进入世界频道'); }
     else account.chatMessages().then(l => {
       if (!Array.isArray(l) || !l.length) { showEmpty('世界频道暂时安静…'); return; }
-      msgs.innerHTML = l.map(c => `<div class="cmsg ${c.me ? 'me' : ''}"><span class="ca"><svg class="icon"><use href="#i-user"/></svg></span><div class="cb"><div class="nm">${c.nickname || c.n || '玩家'}</div><div class="tx">${c.text || c.m || ''}</div></div></div>`).join('');
+      msgs.innerHTML = l.map(c => `<div class="cmsg ${c.me ? 'me' : ''}"><span class="ca"><svg class="icon"><use href="#i-user"/></svg></span><div class="cb"><div class="nm">${escapeHtml(c.nickname || c.nick || c.n || '玩家')}</div><div class="tx">${escapeHtml(c.text || c.m || '')}</div></div></div>`).join('');
       msgs.scrollTop = msgs.scrollHeight;
     }).catch(() => showEmpty('聊天加载失败'));
     body.querySelector('#hifiChatSend')?.addEventListener('click', () => {
@@ -1245,6 +1263,7 @@
       });
       document._hifiAccountBound = true;
     }
+    ['resultPanel', 'helpPanel'].forEach(id => document.getElementById(id)?.classList.add('hifi'));
     showTab('home');
     setInterval(syncNavVisibility, 180);
     syncNavVisibility();

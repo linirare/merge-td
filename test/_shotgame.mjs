@@ -1,0 +1,15 @@
+import { chromium } from 'playwright';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const out = process.argv[2] || 'shot_game.jpg';
+const wait = Number(process.argv[3] || 2500);
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, reducedMotion: 'reduce' });
+const logs = [];
+page.on('console', m => { if (m.type() === 'error') logs.push(m.text()); });
+await page.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+await page.waitForTimeout(wait);
+await page.screenshot({ path: path.join(__dirname, '..', out), type: 'jpeg', quality: 88 });
+await browser.close();
+console.log('WROTE', out, '| console errors:', logs.length ? logs.slice(0,5) : 'none');

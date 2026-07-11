@@ -323,6 +323,8 @@
     if (state.mode !== 'pvp' || pvp.suppress) return;
     const action = {
       seq: ++pvp.seq,
+      seed: pvp.seed,
+      timestamp: Date.now(),
       matchTime: Number((state.time || 0).toFixed(3)),
       type,
       payload,

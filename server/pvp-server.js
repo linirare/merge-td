@@ -1,5 +1,7 @@
 const crypto = require('crypto');
+
 const rooms = new Map();
+const allClients = new Set();
 
 function makeRoomId() {
   let id = '';
@@ -16,7 +18,7 @@ function makeSeed() {
 function acceptKey(key) {
   return crypto
     .createHash('sha1')
-    .update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
+    .update(String(key || '') + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
     .digest('base64');
 }
 
@@ -49,69 +51,126 @@ function decodeFrames(buffer) {
     const masked = (second & 0x80) !== 0;
     let len = second & 0x7f;
     let pos = offset + 2;
+
     if (len === 126) {
       if (pos + 2 > buffer.length) break;
       len = buffer.readUInt16BE(pos);
       pos += 2;
     } else if (len === 127) {
       if (pos + 8 > buffer.length) break;
-      len = Number(buffer.readBigUInt64BE(pos));
+      const longLen = buffer.readBigUInt64BE(pos);
+      if (longLen > BigInt(64 * 1024)) throw new Error('frame too large');
+      len = Number(longLen);
       pos += 8;
     }
-    if (!masked || pos + 4 + len > buffer.length) break;
+
+    if (!masked) throw new Error('client frames must be masked');
+    if (len > 64 * 1024) throw new Error('frame too large');
+    if (pos + 4 + len > buffer.length) break;
+
     const mask = buffer.subarray(pos, pos + 4);
     pos += 4;
     const body = Buffer.alloc(len);
     for (let i = 0; i < len; i++) body[i] = buffer[pos + i] ^ mask[i % 4];
     pos += len;
     offset = pos;
+
     if (opcode === 0x8) messages.push({ close: true });
     else if (opcode === 0x1) messages.push({ text: body.toString('utf8') });
+    else if (opcode === 0x9) messages.push({ ping: body });
   }
   return { messages, rest: buffer.subarray(offset) };
 }
 
 function send(client, message) {
-  if (!client.socket.destroyed) client.socket.write(encodeFrame(JSON.stringify(message)));
+  if (!client || !client.socket || client.socket.destroyed) return;
+  client.socket.write(encodeFrame(JSON.stringify(message)));
 }
 
 function sendError(client, message) {
   send(client, { type: 'error', message });
 }
 
-const allClients = new Set();
 function broadcast(room, message, except = null) {
   for (const player of room.players) if (player && player !== except) send(player, message);
 }
-function broadcastAll(except, message) { for (const c of allClients) if (c !== except) send(c, message); }
+
+function broadcastAll(except, message) {
+  for (const client of allClients) if (client !== except) send(client, message);
+}
+
+function sanitizeText(value, max = 40) {
+  const clean = String(value == null ? '' : value)
+    .replace(/[\u0000-\u001f\u007f<>]/g, '')
+    .trim();
+  return Array.from(clean).slice(0, max).join('');
+}
+
+function sanitizeDeck(deck) {
+  if (!Array.isArray(deck)) return [];
+  return deck
+    .map(id => sanitizeText(id, 40))
+    .filter(id => /^[a-z0-9_-]+$/i.test(id))
+    .slice(0, 5);
+}
 
 function roomState(room) {
   return {
     roomId: room.id,
     players: room.players.map(player => player ? {
       index: player.index,
-      ready: player.ready,
-      deck: player.deck || [],
+      ready: !!player.ready,
+      deck: sanitizeDeck(player.deck || []),
     } : null),
   };
 }
 
-function createRoom(client) {
-  leaveRoom(client, false);
-  // 分池匹配(设计档 §10.1):按养成级分 5 池,交换信息时写入
-  function pvpTier(cultivateLv) {
-    if (cultivateLv <= 3) return '新手';
-    if (cultivateLv <= 8) return '普通';
-    if (cultivateLv <= 13) return '高级';
-    if (cultivateLv <= 17) return '大师';
-    return '传奇';
+function leaveObserve(client) {
+  const roomId = client._observer;
+  if (!roomId) return;
+  const room = rooms.get(roomId);
+  if (room && room.observers) room.observers = room.observers.filter(c => c !== client);
+  client._observer = '';
+}
+
+function leaveRoom(client, notify = true) {
+  const room = rooms.get(client.roomId);
+  if (!room) {
+    client.roomId = '';
+    client.index = -1;
+    client.ready = false;
+    return;
   }
 
+  if (client.index >= 0 && room.players[client.index] === client) {
+    room.players[client.index] = null;
+  }
+  if (notify) broadcast(room, { type: 'peer_left', roomId: room.id }, client);
+  if (!room.players[0] && !room.players[1]) rooms.delete(room.id);
+
+  client.roomId = '';
+  client.index = -1;
+  client.ready = false;
+  client.deck = [];
+}
+
+function disconnectClient(client) {
+  leaveObserve(client);
+  leaveRoom(client, true);
+  allClients.delete(client);
+}
+
+function createRoom(client) {
+  leaveObserve(client);
+  leaveRoom(client, false);
+
   const id = makeRoomId();
-  const room = { id, seed: 0, players: [null, null] };
+  const room = { id, seed: 0, players: [null, null], observers: [] };
   client.roomId = id;
   client.index = 0;
   client.ready = false;
+  client.deck = [];
+  client._lastActionSeq = 0;
   room.players[0] = client;
   rooms.set(id, room);
   send(client, { type: 'room_created', ...roomState(room), playerIndex: 0 });
@@ -119,12 +178,16 @@ function createRoom(client) {
 
 function joinRoom(client, roomId) {
   const room = rooms.get(String(roomId || '').trim());
-  if (!room) return sendError(client, '房间不存在');
-  if (room.players[1]) return sendError(client, '房间已满');
+  if (!room) return sendError(client, 'room_not_found');
+  if (room.players[1]) return sendError(client, 'room_full');
+
+  leaveObserve(client);
   leaveRoom(client, false);
   client.roomId = room.id;
   client.index = 1;
   client.ready = false;
+  client.deck = [];
+  client._lastActionSeq = 0;
   room.players[1] = client;
   send(client, { type: 'room_joined', ...roomState(room), playerIndex: 1 });
   broadcast(room, { type: 'peer_joined', ...roomState(room) }, client);
@@ -132,61 +195,85 @@ function joinRoom(client, roomId) {
 
 function setReady(client, ready, deck) {
   const room = rooms.get(client.roomId);
-  if (!room) return sendError(client, '尚未加入房间');
+  if (!room) return sendError(client, 'not_in_room');
+
   client.ready = !!ready;
-  client.deck = Array.isArray(deck) ? deck.slice(0, 5) : [];
+  client.deck = sanitizeDeck(deck);
   broadcast(room, { type: 'ready_state', ...roomState(room) });
+
   if (room.players[0] && room.players[1] && room.players.every(player => player.ready)) {
     room.seed = makeSeed();
+    for (const player of room.players) player._lastActionSeq = 0;
     broadcast(room, {
       type: 'match_start',
       roomId: room.id,
       seed: room.seed,
-      decks: room.players.map(player => player.deck || []),
+      decks: room.players.map(player => sanitizeDeck(player.deck || [])),
     });
   }
 }
 
-function forwardAction(client, action) {
-  const room = rooms.get(client.roomId);
-  if (!room) return sendError(client, '尚未加入房间');
-  const peer = room.players[client.index === 0 ? 1 : 0];
-  if (!peer) return sendError(client, '对手不在线');
-  // 反作弊:seq 顺序 + 频率限制
-  if (!action || typeof action !== 'object') return sendError(client, '无效操作');
-  const key = '_seq_' + client.index;
-  room[key] = (room[key] || 0) + 1;
+function normalizeAction(client, room, action) {
+  if (!action || typeof action !== 'object') return null;
   const now = Date.now();
-  client._actionTimes = (client._actionTimes || []).filter(t => now - t < 1000);
-  if (client._actionTimes.length >= 15) return sendError(client, '操作过快');
-  client._actionTimes.push(now);
-  send(peer, { type: 'peer_action', from: client.index, action });
-  // 广播给观战者
-  if (room.observers) for (const obs of room.observers) send(obs, { type: 'peer_action', from: client.index, action });
-}
-function observeRoom(client, roomId) {
-  const room = rooms.get(String(roomId || '').trim());
-  if (!room) return sendError(client, '房间不存在');
-  if (!room.observers) room.observers = [];
-  room.observers.push(client); client._observer = roomId;
-  send(client, { type: 'room_joined', ...roomState(room), playerIndex: -1 });
-}
-function leaveObserve(client) {
-  const roomId = client._observer; if (!roomId) return;
-  const room = rooms.get(roomId);
-  if (room && room.observers) room.observers = room.observers.filter(c => c !== client);
-  client._observer = null;
+  const seq = Number.isInteger(action.seq) && action.seq > 0 ? action.seq : client._lastActionSeq + 1;
+  if (seq <= (client._lastActionSeq || 0)) return null;
+  client._lastActionSeq = seq;
+
+  return {
+    seq,
+    seed: Number.isInteger(action.seed) ? action.seed : room.seed,
+    timestamp: Number.isFinite(action.timestamp) ? action.timestamp : now,
+    matchTime: Number.isFinite(action.matchTime) ? action.matchTime : 0,
+    type: sanitizeText(action.type, 48),
+    payload: action.payload && typeof action.payload === 'object' ? action.payload : {},
+  };
 }
 
-function leaveRoom(client, notify = true) { allClients.delete(client);
+function forwardAction(client, action) {
   const room = rooms.get(client.roomId);
-  if (!room) return;
-  room.players[client.index] = null;
-  if (notify) broadcast(room, { type: 'peer_left', roomId: room.id });
-  if (!room.players[0] && !room.players[1]) rooms.delete(room.id);
-  client.roomId = '';
-  client.index = -1;
-  client.ready = false;
+  if (!room) return sendError(client, 'not_in_room');
+  const peer = room.players[client.index === 0 ? 1 : 0];
+  if (!peer) return sendError(client, 'peer_offline');
+
+  const now = Date.now();
+  client._actionTimes = (client._actionTimes || []).filter(t => now - t < 1000);
+  if (client._actionTimes.length >= 15) return sendError(client, 'action_rate_limited');
+  client._actionTimes.push(now);
+
+  const normalized = normalizeAction(client, room, action);
+  if (!normalized) return sendError(client, 'invalid_action');
+
+  const message = { type: 'peer_action', from: client.index, action: normalized };
+  send(peer, message);
+  if (room.observers) for (const obs of room.observers) send(obs, message);
+}
+
+function observeRoom(client, roomId) {
+  const room = rooms.get(String(roomId || '').trim());
+  if (!room) return sendError(client, 'room_not_found');
+  leaveObserve(client);
+  leaveRoom(client, false);
+  room.observers.push(client);
+  client._observer = room.id;
+  send(client, { type: 'room_joined', ...roomState(room), playerIndex: -1 });
+}
+
+function pushChat(client, message) {
+  const chat = require('./index').chatMessages;
+  const text = sanitizeText(message.text || message.m || '', 80);
+  if (!text) return;
+  const nick = sanitizeText(message.nick || message.nickname || message.n || '', 24);
+  const msg = {
+    uid: sanitizeText(client._uid || '', 32),
+    nick,
+    nickname: nick,
+    text,
+    time: new Date().toISOString(),
+  };
+  chat.push(msg);
+  if (chat.length > 100) chat.shift();
+  broadcastAll(client, { type: 'chat', message: msg });
 }
 
 function handleMessage(client, raw) {
@@ -194,22 +281,63 @@ function handleMessage(client, raw) {
   try {
     message = JSON.parse(raw);
   } catch (err) {
-    return sendError(client, '消息格式错误');
+    return sendError(client, 'bad_json');
   }
+
   if (message.type === 'create_room') createRoom(client);
   else if (message.type === 'join_room') joinRoom(client, message.roomId);
   else if (message.type === 'ready') setReady(client, message.ready, message.deck);
   else if (message.type === 'action') forwardAction(client, message.action);
-  else if (message.type === 'leave_room') { leaveRoom(client); leaveObserve(client); }
+  else if (message.type === 'leave' || message.type === 'leave_room') { leaveObserve(client); leaveRoom(client); }
   else if (message.type === 'observe') observeRoom(client, message.roomId);
-  else if (message.type === 'chat') { const chat = require('./index').chatMessages; const msg = { uid: client._uid || '', nick: message.nick || '', text: message.text || '', time: new Date().toISOString() }; chat.push(msg); if (chat.length > 100) chat.shift(); broadcastAll(client, { type: 'chat', message: msg }); }
-  else sendError(client, '未知消息类型');
+  else if (message.type === 'chat') pushChat(client, message);
+  else sendError(client, 'unknown_message_type');
 }
 
-function attachPvp(httpServer) {
-httpServer.on('upgrade', (req, socket) => {
+function flushClientBuffer(client) {
+  const decoded = decodeFrames(client.buffer);
+  client.buffer = decoded.rest;
+  for (const message of decoded.messages) {
+    if (message.close) return client.socket.end();
+    if (message.text) handleMessage(client, message.text);
+  }
+}
+
+function attachSocket(socket, head = null) {
+  const client = { socket, buffer: Buffer.alloc(0), roomId: '', index: -1, ready: false, deck: [], _observer: '' };
+  allClients.add(client);
+  if (head && head.length) client.buffer = Buffer.concat([client.buffer, head]);
+
+  const onData = (chunk) => {
+    try {
+      client.buffer = Buffer.concat([client.buffer, chunk]);
+      flushClientBuffer(client);
+    } catch (err) {
+      sendError(client, 'websocket_protocol_error');
+      socket.end();
+    }
+  };
+
+  socket.on('data', onData);
+  socket.on('close', () => disconnectClient(client));
+  socket.on('error', () => disconnectClient(client));
+
+  if (client.buffer.length) {
+    try { flushClientBuffer(client); }
+    catch (err) { sendError(client, 'websocket_protocol_error'); socket.end(); }
+  }
+}
+
+function handlePvpUpgrade(req, socket, head) {
+  if (!String(req.url || '').startsWith('/pvp')) {
+    socket.write('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
   const key = req.headers['sec-websocket-key'];
   if (!key) return socket.destroy();
+
   socket.write([
     'HTTP/1.1 101 Switching Protocols',
     'Upgrade: websocket',
@@ -218,31 +346,23 @@ httpServer.on('upgrade', (req, socket) => {
     '',
     '',
   ].join('\r\n'));
-
-  const client = { socket, buffer: Buffer.alloc(0), roomId: '', index: -1, ready: false, deck: [] };
-  socket.on('data', chunk => {
-    client.buffer = Buffer.concat([client.buffer, chunk]);
-    const decoded = decodeFrames(client.buffer);
-    client.buffer = decoded.rest;
-    for (const message of decoded.messages) {
-      if (message.close) return socket.end();
-      if (message.text) handleMessage(client, message.text);
-    }
-  });
-  socket.on('close', () => leaveRoom(client));
-  socket.on('error', () => leaveRoom(client));
-});
+  attachSocket(socket, head);
 }
 
-function handlePvpUpgrade(req, socket, head) {
-  // 复用同一个 HTTP server 做 WS 升级;不再单独起端口
-  const crypto = require('crypto');
-  const key = req.headers['sec-websocket-key'] || '';
-  const accept = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
-  socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n');
-  socket.client = { send(txt) { const b = Buffer.from(txt); const header = Buffer.alloc(2 + (b.length < 126 ? 0 : 2)); header[0] = 0x81; if (b.length < 126) header[1] = b.length; else { header[1] = 126; header.writeUInt16BE(b.length, 2); } socket.write(Buffer.concat([header, b])); } };
-  allClients.add(socket.client);
-  handleClient(socket.client);
+function attachPvp(httpServer) {
+  httpServer.on('upgrade', handlePvpUpgrade);
 }
 
-module.exports = { handlePvpUpgrade };
+module.exports = {
+  handlePvpUpgrade,
+  attachPvp,
+  _internals: {
+    rooms,
+    allClients,
+    acceptKey,
+    encodeFrame,
+    decodeFrames,
+    sanitizeDeck,
+    sanitizeText,
+  },
+};

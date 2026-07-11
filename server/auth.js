@@ -1,5 +1,11 @@
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'merge-td-dev-secret-change-in-production';
+const DEFAULT_JWT_SECRET = 'merge-td-dev-secret-change-in-production';
+
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET is required when NODE_ENV=production');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
 
 function signToken(uid) {
   return jwt.sign({ uid }, JWT_SECRET, { expiresIn: '30d' });
