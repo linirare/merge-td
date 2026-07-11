@@ -66,6 +66,10 @@ function tickStatus(s, dt) {
       s.hp -= burnDmg;
       s.hitFlash = Math.max(s.hitFlash || 0, 0.18);
       if (typeof addFx === 'function') addFx(s.x, s.y - 20, `🔥${burnDmg}`, '#ff6b3a', 10);
+      // 点燃(DOT)也要能击杀:掉到 0 血立即结算死亡,否则单位卡在 hp<=0 仍存活
+      if (s.hp <= 0 && s.alive && typeof killSoldier === 'function') {
+        killSoldier(s, s.side === 'enemy' ? 'player' : 'enemy', burnDmg, 'burn');
+      }
     }
   }
 

@@ -14,7 +14,12 @@
 })();
 
 function v15Role(type) { return TYPES[type]?.role || ''; }
-function v15IsBackRole(s) {
+// 死亡结算时统一释放所有指向该单位的锁定,避免攻击者残留在 fight 状态
+function clearTargetReferences(deadId) {
+  if (!deadId) return;
+  const all = [...(state.playerSoldiers || []), ...(state.enemySoldiers || [])];
+  for (const u of all) if (u && u.target === deadId) u.target = null;
+}function v15IsBackRole(s) {
   const role = v15Role(s?.type);
   return role === 'back' || role === 'support' || role === 'control' || role === 'siege';
 }
@@ -42,7 +47,7 @@ function patchKillRewardV15() {
     if (!target || !target.alive) return;
     target.alive = false;
     target.mode = 'dead';
-
+    clearTargetReferences(target.id);
     if (target.type === 'pumpkin_roller' && !target.rolled) {
       target.rolled = true;
       if (!state.rollings) state.rollings = [];
@@ -99,6 +104,8 @@ function patchRoleTargetingV15() {
     if (sticky && canSeeTarget(s, sticky)) {
       const d = Math.sqrt(dist2(s, sticky));
       if (d <= TARGET_STICK_RANGE || v15IsBackRole(s)) return sticky;
+    } else if (!sticky) {
+      s.target = null; // 旧目标已死/消失:立即清理,避免残留锁定与 fight 姿态
     }
 
     let best = null;
@@ -128,7 +135,7 @@ function patchRoleTargetingV15() {
 
       if (score < bestScore) { bestScore = score; best = e; }
     }
-    if (best) s.target = best.id;
+    s.target = best ? best.id : null; // 无合法目标时明确清空,交回推进/攻城决策
     return best;
   };
   findTarget._balanceV15Patched = true;
