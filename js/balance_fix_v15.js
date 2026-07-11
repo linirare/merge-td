@@ -166,15 +166,17 @@ function patchBacklineAdvanceV15() {
       } else {
         const safeAnchor = s.side === 'player' ? fieldBottom() - 42 : fieldTop() + 42;
         const slowAdvance = s.side === 'player' ? -1 : 1;
-        s.y += slowAdvance * SIEGE_SPEED * 0.28 * dt_global;
+        const bss = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, SIEGE_SPEED) : SIEGE_SPEED;
+        s.y += slowAdvance * bss * 0.28 * dt_global;
         v15ClampBacklineY(s, s.y + (safeAnchor - s.y) * 0.12);
       }
       return;
     }
 
     s.mode = 'march';
-    if (s.side === 'player') s.y -= SIEGE_SPEED * dt_global;
-    else s.y += SIEGE_SPEED * dt_global;
+    const ass = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, SIEGE_SPEED) : SIEGE_SPEED;
+    if (s.side === 'player') s.y -= ass * dt_global;
+    else s.y += ass * dt_global;
   };
   advanceTowardWall._balanceV15Patched = true;
 }
