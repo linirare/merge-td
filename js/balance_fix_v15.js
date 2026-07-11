@@ -110,10 +110,12 @@ function patchRoleTargetingV15() {
 
     let best = null;
     let bestScore = Infinity;
+    // 城墙防守:只有靠近自家城墙的兵才回防(前线兵不回撤);逼近/正在打我方城墙的敌人优先清理。
+    const ownWallY = s.side === 'player' ? LAYOUT.playerWallY : LAYOUT.enemyWallY + LAYOUT.wallH;
+    const nearOwnWall = s.side === 'player' ? s.y >= ownWallY - 150 : s.y <= ownWallY + 150;
     for (const e of enemies) {
       if (!isCombatant(e)) continue;
       ensureLane(e);
-      if (!canSeeTarget(s, e)) continue;
 
       const dx = e.x - s.x;
       const dy = e.y - s.y;
@@ -121,11 +123,17 @@ function patchRoleTargetingV15() {
       const laneGap = Math.abs(e.x - s.laneX);
       const sameLane = laneGap <= LANE_TOLERANCE;
       const forward = isForwardOf(s, e);
+      const eNearOwnWall = s.side === 'player' ? e.y >= ownWallY - 70 : e.y <= ownWallY + 70;
+      // 回防对象:靠近我墙且离本兵不远(本地威胁),允许越过普通可见性、不吃"非前方/跨路"惩罚
+      const wallThreat = nearOwnWall && eNearOwnWall && dist <= 150;
+
+      if (!wallThreat && !canSeeTarget(s, e)) continue;
       const roleMul = typeof roleCounterMultiplier === 'function' ? roleCounterMultiplier(s.type, e.type) : 1;
 
-      let score = Math.abs(dy) + laneGap * 0.85 + dist * 0.22;
-      if (!sameLane) score += 58;
-      if (!forward && dist > 52) score += 180;
+      let score = Math.abs(dy) + laneGap * (wallThreat ? 0.3 : 0.85) + dist * 0.22;
+      if (!sameLane) score += wallThreat ? 16 : 58;
+      if (!forward && dist > 52 && !wallThreat) score += 180;
+      if (wallThreat) score -= 200; // 强优先:先清理围攻/破坏我方城墙的敌人
       if (roleMul >= 1.32) score -= 86;
       else if (roleMul >= 1.15) score -= 40;
       else if (roleMul <= 0.9) score += 36;
