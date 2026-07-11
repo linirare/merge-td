@@ -45,9 +45,12 @@
     shell.gems = Number(shell.gems || 0);
     shell.fragments = shell.fragments || {};
     shell.fruitLv = shell.fruitLv || {};
+    meta.shardsTotal = meta.shardsTotal || {};
     for (const id of UNIT_POOL) {
       if (!shell.fragments[id]) shell.fragments[id] = 0;
       if (!shell.fruitLv[id]) shell.fruitLv[id] = 1;
+      // 迁移:老存档只有可花费碎片,用它给养成累计打底(取两者较大值,单调不减)
+      if (!meta.shardsTotal[id]) meta.shardsTotal[id] = shell.fragments[id] || 0;
     }
     saveShell();
   }
@@ -441,7 +444,9 @@
       const isNew = !meta.unlocked.includes(id);
       if (isNew) meta.unlocked.push(id);
       // 新 → 解锁 + 碎片;重复 → 转碎片(碎片即养成货币)
-      shell.fragments[id] = (shell.fragments[id] || 0) + tier.frag;
+      shell.fragments[id] = (shell.fragments[id] || 0) + tier.frag;      // 可花费余额
+      meta.shardsTotal = meta.shardsTotal || {};
+      meta.shardsTotal[id] = (meta.shardsTotal[id] || 0) + tier.frag;    // 单调累计 → 驱动养成/星级
       results.push({ id, icon: t.icon || '?', name: t.name || id, tier, isNew, total: shell.fragments[id] });
     }
     saveAll();

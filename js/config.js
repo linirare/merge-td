@@ -211,6 +211,32 @@ function bestCounterForEnemy(enemyType, pool = null) {
 
 const LEVEL_MUL = [0, 1.0, 1.4, 1.9, 2.5, 3.2, 4.0, 5.0];
 const MAX_LEVEL = 7;
+
+/* ——— 局外养成:碎片指数消耗 Lv1-20 + ★1-7 星级(设计档 §7)——— */
+const CULTIVATE_MAX = 20;
+function cultivateShardCost(lv) { return 10 * Math.pow(2, lv - 1); }        // 升到 Lv 的单级消耗
+function cultivateCumCost(lv) { return 10 * (Math.pow(2, lv) - 1); }        // 升满 Lv 的累计消耗
+function cultivateBonusAt(lv) {                                            // ATK/HP 加成(§7.2)
+  if (lv <= 0) return 0;
+  if (lv <= 10) return lv * 0.05;                                          // Lv1-10:+5%/级 → +50%
+  return [0.54, 0.58, 0.62, 0.66, 0.70, 0.73, 0.76, 0.79, 0.82, 0.85][Math.min(lv, 20) - 11]; // Lv11-20
+}
+function cultivateLevelFromShards(shards) {                                // 累计碎片自动投资到最高可达级
+  let lv = 0;
+  while (lv < CULTIVATE_MAX && (shards || 0) >= cultivateCumCost(lv + 1)) lv++;
+  return lv;
+}
+const STAR_THRESHOLDS = [0, 20, 60, 140, 290, 540, 940];                    // ★1..★7 累计碎片门槛(§7.3)
+function starLevelFromShards(shards) {
+  let st = 1;
+  for (let i = 1; i < STAR_THRESHOLDS.length; i++) if ((shards || 0) >= STAR_THRESHOLDS[i]) st = i + 1;
+  return st;
+}
+function starAtkBonus(star) { return [0, 0, 0.05, 0.10, 0.16, 0.23, 0.30, 0.38][Math.min(Math.max(star, 1), 7)]; }
+function starHpBonus(star)  { return [0, 0, 0.03, 0.06, 0.10, 0.15, 0.20, 0.26][Math.min(Math.max(star, 1), 7)]; }
+// 碎片 → 最终 ATK/HP 乘子:(1+养成加成)×(1+星级加成)
+function fragmentAtkMul(shards) { return (1 + cultivateBonusAt(cultivateLevelFromShards(shards))) * (1 + starAtkBonus(starLevelFromShards(shards))); }
+function fragmentHpMul(shards)  { return (1 + cultivateBonusAt(cultivateLevelFromShards(shards))) * (1 + starHpBonus(starLevelFromShards(shards))); }
 const BASE_WALL_HP = 72;
 const SIEGE_SLOTS_PER_LANE = 3;
 const BALL_SPAWN_INTERVAL = 4.4;

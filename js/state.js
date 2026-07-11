@@ -127,6 +127,7 @@ function createMeta() {
     highestLevel: 1,
     totalWins: 0,
     stars: {},
+    shardsTotal: {},
     deck: DEFAULT_DECK.slice(),
     unlocked: BASIC_UNLOCKED.slice(),
   };
@@ -138,11 +139,16 @@ function upgradeKey(typeId, stat) {
 function getUpgradeLv(meta, typeId, stat) {
   return meta.upgrades[upgradeKey(typeId, stat)] || 0;
 }
+function fragShards(meta, typeId) {
+  return (meta.shardsTotal && meta.shardsTotal[normalizeTypeId(typeId)]) || 0;
+}
 function getAtkMul(meta, typeId) {
-  return 1 + getUpgradeLv(meta, typeId, 'atk') * UPGRADE_PER_LV;
+  const base = 1 + getUpgradeLv(meta, typeId, 'atk') * UPGRADE_PER_LV;
+  return base * (typeof fragmentAtkMul === 'function' ? fragmentAtkMul(fragShards(meta, typeId)) : 1);
 }
 function getHpMul(meta, typeId) {
-  return 1 + getUpgradeLv(meta, typeId, 'hp') * UPGRADE_PER_LV;
+  const base = 1 + getUpgradeLv(meta, typeId, 'hp') * UPGRADE_PER_LV;
+  return base * (typeof fragmentHpMul === 'function' ? fragmentHpMul(fragShards(meta, typeId)) : 1);
 }
 function getWallBonus(meta) {
   return meta.wallLv * WALL_PER_LV;
