@@ -241,8 +241,8 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 .hifi .card .rc{position:absolute;top:3px;left:3px;font-size:9px;font-weight:900;padding:0 4px;border-radius:5px;background:var(--rc);color:#20140a;font-family:'Nunito';z-index:1;}
 .hifi .card .lv{position:absolute;top:3px;right:3px;font-size:9px;font-weight:800;color:#FFE9A8;font-family:'Fredoka';}
 .hifi .card .fdisc{margin:auto 0;}
-.hifi .card .nm{font-size:11px;font-weight:800;color:#F3E3C0;font-family:'ZCOOL KuaiLe';text-align:center;line-height:1.1;margin-top:auto;}
-.hifi .card .stars{display:flex;gap:1px;margin-bottom:2px;} .hifi .card .stars .icon{width:9px;height:9px;color:var(--gold);}
+.hifi .card .nm{font-size:13px;font-weight:800;color:#F3E3C0;font-family:'ZCOOL KuaiLe';text-align:center;line-height:1.1;margin-top:auto;}
+.hifi .card .stars{display:flex;gap:2px;margin-bottom:2px;} .hifi .card .stars .icon{width:11px;height:11px;color:var(--gold);}
 .hifi .card.lock{filter:grayscale(.75);opacity:.85;cursor:default;}
 .hifi .card .lk{position:absolute;inset:0;display:grid;place-items:center;color:#fff;}
 .hifi .card .lk .icon{width:22px;height:22px;}
