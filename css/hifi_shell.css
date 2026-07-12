@@ -144,11 +144,11 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 @media (prefers-reduced-motion: reduce){.hifi *,#bottomNav.hifi *{animation:none !important;}}
 
 /* 桌面下给壳屏加个手机边框(与原型一致) */
-/* 桌面下把整个 app 收成居中 430px 全高一列(壳屏 + 底栏对齐),避免底栏满屏 */
+/* 桌面 app 收成居中 550px 列(手机<430不受影响;桌面放大占更多屏幕,减少空白) */
 @media(min-width:470px){
-  #menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi,#campaignPanel.hifi{left:50%;right:auto;transform:translateX(-50%);width:430px;box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);}
-  body.shell-v65 #bottomNav.hifi,#bottomNav.hifi{left:50%;right:auto;transform:translateX(-50%);width:430px;}
-  #wrap{left:50%;right:auto;transform:translateX(-50%);width:430px;}
+  #menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi,#campaignPanel.hifi{left:50%;right:auto;transform:translateX(-50%);width:550px;box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);}
+  body.shell-v65 #bottomNav.hifi,#bottomNav.hifi{left:50%;right:auto;transform:translateX(-50%);width:550px;}
+  #wrap{left:50%;right:auto;transform:translateX(-50%);width:550px;}
 }
 
 /* ---- 轻量占位 toast(未接后端的入口用) ---- */

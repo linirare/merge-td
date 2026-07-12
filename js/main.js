@@ -16,8 +16,8 @@ try {
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  // canvas 最大宽度收至 430px(与 DOM 壳屏 #menuPanel 桌面约束对齐,消除局内/外尺寸割裂)
-  const maxW = Math.min(window.innerWidth, 430);
+  // 桌面 canvas 最大宽度放大(手机<430不受影响,桌面>470放大到550,减少空白)
+  const maxW = Math.min(window.innerWidth, 550);
   scale = Math.min(maxW / W, window.innerHeight / H) * 0.96;
   canvas.style.width = W * scale + 'px';
   canvas.style.height = H * scale + 'px';
