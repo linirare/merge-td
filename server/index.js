@@ -3,6 +3,8 @@ const http = require('http');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 const db = require('./db');
 const { signToken, authMiddleware } = require('./auth');
 const { clampInt, safeText, safeJsonText } = require('./util');
@@ -20,6 +22,9 @@ const FRONTEND_STATIC = { dotfiles: 'deny', index: false, etag: true, maxAge: 0,
 const POWER_MAX = 300;
 
 app.use(express.json({ limit: '128kb' }));
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, message: { error: 'rate_limit' } });
+app.use('/api/', apiLimiter);
 app.use('/css', express.static(path.join(PUBLIC_ROOT, 'css'), FRONTEND_STATIC));
 app.use('/js', express.static(path.join(PUBLIC_ROOT, 'js'), FRONTEND_STATIC));
 app.use('/art', express.static(path.join(PUBLIC_ROOT, 'art'), FRONTEND_STATIC));
@@ -180,5 +185,11 @@ const PORT = process.env.PORT || 3000;
 if (require.main === module) {
   server.listen(PORT, () => console.log(`Server :${PORT}`));
 }
+
+// 全局错误 handler (防未捕获异常泄露堆栈)
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 module.exports = { app, server, chatMessages, clampInt, safeText, safeJsonText, POWER_MAX };
