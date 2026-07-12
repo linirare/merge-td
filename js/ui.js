@@ -168,13 +168,13 @@ function refreshGold() {
 /* ——— 按钮事件绑定 ——— */
 document.addEventListener('DOMContentLoaded', () => {
   loadMeta();
-  document.getElementById('btnStart').addEventListener('click', () => {
+  document.getElementById('btnStart')?.addEventListener('click', () => {
     meta.deck = normalizeDeck(meta.deck);
     saveMeta();
     document.getElementById('menuPanel').classList.add('hide');
     initLevel(meta.highestLevel || 1);
   });
-  document.getElementById('btnUpgrade').addEventListener('click', () => {
+  document.getElementById('btnUpgrade')?.addEventListener('click', () => {
     refreshGold();
     document.getElementById('upgradePanel').classList.remove('hide');
     renderUpgrades();

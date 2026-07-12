@@ -53,41 +53,41 @@
 
 <div id="overlay"></div>
 
-<div id="menuPanel" class="panel">
-  <div class="panel-inner menu-card">
-    <div class="game-logo">
-      <span class="logo-mark">🍉</span>
-      <div>
-        <h1>水果突击</h1>
-        <p class="sub">果汁召唤 · 免费合成 · 职责克制</p>
-        <p class="sub" style="font-size:10px;color:#2c8d3f;">BUILD <span id="buildBadge">loading</span></p>
+<div id="menuPanel" class="panel hifi">
+  <!-- FOUC 永久修复(static-first):首帧静态渲染=烫金首页骨架,与 product_shell.js renderHome() 输出保持一致。
+       占位数字(Lv.1/0)由 JS 注水校正为真实值。⚠️改首页两边同步:此骨架 + renderHome()。 -->
+  <div class="panel-inner shell-page shell-home-page">
+    <div class="hifi-home">
+      <div class="bg"></div><div class="scrim"></div>
+      <header class="top">
+        <button class="ring avatar" data-account><span class="inner"><svg class="icon"><use href="#i-user"/></svg></span><span class="lvl">Lv.1</span></button>
+        <span class="cchip"><svg class="icon"><use href="#i-coin"/></svg><b data-shell-gold>0</b><span class="plus"><svg class="icon"><use href="#i-plus"/></svg></span></span>
+        <span class="cchip"><svg class="icon"><use href="#i-gem"/></svg><b data-shell-gems>0</b><span class="plus"><svg class="icon"><use href="#i-plus"/></svg></span></span>
+        <span class="sp"></span>
+        <button class="ring" data-tut><span class="inner"><svg class="icon"><use href="#i-help"/></svg></span></button>
+        <button class="ring" data-go="shop"><span class="inner"><svg class="icon"><use href="#i-gear"/></svg></span></button>
+      </header>
+      <div class="logo"><h1 class="display">水果突击</h1><div class="rib">灵果召唤 · 合成塔防</div></div>
+      <div class="side-l">
+        <button class="ring" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">签到</span></button>
+        <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg></span><span class="lbl">邮件</span></button>
+        <button class="ring" data-chat><span class="inner" style="background:radial-gradient(circle at 40% 34%,#8FE0A0,#2E9A56)"><svg class="icon"><use href="#i-cards"/></svg></span><span class="lbl">聊天</span></button>
+      </div>
+      <div class="side">
+        <button class="ring" data-go="shop"><span class="inner" style="background:radial-gradient(circle at 40% 34%,#FFB05A,#D9600E)"><svg class="icon"><use href="#i-flame"/></svg></span><span class="lbl">活动</span></button>
+        <button class="ring" data-help><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-bell"/></svg></span><span class="lbl">公告</span></button>
+      </div>
+      <button class="hifi-levelsel" id="hifiLevelSel">☰ 选关 · 第1关</button>
+      <div class="homecta">
+        <button class="cta pve" id="hifiPve"><svg class="micon"><use href="#i-sword"/></svg><span class="txtcol"><span class="t">开始对战</span><span class="s">闯关 · 第1关</span></span><span class="shine"></span></button>
+        <button class="cta pvp" id="hifiPvp"><svg class="micon"><use href="#i-vs"/></svg><span class="txtcol"><span class="t">开始竞技</span><span class="s">PVP · 论剑</span></span><span class="shine"></span></button>
       </div>
     </div>
-
-    <div class="hero-preview" aria-hidden="true">
-      <div class="castle enemy-castle">腐坏果堡</div>
-      <div class="lane-line"></div>
-      <div class="troop-row"><span>🍇</span><span>🍍</span><span>🍌</span><span>🍊</span></div>
-      <div class="castle player-camp">水果营地</div>
-    </div>
-
-    <div class="menu-stats">
-      <span>🍋 <b id="menuGold">0</b></span>
-      <span>🚩 关卡 <b id="menuStage">1</b></span>
-    </div>
-
-    <div class="feature-chips">
-      <span>点空格召唤</span>
-      <span>拖拽免费</span>
-      <span>双击急派</span>
-    </div>
-
-    <div id="menuDeck" class="feature-chips" style="font-size:22px;gap:8px;"></div>
-    <button id="btnStart" class="btn-primary">开始突击</button>
-    <button id="btnDeck" class="btn-secondary">水果养成 · 编队/科技</button>
-    <button id="btnUpgrade" class="btn-secondary">水果科技树</button>
-    <button id="btnSim" class="btn-secondary small">数值模拟 1-20关</button>
-    <button id="btnReset" class="btn-reset">长按重置数据</button>
+  </div>
+  <!-- 旧控件隐藏保活:ui.js 等在 renderHome 之前会绑定这些ID,保留隐藏桩防 null 崩溃(renderHome 后失效无害) -->
+  <div hidden aria-hidden="true">
+    <span id="buildBadge">loading</span><b id="menuGold">0</b><b id="menuStage">1</b><span id="menuDeck"></span>
+    <button id="btnStart"></button><button id="btnDeck"></button><button id="btnUpgrade"></button><button id="btnSim"></button><button id="btnReset"></button>
   </div>
 </div>
 
