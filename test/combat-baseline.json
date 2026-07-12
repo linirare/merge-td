@@ -31,7 +31,7 @@
       "eHp": 57
     },
     "frost_vs_coconut": {
-      "engage": 47,
+      "engage": 49,
       "frames": 584,
       "winner": "enemy",
       "pHp": 0,
@@ -46,8 +46,8 @@
   "skirmish_900f": {
     "pAlive": 1,
     "eAlive": 2,
-    "pWall": 600,
-    "eWall": 600,
+    "pWall": 565,
+    "eWall": 570,
     "phase": "playing"
   },
   "boss_melon_shield": 0,

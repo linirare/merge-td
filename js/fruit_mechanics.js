@@ -157,8 +157,8 @@ function patchFruitUpdateCombat() {
   const oldUpdateCombat = updateCombat;
   updateCombat = function fruitUpdateCombat() {
     if (state.phase !== 'playing') return;
-    updateFruitPassiveSkills(dt_global);
-    updateRollingPumpkins(dt_global);
+    // 修#3:被动/南瓜 tick 交给 combat.js updateCombat 内部单点调用。原来这里再调一次 = 每帧 2 倍
+    //       (所有护盾/治疗/buff/技能冷却时序全被 ×2)。此处只保留对原 updateCombat 的透传。
     oldUpdateCombat();
   };
   updateCombat._fruitPatched = true;

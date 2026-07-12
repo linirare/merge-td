@@ -294,15 +294,22 @@ function advanceTowardWall(s) {
       else if (s.side === 'player' ? u.y < front.y : u.y > front.y) front = u;
     }
     const spacing = role === 'siege' ? 78 : role === 'support' ? 70 : 58;
+    const wallDir = s.side === 'player' ? -1 : 1; // 朝敌方城墙方向
     if (front) {
-      const desiredY = s.side === 'player' ? front.y + spacing : front.y - spacing;
-      s.y += (clamp(desiredY, fieldTop() + 18, fieldBottom() - 18) - s.y) * Math.min(1, dt_global * 4.2);
+      const frontSieging = front.mode === 'siege' || front.mode === 'siege_queue' || front.mode === 'siege_support' || reachedWall(front);
+      if (frontSieging) {
+        // 修#5:前排已到城墙攻城时,后排也压到城墙。旧逻辑停在 front.y+spacing(墙后)→ reachedWall 永为 false → 后排永不攻城
+        s.mode = 'march';
+        s.y += wallDir * sspeed * 0.7 * dt_global;
+      } else {
+        const desiredY = s.side === 'player' ? front.y + spacing : front.y - spacing;
+        s.y += (clamp(desiredY, fieldTop() + 18, fieldBottom() - 18) - s.y) * Math.min(1, dt_global * 4.2);
+      }
     } else {
-      // 后排无前排时:慢速谨慎推进(V15 原版行为,不同路敌人不会卡住)
-      const slowAdvance = s.side === 'player' ? -1 : 1;
-      const safeAnchor = s.side === 'player' ? fieldBottom() - 42 : fieldTop() + 42;
-      s.y += slowAdvance * sspeed * 0.38 * dt_global;
-      s.y += (clamp(s.y + (safeAnchor - s.y) * 0.12, fieldTop() + 18, fieldBottom() - 18) - s.y) * Math.min(1, dt_global * 4.2);
+      // 修#1:后排无前排时仍朝敌方城墙谨慎推进。旧逻辑锚点=己方墙(fieldBottom-42),
+      //       前推力被锚拉力抵消→平衡点在敌墙前→后排永远到不了敌方城墙。
+      s.mode = 'march';
+      s.y += wallDir * sspeed * 0.55 * dt_global;
     }
     return;
   }
@@ -557,7 +564,10 @@ function applySeparation(soldiers) {
       const speed = 42 * dt_global;
       const nextX = a.x + fx * speed;
       a.x = clamp(nextX, a.laneX - FIGHT_X_LEASH, a.laneX + FIGHT_X_LEASH);
-      a.y = clamp(a.y + fy * speed * (a.mode === 'siege' || a.mode === 'siege_queue' ? 0 : 1), fieldTop(), fieldBottom()); // 攻城单位也允许水平分散
+      // 修#4:攻城单位只做水平分散,Y 完全不碰。否则 y(城墙≈278) 被 clamp 到 fieldTop(296),
+      //       每帧被弹离城墙 ~18px,attackWall 又把它拉回 → 墙边上下抖动。
+      const sieging = a.mode === 'siege' || a.mode === 'siege_queue' || a.mode === 'siege_support';
+      if (!sieging) a.y = clamp(a.y + fy * speed, fieldTop(), fieldBottom());
     }
   }
 }

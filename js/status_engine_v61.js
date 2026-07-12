@@ -199,7 +199,9 @@ function migrateOldStatus(s) {
     const effectiveMul = Math.min(oldMul, newMul);
     const t = TYPES[s.type] || {};
     const move = t.move || 86;
-    return base * (move / 92) * effectiveMul;
+    // 修#2:恢复 78% 速度下限(原 fruit_mechanics.fruitMoveSpeed 有,v61 shim 时丢了)。
+    //       丢失后慢速单位(move 64-72)+减速叠加可掉到正常的 34-51%,表现为爬行/卡住。
+    return Math.max(base * 0.78, base * (move / 92) * effectiveMul);
   };
   fruitMoveSpeed._statusV61 = true;
 })();
