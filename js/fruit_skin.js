@@ -22,15 +22,16 @@ function drawPanel(x, y, w, h, r, fill = 'rgba(255,255,255,0.54)', stroke = 'rgb
 
 function drawBackground() {
   const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#fff9c8');
-  sky.addColorStop(0.25, '#eaffb8');
-  sky.addColorStop(0.58, '#b9f29a');
-  sky.addColorStop(1, '#73d98b');
+  sky.addColorStop(0, '#FBF1D2');
+  sky.addColorStop(0.28, '#F6E6B8');
+  sky.addColorStop(0.60, '#F0D492');
+  sky.addColorStop(1, '#E7C070');
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
   ctx.save();
-  ctx.fillStyle = 'rgba(69,166,73,0.12)';
+  // 敌墙后的暖金圆簇(淡,保留纵深)
+  ctx.fillStyle = 'rgba(181,117,10,0.10)';
   for (let i = 0; i < 8; i++) {
     const x = -20 + i * 68;
     ctx.beginPath();
@@ -41,10 +42,10 @@ function drawBackground() {
   }
 
   const fruits = [
-    ['rgba(255,93,108,0.10)', 52, 86, 18],
-    ['rgba(155,92,255,0.08)', 400, 102, 22],
-    ['rgba(255,201,60,0.10)', 420, 740, 28],
-    ['rgba(83,201,106,0.08)', 58, 730, 24],
+    ['rgba(226,59,78,0.08)', 52, 86, 20],
+    ['rgba(199,121,132,0.07)', 400, 102, 24],
+    ['rgba(245,194,66,0.12)', 420, 740, 30],
+    ['rgba(120,199,131,0.07)', 58, 730, 26],
   ];
   for (const [color, x, y, r] of fruits) {
     ctx.fillStyle = color;
@@ -53,10 +54,11 @@ function drawBackground() {
     ctx.fill();
   }
 
+  // 中心提亮 → 四周淡金压边(暖、亮、聚焦战场)
   const vignette = ctx.createRadialGradient(W / 2, H * 0.46, 80, W / 2, H * 0.52, 470);
-  vignette.addColorStop(0, 'rgba(255,255,255,0.16)');
-  vignette.addColorStop(0.70, 'rgba(255,255,255,0)');
-  vignette.addColorStop(1, 'rgba(40,130,60,0.10)');
+  vignette.addColorStop(0, 'rgba(255,255,255,0.20)');
+  vignette.addColorStop(0.66, 'rgba(255,255,255,0)');
+  vignette.addColorStop(1, 'rgba(150,95,10,0.16)');
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
