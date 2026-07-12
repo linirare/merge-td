@@ -69,6 +69,12 @@ function update(dt) {
 
   if (state.phase !== 'playing') return;
 
+  // 服务器权威 PvP:本地不驱动战斗,只把服务端快照插值渲染(见 pvp.js pvpClientUpdate)
+  if (state.mode === 'pvp') {
+    if (typeof pvpClientUpdate === 'function') pvpClientUpdate(dt);
+    return;
+  }
+
   state.time += dt;
 
   if (!state._spTimer) state._spTimer = 0;

@@ -142,13 +142,17 @@
         playerIndex: pvp.playerIndex,
         decks: message.decks || [],
       });
+    } else if (message.type === 'snapshot') {
+      applySnapshot(message.snap);
     } else if (message.type === 'peer_action') {
-      applyRemoteAction(message.action);
+      applyRemoteAction(message.action); // 旧帧同步遗留;服务器权威下已不发,保留兜底无害
     } else if (message.type === 'peer_left') {
       handlePeerLeft();
     } else if (message.type === 'match_result') {
       pvp.resultReported = true;
-      setStatus(message.result && message.result.winner === pvp.playerIndex ? 'PVP 结果已确认：胜利' : 'PVP 结果已确认：失败');
+      const win = !!(message.result && message.result.winner === pvp.playerIndex);
+      setStatus(win ? 'PVP 结果:胜利' : 'PVP 结果:失败');
+      if (state.mode === 'pvp' && state.phase === 'playing') { state.phase = win ? 'won' : 'lost'; showPvpResult(win); }
     } else if (message.type === 'error') {
       setStatus(message.message || 'PVP 错误');
     }
@@ -287,12 +291,84 @@
     state.pvpSeq = 0;
     state.currentLevel = 1;
     state.levelConfig = { id: 1, isBoss: false, enemyInitLevel: 1, enemyWallHp: state.enemyWallMax, enemySpawnInterval: 9999, reward: 0, desc: '实时 PVP' };
-    pvpOpening(state.playerSlots, myDeck, true);
-    pvpOpening(state.enemySlots, peerDeck, false);
+    // 服务器权威:棋盘/士兵/城墙全部由服务端快照驱动,客户端不再本地布局或跑战斗
     state.phase = 'playing';
     hidePvpPanels();
     setStatus('PVP 对战中');
     addFx(W / 2, LAYOUT.fieldY + 80, '实时对战开始', THEME.gold, 18);
+  }
+
+  // —— 阶段3:服务器权威——客户端只渲染快照,不跑本地战斗 ——
+  function fieldMirrorY(y) {
+    // side1 视角:绕战场中线镜像,让"我"永远在下面
+    const mid = (LAYOUT.playerWallY + LAYOUT.enemyWallY) / 2;
+    return 2 * mid - y;
+  }
+  function reconstructBoard(rows) {
+    if (!Array.isArray(rows)) return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+    return rows.map(row => (row || []).map(cell => {
+      if (!cell) return null;
+      const b = createBall(cell.type, cell.level || 1);
+      if (cell.sp != null) b.spawnTimer = cell.sp;
+      return b;
+    }));
+  }
+  function applySnapshot(snap) {
+    if (state.mode !== 'pvp' || !snap || !snap.walls) return;
+    const mySide = pvp.playerIndex === 1 ? 1 : 0;
+    const flip = mySide === 1;
+
+    // 城墙/果汁:我方永远在下(playerWall),对方在上(enemyWall)
+    if (mySide === 0) {
+      state.playerWallHp = snap.walls.p; state.playerWallMax = snap.walls.pMax;
+      state.enemyWallHp = snap.walls.e; state.enemyWallMax = snap.walls.eMax;
+      state.sp = snap.sp.p; state.enemySp = snap.sp.e;
+    } else {
+      state.playerWallHp = snap.walls.e; state.playerWallMax = snap.walls.eMax;
+      state.enemyWallHp = snap.walls.p; state.enemyWallMax = snap.walls.pMax;
+      state.sp = snap.sp.e; state.enemySp = snap.sp.p;
+    }
+
+    // 棋盘:我方=snapshot 里我这侧(拖拽中不重建,避免打断手感)
+    if (!state.drag) {
+      const myBoard = mySide === 0 ? snap.boards.p : snap.boards.e;
+      const opBoard = mySide === 0 ? snap.boards.e : snap.boards.p;
+      state.playerSlots = reconstructBoard(myBoard);
+      state.enemySlots = reconstructBoard(opBoard);
+    }
+
+    // 士兵:按 side 映射 player/enemy;side1 翻 y;插值保留旧对象平滑移动
+    const prev = {};
+    for (const s of state.playerSoldiers) prev[s.id] = s;
+    for (const s of state.enemySoldiers) prev[s.id] = s;
+    const mine = [], theirs = [];
+    for (const su of (snap.soldiers || [])) {
+      const isMine = su.side === mySide;
+      const tx = su.x;
+      const ty = flip ? fieldMirrorY(su.y) : su.y;
+      const o = prev[su.id] || { id: su.id, x: tx, y: ty, hitFlash: 0 };
+      o.type = su.type; o.level = su.level; o.hp = su.hp; o.maxHp = su.maxHp;
+      o.mode = su.mode; o.shield = su.shield; o.alive = true;
+      o.side = isMine ? 'player' : 'enemy';
+      o.tx = tx; o.ty = ty;
+      if (su.hit) o.hitFlash = 0.28;
+      o._faceDir = flip ? -(su.face || 0) : (su.face || 0);
+      (isMine ? mine : theirs).push(o);
+    }
+    state.playerSoldiers = mine;
+    state.enemySoldiers = theirs;
+  }
+
+  // PvP 客户端逐帧:不驱动战斗,只把士兵插值到快照目标 + 视觉衰减
+  function pvpClientUpdate(dt) {
+    state.time = (state.time || 0) + dt;
+    const k = Math.min(1, dt * 14);
+    const lerp = (s) => { if (s.tx != null) s.x += (s.tx - s.x) * k; if (s.ty != null) s.y += (s.ty - s.y) * k; if (s.hitFlash > 0) s.hitFlash = Math.max(0, s.hitFlash - dt * 1.2); };
+    for (const s of state.playerSoldiers) lerp(s);
+    for (const s of state.enemySoldiers) lerp(s);
+    for (let i = state.rings.length - 1; i >= 0; i--) { const r = state.rings[i]; r.life -= dt; r.r += 64 * dt; if (r.life <= 0) state.rings.splice(i, 1); }
+    for (let i = state.fx.length - 1; i >= 0; i--) { const f = state.fx[i]; if (f.vx) { f.x += f.vx * dt; f.y += f.vy * dt; } f.life -= dt; if (f.life <= 0) state.fx.splice(i, 1); }
+    for (let i = state.attackFx.length - 1; i >= 0; i--) { state.attackFx[i].life -= dt; if (state.attackFx[i].life <= 0) state.attackFx.splice(i, 1); }
   }
 
   function actionCostFor(side) {
@@ -543,4 +619,7 @@
     localUrgent: pvpLocalUrgent,
   };
   window.startPvpMatch = startPvpMatch;
+  window.pvpClientUpdate = pvpClientUpdate;
+  // 测试钩子:让 headless 直接验证"快照→本地state(含视角翻转)"映射,不用起真两人对局
+  window.__pvpTest = { applySnapshot, fieldMirrorY, setSide(i) { pvp.playerIndex = i; } };
 })();

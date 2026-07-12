@@ -206,7 +206,7 @@ const DRIVER = `
         hp: Math.round(s.hp), maxHp: Math.round(s.maxHp), mode: s.mode,
         shield: Math.round(s.shield || 0), hit: s.hitFlash > 0 ? 1 : 0, face: s._faceDir || 0,
       });
-      const serBoard = (slots) => slots.map(row => row.map(b => (b ? { type: b.type, level: b.level } : null)));
+      const serBoard = (slots) => slots.map(row => row.map(b => (b ? { type: b.type, level: b.level, sp: Math.round((b.spawnTimer || 0) * 100) / 100 } : null)));
       return {
         t: Math.round(state.time * 100) / 100,
         phase: state.phase,
