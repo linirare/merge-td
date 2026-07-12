@@ -237,7 +237,6 @@ function initLevel(k) {
     size: 1.1 + Math.random() * 1.4,
     alpha: 0.018 + Math.random() * 0.028,
   }));
-  addFx(W / 2, LAYOUT.playerBoardY - 14, `消耗果汁点空格召唤 · ${activeDeck().map(id => TYPES[id].icon).join(' ')} 刷这5种`, THEME.gold, 14);
   state.phase = 'playing';
   resetAI();
 }

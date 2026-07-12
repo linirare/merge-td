@@ -770,12 +770,6 @@
             </div>
           </div>
 
-          <div class="shead" style="margin-top:16px"><h2 class="display" style="font-size:20px">无尽天梯</h2><span class="line"></span></div>
-          <div class="gpanel">
-            <p style="font-size:13px;color:#C9B48A;font-weight:700;margin:0 0 12px;position:relative;z-index:1">连续波次挑战,失败后按坚持波数结算。</p>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;position:relative;z-index:1"><span style="font-weight:800;color:#C9B48A">历史最好</span><span><b id="ladderBest" style="font-family:Fredoka;font-size:26px;color:#F5C242">${best}</b> <small style="color:#C9B48A">波</small></span></div>
-            <button class="gbtn blk" id="btnLadderStart" style="position:relative;z-index:1"><svg class="icon"><use href="#i-vs"/></svg>开始天梯</button>
-          </div>
         </div>
       </div>
     `;
@@ -786,7 +780,6 @@
       window.pvpClient?.setReady(ready);
     });
     root.querySelector('#btnPvpLeave')?.addEventListener('click', () => window.pvpClient?.leaveRoom());
-    root.querySelector('#btnLadderStart')?.addEventListener('click', startLadder);
     root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => { hidePanels(); document.getElementById('helpPanel')?.classList.remove('hide'); }));
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
     renderPvpStatus();
@@ -804,7 +797,13 @@
         <div class="bg"></div><div class="scrim"></div>
         ${hifiTopBarHtml()}
         <div class="hifi-scroll">
-          <div class="shead"><h2 class="display">排行榜</h2><span class="line"></span></div>
+          <div class="shead"><h2 class="display">无尽天梯</h2><span class="line"></span></div>
+          <div class="gpanel">
+            <p style="font-size:13px;color:#C9B48A;font-weight:700;margin:0 0 12px">连续波次挑战,失败后按坚持波数结算。</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-weight:800;color:#C9B48A">历史最好</span><span><b style="font-family:Fredoka;font-size:26px;color:#F5C242">${shell.ladderBest || 0}</b> <small style="color:#C9B48A">波</small></span></div>
+            <button class="gbtn blk" id="btnLadderStart"><svg class="icon"><use href="#i-vs"/></svg>开始天梯</button>
+          </div>
+          <div class="shead" style="margin-top:20px"><h2 class="display">排行榜</h2><span class="line"></span></div>
           <div class="rtabs">${RANK_TABS.map(([k, l]) => `<button class="rtab ${rankTab === k ? 'on' : ''}" data-rtab="${k}">${l}</button>`).join('')}</div>
           <div class="podium" id="hifiPodium"></div>
           <div id="hifiRlist"></div>
@@ -812,6 +811,7 @@
         <div class="selfrank"><span class="tag">你的排名</span><span class="no">—</span><span class="av"><svg class="icon"><use href="#i-user"/></svg></span><span class="nm">${myName}</span><span class="pw"><svg class="icon"><use href="#i-flame"/></svg>${myScore}</span></div>
       </div>
     `;
+    root.querySelector('#btnLadderStart')?.addEventListener('click', startLadder);
     root.querySelectorAll('[data-rtab]').forEach(b => b.addEventListener('click', () => { rankTab = b.dataset.rtab; renderRank(); }));
     root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => { hidePanels(); document.getElementById('helpPanel')?.classList.remove('hide'); }));
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
