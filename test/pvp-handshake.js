@@ -1,3 +1,4 @@
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-only';
 const assert = require('assert');
 const http = require('http');
 const net = require('net');
