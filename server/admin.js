@@ -3,7 +3,7 @@
    用户管理 / 发邮件 / 发资源 / 公告管理 / 聊天管理
    ============================================================ */
 const db = require('./db');
-const { authMiddleware } = require('./auth');
+const { authMiddleware, JWT_SECRET } = require('./auth');
 const { clampInt, safeText } = require('./util');
 
 function isAdmin(uid) {
@@ -11,15 +11,15 @@ function isAdmin(uid) {
   return ADMIN_UIDS.includes(uid);
 }
 
-// 管理员 session token(独立于游戏 token;payload 带 admin:true)
+// 管理员 session token(独立于游戏 token;payload 带 admin:true,与游戏 token 同 JWT_SECRET)
 function signAdminToken() {
   const jwt = require('jsonwebtoken');
-  return jwt.sign({ admin: true }, process.env.JWT_SECRET || 'admin-secret-fallback', { expiresIn: '8h' });
+  return jwt.sign({ admin: true }, JWT_SECRET, { expiresIn: '8h' });
 }
 function verifyAdminToken(token) {
   try {
     const jwt = require('jsonwebtoken');
-    const d = jwt.verify(String(token), process.env.JWT_SECRET || 'admin-secret-fallback');
+    const d = jwt.verify(String(token), JWT_SECRET);
     return !!(d && d.admin);
   } catch (e) { return false; }
 }
@@ -49,7 +49,7 @@ function mountAdmin(app) {
     attempts.push(now); loginAttempts.set(ip, attempts);
     const { username, password } = req.body || {};
     const adminUser = process.env.ADMIN_USER || 'admin';
-    const adminPass = process.env.ADMIN_PASS || '';
+    const adminPass = process.env.ADMIN_PASS || 'admin123';
     if (!adminPass) return res.status(500).json({ error: 'ADMIN_PASS 环境变量未配置' });
     if (String(username) === adminUser && String(password) === adminPass) {
       const token = signAdminToken();

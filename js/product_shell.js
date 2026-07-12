@@ -511,7 +511,7 @@
       });
     roster.innerHTML = list.map(id => {
       const t = fruit(id);
-      const fruitColor = t.color || '#F5C242';
+      const rc = RAR_COLOR[t.rarity] || '#8FE0A0';
       const rk = RAR_KEY[t.rarity] || 'T2';
       const unlocked = isUnlocked(id);
       if (!unlocked) {
@@ -519,7 +519,7 @@
       }
       const lv = initLv(id);
       const stars = Array.from({ length: Math.min(5, lv) }, () => '<svg class="icon"><use href="#i-star"/></svg>').join('');
-      return `<button class="card" data-detail="${id}" style="--rc:${fruitColor}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 38)}<span class="nm">${t.name}</span><span class="stars">${stars}</span></button>`;
+      return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 38)}<span class="nm">${t.name}</span><span class="stars">${stars}</span></button>`;
     }).join('') || '<div style="grid-column:1/-1;text-align:center;color:#8a7a5a;font-weight:800;padding:24px">该职责暂无英雄</div>';
 
     root.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => { squadFilter = btn.dataset.filter; renderSquad(); }));
