@@ -14,7 +14,7 @@ const TARGET_STICK_RANGE = 220;
 const WALL_ATTACK_INTERVAL = 1.05;
 const BOW_SAFE_MIN = 66;
 const CROSS_LANE_EMERGENCY_RANGE = 120; // 修#6:50→120。邻路正常间距(~72px)原来看不见→径直去撞墙;放宽后邻路近敌可见
-const FIGHT_X_LEASH = 18;
+const FIGHT_X_LEASH = 32;
 
 const ATTACK_RANGES = {
   bow: 116,
@@ -125,6 +125,7 @@ function markBattleReadyIfNeeded(s) {
   if (!hasLeftOwnCastle(s)) return false;
   s.battleReady = true;
   s.protected = false;
+  s._spawnTimer = 0;
   s.mode = 'march';
   s.target = null;
   if (!s._gateFx) {
@@ -252,16 +253,17 @@ function findTarget(s, enemies) {
 
 function moveTowardEnemy(s, target) {
   s.mode = 'fight';
-  const desiredX = clamp(target.x, s.laneX - FIGHT_X_LEASH, s.laneX + FIGHT_X_LEASH);
+  const leash = FIGHT_X_LEASH * 1.8;
+  const desiredX = clamp(target.x, s.laneX - leash, s.laneX + leash);
   const dx = desiredX - s.x;
   const dy = target.y - s.y;
   const cspeed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : CHASE_SPEED;
-  const xStep = cspeed * 0.42 * dt_global;
+  const xStep = cspeed * 0.65 * dt_global;
   const yStep = cspeed * dt_global;
 
   if (Math.abs(dx) > 3) s.x += Math.sign(dx) * Math.min(Math.abs(dx), xStep);
   if (Math.abs(dy) > 3) s.y += Math.sign(dy) * Math.min(Math.abs(dy), yStep);
-  if (Math.abs(target.x - s.laneX) > FIGHT_X_LEASH) steerToLane(s, 0.35);
+  if (Math.abs(s.x - s.laneX) > leash + 12) steerToLane(s, 0.12);
   keepInsideBattlefield(s);
 }
 
@@ -459,7 +461,7 @@ function attackTarget(s, target) {
   if (melee) { const d = Math.hypot(s.x - target.x, s.y - target.y); if (d > 30) { moveTowardEnemy(s, target); return; } }
 
   const dx = s.x - target.x, dy = s.y - target.y, dist = Math.sqrt(dx*dx + dy*dy);
-  if (isBack && dist < BOW_SAFE_MIN) { kiteAsBackline(s, target); return; }
+  if (isBack && !reachedWall(s) && dist < BOW_SAFE_MIN) { kiteAsBackline(s, target); return; }
   if (dist > range) { moveTowardEnemy(s, target); return; }
   if (dist > range + 6) return;
 
@@ -518,22 +520,8 @@ function updateSoldier(s, enemies) {
     return;
   }
 
-  // 找目标(优先防守城墙)
-  const target = findTarget(s, enemies) || sameLaneBlocker(s, enemies);
-  if (target) {
-    ensureLane(target);
-    // 近战转路收敛(来自 lane_block_fix)
-    if (typeof isMeleeRoleLB === 'function' && isMeleeRoleLB(s.type) && target.laneIndex !== s.laneIndex) {
-      s.laneIndex = clamp(target.laneIndex, 0, COLS - 1);
-      s.laneX = laneXByIndex(s.laneIndex);
-    }
-    s.target = target.id;
-    attackTarget(s, target);
-    return;
-  }
-
+  // 已到敌方城墙:优先攻城,不清完面前 blocker 不离开
   if (reachedWall(s)) {
-    // 城墙前检查是否有需先清理的同/邻路敌兵(来自 lane_block_fix)
     const blocker = sameLaneBlocker(s, enemies);
     if (blocker) {
       s.target = blocker.id;
@@ -542,6 +530,34 @@ function updateSoldier(s, enemies) {
       return;
     }
     attackWall(s);
+    return;
+  }
+
+  // 出生缓冲:刚出城门稳步推进 0.35s,避免立即索敌导致 X 方向慢速"原地踏步"
+  if ((s._spawnTimer || 0) < 0.35) {
+    s._spawnTimer = (s._spawnTimer || 0) + dt_global;
+    advanceTowardWall(s);
+    return;
+  }
+
+  // 未到城墙:正常索敌推进
+  const target = findTarget(s, enemies) || sameLaneBlocker(s, enemies);
+  if (target) {
+    ensureLane(target);
+    // 近战转路收敛(来自 lane_block_fix)
+    if (typeof isMeleeRoleLB === 'function' && isMeleeRoleLB(s.type) && target.laneIndex !== s.laneIndex) {
+      const tLaneX = laneXByIndex(clamp(target.laneIndex, 0, COLS - 1));
+      const step = 140 * dt_global;
+      s.laneX += Math.sign(tLaneX - s.laneX) * Math.min(Math.abs(tLaneX - s.laneX), step);
+    }
+    // 平滑切路后同步 laneIndex,确保 applySeparation 能正确识别同路
+    if (typeof isMeleeRoleLB === 'function' && isMeleeRoleLB(s.type) && target.laneIndex !== s.laneIndex) {
+      if (Math.abs(s.laneX - laneXByIndex(clamp(target.laneIndex, 0, COLS - 1))) < 20) {
+        s.laneIndex = clamp(target.laneIndex, 0, COLS - 1);
+      }
+    }
+    s.target = target.id;
+    attackTarget(s, target);
     return;
   }
   advanceTowardWall(s);
@@ -558,14 +574,15 @@ function applySeparation(soldiers) {
       if (i === j) continue;
       const b = soldiers[j];
       if (!isCombatant(b)) continue;
-      if (a.laneIndex !== b.laneIndex) continue;
+      // 用 X 距离代替 laneIndex:平滑切路后 laneIndex 可能未同步,物理接近就该分离
+      if (Math.abs(a.x - b.x) > (CELL + GAP) * 1.2) continue;
       const dx = a.x - b.x;
       const dy = a.y - b.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < sepDist && dist > 0.1) {
         const force = (sepDist - dist) / sepDist;
         fx += (dx / dist) * force;
-        fy += (dy / dist) * force * 0.30;
+        fy += (dy / dist) * force * 0.80;
       } else if (dist <= 0.1) {
         fx += (i % 2 === 0 ? 1 : -1) * 0.45;
         fy += (i % 3 - 1) * 0.12;
@@ -573,12 +590,18 @@ function applySeparation(soldiers) {
     }
     if (fx || fy) {
       const speed = 42 * dt_global;
+      const leash = FIGHT_X_LEASH * 1.8;
       const nextX = a.x + fx * speed;
-      a.x = clamp(nextX, a.laneX - FIGHT_X_LEASH, a.laneX + FIGHT_X_LEASH);
+      a.x = clamp(nextX, a.laneX - leash, a.laneX + leash);
       // 修#4:攻城单位只做水平分散,Y 完全不碰。否则 y(城墙≈278) 被 clamp 到 fieldTop(296),
       //       每帧被弹离城墙 ~18px,attackWall 又把它拉回 → 墙边上下抖动。
       const sieging = a.mode === 'siege' || a.mode === 'siege_queue' || a.mode === 'siege_support';
-      if (!sieging) a.y = clamp(a.y + fy * speed, fieldTop(), fieldBottom());
+      if (sieging) {
+        const w = wallDataFor(a);
+        a.y = clamp(a.y + fy * speed * 0.5, w.attackY - 10, w.attackY + 10);
+      } else {
+        a.y = clamp(a.y + fy * speed, fieldTop(), fieldBottom());
+      }
     }
   }
 }
