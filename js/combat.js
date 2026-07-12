@@ -253,7 +253,8 @@ function findTarget(s, enemies) {
 
 function moveTowardEnemy(s, target) {
   s.mode = 'fight';
-  const desiredX = clamp(target.x, s.laneX - FIGHT_X_LEASH, s.laneX + FIGHT_X_LEASH);
+  const leash = FIGHT_X_LEASH * 1.8;
+  const desiredX = clamp(target.x, s.laneX - leash, s.laneX + leash);
   const dx = desiredX - s.x;
   const dy = target.y - s.y;
   const cspeed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : CHASE_SPEED;
@@ -262,7 +263,7 @@ function moveTowardEnemy(s, target) {
 
   if (Math.abs(dx) > 3) s.x += Math.sign(dx) * Math.min(Math.abs(dx), xStep);
   if (Math.abs(dy) > 3) s.y += Math.sign(dy) * Math.min(Math.abs(dy), yStep);
-  if (Math.abs(s.x - s.laneX) > FIGHT_X_LEASH + 12) steerToLane(s, 0.15);
+  if (Math.abs(s.x - s.laneX) > leash + 12) steerToLane(s, 0.12);
   keepInsideBattlefield(s);
 }
 
@@ -579,8 +580,9 @@ function applySeparation(soldiers) {
     }
     if (fx || fy) {
       const speed = 42 * dt_global;
+      const leash = FIGHT_X_LEASH * 1.8;
       const nextX = a.x + fx * speed;
-      a.x = clamp(nextX, a.laneX - FIGHT_X_LEASH * 1.8, a.laneX + FIGHT_X_LEASH * 1.8);
+      a.x = clamp(nextX, a.laneX - leash, a.laneX + leash);
       // 修#4:攻城单位只做水平分散,Y 完全不碰。否则 y(城墙≈278) 被 clamp 到 fieldTop(296),
       //       每帧被弹离城墙 ~18px,attackWall 又把它拉回 → 墙边上下抖动。
       const sieging = a.mode === 'siege' || a.mode === 'siege_queue' || a.mode === 'siege_support';

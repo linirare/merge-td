@@ -44,7 +44,7 @@
   "skirmish_900f": {
     "pAlive": 0,
     "eAlive": 3,
-    "pWall": 517,
+    "pWall": 495,
     "eWall": 600,
     "phase": "playing"
   },
