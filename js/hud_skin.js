@@ -193,6 +193,4 @@ function drawTopActionBarV60() {
   ctx.restore();
 }
 
-function drawSpeedBtn() { drawTopActionBarV60(); }
-function drawPauseBtn() {}
-function drawHelpBtn() {}
+// drawSpeedBtn/drawPauseBtn/drawHelpBtn → 已迁移至壳HUD(#battleShellHud)

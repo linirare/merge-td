@@ -434,43 +434,17 @@ function drawFx() {
 /* ——— 暂停按钮 ——— */
 const PAUSE_RECT = { x: W - 158, y: 2, w: 36, h: 36 };
 
-function drawPauseBtn() {
-  if (state.phase !== 'playing' && state.phase !== 'paused') return;
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  roundRect(PAUSE_RECT.x, PAUSE_RECT.y, PAUSE_RECT.w, PAUSE_RECT.h, 8);
-  ctx.fill();
-  ctx.font = 'bold 14px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#c9b69a';
-  ctx.fillText(state.phase === 'paused' ? '▶' : '⏸',
-    PAUSE_RECT.x + PAUSE_RECT.w / 2, PAUSE_RECT.y + 19);
-}
+function drawPauseBtn(){} // → 壳HUD
 
 /* ——— 帮助按钮 ——— */
 const HELP_RECT = { x: W - 122, y: 2, w: 36, h: 36 };
 
-function drawHelpBtn() {
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  roundRect(HELP_RECT.x, HELP_RECT.y, HELP_RECT.w, HELP_RECT.h, 8);
-  ctx.fill();
-  ctx.font = 'bold 15px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#c9b69a';
-  ctx.fillText('?', HELP_RECT.x + HELP_RECT.w / 2, HELP_RECT.y + 19);
-}
+function drawHelpBtn(){} // → 壳HUD
 
 /* ——— 速度控制按钮 ——— */
 const SPEED_RECT = { x: W - 86, y: 2, w: 84, h: 36 };
 
-function drawSpeedBtn() {
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  roundRect(SPEED_RECT.x, SPEED_RECT.y, SPEED_RECT.w, SPEED_RECT.h, 8);
-  ctx.fill();
-  ctx.font = 'bold 13px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#c9b69a';
-  ctx.fillText(`⏩ ×${state.speed}`, SPEED_RECT.x + SPEED_RECT.w / 2, SPEED_RECT.y + 18);
-}
+function drawSpeedBtn(){} // → 壳HUD
 
 /* ——— 溢出队列指示（可点击区域） ——— */
 const OVERFLOW_RECT = { x: W / 2 - 56, y: LAYOUT.bottomY + 2, w: 112, h: 36 };

@@ -360,12 +360,9 @@ function drawControlButton(rect, text, active = false) {
   ctx.fillStyle = active ? THEME.gold : '#d7c49d';
   ctx.fillText(text, rect.x + rect.w / 2, rect.y + 19);
 }
-function drawPauseBtn() {
-  if (state.phase !== 'playing' && state.phase !== 'paused') return;
-  drawControlButton(PAUSE_RECT, state.phase === 'paused' ? '▶' : '⏸', state.phase === 'paused');
-}
-function drawHelpBtn() { drawControlButton(HELP_RECT, '?'); }
-function drawSpeedBtn() { drawControlButton(SPEED_RECT, `×${state.speed}`, state.speed > 1); }
+function drawPauseBtn(){} // → 壳HUD
+function drawHelpBtn(){}  // → 壳HUD
+function drawSpeedBtn(){}  // → 壳HUD
 
 function drawOverflowIndicator() {
   if (state.overflowQueue.length === 0) return;
