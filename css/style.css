@@ -8,7 +8,7 @@ html, body {
 }
 /* 老绿皮背景+光晕:仅当新皮 ui_redesign.css 未生效(未带 ui-redesign class)时渲染。
    带了则交给 ui_redesign.css 的 body.ui-redesign 奶油渐变接管——消除 FOUC。 */
-body:not(.ui-redesign) {
+body:not(.shell-v65) {
   background: radial-gradient(circle at 50% 12%, #fff7b8 0%, #dfff9b 33%, #8ee7a8 70%, #4dbb79 100%);
 }
 body:not(.ui-redesign)::before {
