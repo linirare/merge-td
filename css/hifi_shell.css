@@ -88,9 +88,9 @@ body.shell-v65 #bottomNav.hifi,
 body.shell-v65 #bottomNav.hifi.shell-hidden,
 #bottomNav.hifi.shell-hidden{display:none;}
 #bottomNav.hifi .navtab{flex:1;max-width:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:5px;color:#B99A6E;font-family:'ZCOOL KuaiLe';font-size:12px;transition:color .15s;background:none;border:0;}
-#bottomNav.hifi .navtab .ic{position:relative;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;
+#bottomNav.hifi .navtab .ic{position:relative;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
   background:radial-gradient(circle at 40% 34%,#5A3A1E,#2C1B0E);border:1.5px solid #7A4E08;box-shadow:inset 0 1px 2px rgba(255,255,255,.18),inset 0 -2px 3px rgba(0,0,0,.4);transition:transform .12s;}
-#bottomNav.hifi .navtab .ic .icon{width:22px;height:22px;color:#8A6A3E;transition:color .15s;}
+#bottomNav.hifi .navtab .ic .icon{width:24px;height:24px;color:#8A6A3E;transition:color .15s;}
 #bottomNav.hifi .navtab:active .ic{transform:scale(.9);}
 #bottomNav.hifi .navtab.active{color:#FFE9A8;}
 #bottomNav.hifi .navtab.active .ic{background:radial-gradient(circle at 40% 34%,#8A5A2E,#4A2E12);border-color:#F5C242;box-shadow:inset 0 1px 2px rgba(255,255,255,.3),0 0 10px rgba(245,194,66,.5);}
@@ -216,8 +216,8 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 @keyframes hifiUp{from{transform:translateY(30px)}to{transform:translateY(0)}}
 .hifi-ov .sheet-h{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1.5px solid rgba(245,194,66,.25);}
 .hifi-ov .sheet-h h2{font-family:'ZCOOL KuaiLe';font-size:22px;color:#FFE9A8;-webkit-text-stroke:1px #6B0F0F;paint-order:stroke fill;text-shadow:0 2px 0 #8B1A1A;flex:1;}
-.hifi-ov .sheet-h .x{width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.35);display:grid;place-items:center;color:#E9C98A;border:1.5px solid rgba(245,194,66,.4);}
-.hifi-ov .sheet-h .x .icon{width:18px;height:18px;}
+.hifi-ov .sheet-h .x{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.35);display:grid;place-items:center;color:#E9C98A;border:1.5px solid rgba(245,194,66,.4);}
+.hifi-ov .sheet-h .x .icon{width:20px;height:20px;}
 .hifi-ov .sheet-b{padding:14px 16px calc(18px + env(safe-area-inset-bottom));overflow-y:auto;color:#F3E3C0;}
 .hifi .cardsheet .hero{display:flex;gap:14px;align-items:center;margin-bottom:6px;}
 .hifi .cardsheet .hero .big{flex:none;}
