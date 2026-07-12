@@ -174,7 +174,7 @@
           <h3><svg class="icon"><use href="#i-mail"/></svg>发送系统邮件</h3>
           <div class="field"><label>收件人</label><div class="radio"><label><input type="radio" name="mailto" checked><span>全服玩家</span></label><label><input type="radio" name="mailto"><span>指定 UID</span></label></div></div>
           <div class="field" id="uidField" style="display:none"><label>目标 UID</label><input id="mailUid" placeholder="输入玩家 UID" /></div>
-          <div class="field"><label>标题</label><input placeholder="例:v1.2 版本更新补偿" /></div>
+          <div class="field"><label>标题</label><input id="mailTitle" placeholder="例:v1.2 版本更新补偿" /></div>
           <div class="field"><label>正文</label><textarea placeholder="亲爱的果园园长…"></textarea></div>
           <div class="field"><label>附件奖励</label><div class="attach">
             <span class="a"><svg class="icon"><use href="#i-coin"/></svg>金币<input value="500"/></span>
@@ -195,7 +195,7 @@
       <div class="grid2">
         <div class="panel">
           <h3><svg class="icon"><use href="#i-bell"/></svg>发布公告</h3>
-          <div class="field"><label>公告标题</label><input placeholder="例:五一无尽果园活动开启" /></div>
+          <div class="field"><label>公告标题</label><input id="noticeTitle" placeholder="例:五一无尽果园活动开启" /></div>
           <div class="field"><label>公告内容</label><textarea placeholder="活动时间 / 规则 / 奖励…"></textarea></div>
           <div class="field"><label>生效时间</label><input type="text" id="noticeStartTime" placeholder="开始时间,如 2026-07-12 12:00" /></div>
           <div class="field"><label>结束时间</label><input type="text" id="noticeEndTime" placeholder="结束时间,如 2026-07-20 23:59" /></div>
@@ -369,15 +369,14 @@
     document.getElementById('uidField').style.display = r.parentElement.textContent.includes('指定') ? 'block' : 'none';
   }));
   document.getElementById('btnSendMail')?.addEventListener('click', async () => {
-    const panel = document.getElementById('p-mail');
-    const title = panel.querySelector('input[placeholder*="标题"]')?.value?.trim();
-    const body = panel.querySelector('textarea')?.value?.trim();
-    const toAll = panel.querySelector('input[name="mailto"]:checked')?.parentElement?.textContent?.includes('全服');
+    const title = document.getElementById('mailTitle')?.value?.trim();
+    const body = document.getElementById('p-mail').querySelector('textarea')?.value?.trim();
+    const toAll = document.querySelector('input[name="mailto"]:checked')?.parentElement?.textContent?.includes('全服');
     const uidVal = document.getElementById('mailUid')?.value?.trim();
     if (!title) { toast('请输入标题'); return; }
-    const goldAmt = parseInt(panel.querySelectorAll('.attach input')[0]?.value) || 0;
-    const gemAmt = parseInt(panel.querySelectorAll('.attach input')[1]?.value) || 0;
-    const fragAmt = parseInt(panel.querySelectorAll('.attach input')[2]?.value) || 0;
+    const goldAmt = parseInt(document.querySelectorAll('.attach input')[0]?.value) || 0;
+    const gemAmt = parseInt(document.querySelectorAll('.attach input')[1]?.value) || 0;
+    const fragAmt = parseInt(document.querySelectorAll('.attach input')[2]?.value) || 0;
     const rewards_json = JSON.stringify({ gold: goldAmt, diamonds: gemAmt, fragments: fragAmt });
     try {
       const payload = { title, body: body || '', rewards_json };
@@ -405,14 +404,14 @@
   }
   async function delNotice(id) { try { await api('DELETE', '/api/admin/announcement/' + id); toast('已下架'); loadNotices(); } catch(e) { toast('操作失败'); } }
   document.getElementById('btnSendNotice')?.addEventListener('click', async () => {
-    const p = document.getElementById('p-notice');
-    const title = p.querySelector('input[placeholder*="标题"]')?.value?.trim();
+    const title = document.getElementById('noticeTitle')?.value?.trim();
     if (!title) { toast('请输入公告标题'); return; }
     const start_time = document.getElementById('noticeStartTime')?.value?.trim() || '';
     const end_time = document.getElementById('noticeEndTime')?.value?.trim() || '';
     try {
-      const r = await api('POST', '/api/admin/announcement', { title, body: p.querySelector('textarea')?.value || '', start_time, end_time });
-      if (r.ok) { toast('公告已发布'); loadNotices(); p.querySelector('input[placeholder*="标题"]').value = ''; p.querySelector('textarea').value = ''; }
+      const noticeBody = document.getElementById('p-notice').querySelector('textarea')?.value || '';
+      const r = await api('POST', '/api/admin/announcement', { title, body: noticeBody, start_time, end_time });
+      if (r.ok) { toast('公告已发布'); loadNotices(); document.getElementById('noticeTitle').value = ''; document.getElementById('p-notice').querySelector('textarea').value = ''; }
     } catch(e) { toast('发布失败: ' + e.message); }
   });
 
@@ -453,7 +452,7 @@
     const p = document.getElementById('p-res');
     const uid = p.querySelector('input[placeholder*="UID"]')?.value?.trim();
     const type = p.querySelector('select')?.value || 'gold';
-    const amount = parseInt(p.querySelectorAll('input')[2]?.value) || 0;
+    const amount = parseInt(p.querySelectorAll('input')[1]?.value) || 0;
     const payload = { gold: 0, diamonds: 0 };
     if (type === 'gold') payload.gold = amount; else payload.diamonds = amount;
     if (!uid) {
