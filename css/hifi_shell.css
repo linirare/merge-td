@@ -496,7 +496,7 @@ body.shell-v65.battle-shell-active #wrap{
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:calc(env(safe-area-inset-top) + 48px) 0 calc(env(safe-area-inset-bottom) + 10px);
+  padding:calc(env(safe-area-inset-top) + 34px) 0 calc(env(safe-area-inset-bottom) + 4px);
   overflow:hidden;
   background:
     linear-gradient(180deg,rgba(255,246,214,.06),transparent 18%,rgba(20,10,4,.28) 100%),

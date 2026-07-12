@@ -558,7 +558,7 @@
     const body = document.getElementById('hifiCardBody');
     if (!body) return;
     body.innerHTML =
-      `<div class="hero"><div class="big">${hifiDisc(id, 78)}</div><div style="flex:1"><h3>${t.name}</h3><div class="tags"><span class="rchip" style="background:${RAR_COLOR[t.rarity] || '#9AA6B2'}">${RAR_KEY[t.rarity] || 'N'}</span><span class="rchip" style="background:#5c4a2a;color:#F3E3C0">${roleZh(t.role)}</span><span style="font-weight:800;font-size:12px;color:#C9B48A">局内 Lv.${lv}</span></div><div class="stars-line" style="margin-top:6px">${sl}</div></div></div>`
+      `<div class="hero"><div class="big">${hifiDisc(id, 56)}</div><div style="flex:1"><h3>${t.name}</h3><div class="tags"><span class="rchip" style="background:${RAR_COLOR[t.rarity] || '#9AA6B2'}">${RAR_KEY[t.rarity] || 'N'}</span><span class="rchip" style="background:#5c4a2a;color:#F3E3C0">${roleZh(t.role)}</span><span style="font-weight:800;font-size:12px;color:#C9B48A">局内 Lv.${lv}</span></div><div class="stars-line" style="margin-top:6px">${sl}</div></div></div>`
       + `<div class="ctabs">${[['attr', '属性·技能'], ['grow', '等级成长'], ['star', '星级特效']].map(([k, l]) => `<button class="ctab ${detailTab === k ? 'on' : ''}" data-ctab="${k}">${l}</button>`).join('')}</div>`
       + `<div id="hifiCardTabBody"></div>`
       + `<div id="hifiCardActions" style="display:flex;gap:10px;margin-top:14px"></div>`
