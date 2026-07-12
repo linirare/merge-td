@@ -97,13 +97,13 @@ function showOverflowPopup() {
   const list = document.getElementById('overflowList');
   list.innerHTML = '';
   if (state.overflowQueue.length === 0) {
-    list.innerHTML = '<p style="color:#8a7a5a;font-size:13px;">队列为空</p>';
+    list.innerHTML = '<p style="color:#b6a179;font-size:13px;">队列为空</p>';
   } else {
     for (let i = 0; i < state.overflowQueue.length; i++) {
       const item = state.overflowQueue[i];
       const t = TYPES[normalizeTypeId(item.type)] || TYPES[DEFAULT_DECK[0]];
       const el = document.createElement('div');
-      el.style.cssText = `display:flex;align-items:center;gap:5px;padding:8px 11px;background:rgba(255,255,255,0.42);border:1px solid rgba(72,174,70,0.16);border-radius:10px;cursor:pointer;color:#416329;font-size:13px;`;
+      el.style.cssText = `display:flex;align-items:center;gap:5px;padding:8px 11px;background:rgba(0,0,0,0.28);border:1px solid rgba(245,194,66,0.3);border-radius:10px;cursor:pointer;color:#F3E3C0;font-size:13px;`;
       el.innerHTML = `${t.icon} ${t.name} Lv.${item.level}`;
       el.title = '点击后选择棋盘空格放置';
       const pick = (e) => {

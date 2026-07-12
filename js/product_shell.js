@@ -1370,7 +1370,7 @@
       });
       document._hifiAccountBound = true;
     }
-    ['resultPanel', 'helpPanel'].forEach(id => document.getElementById(id)?.classList.add('hifi'));
+    ['resultPanel', 'helpPanel', 'overflowPopup'].forEach(id => document.getElementById(id)?.classList.add('hifi'));
     showTab('home');
     setInterval(syncNavVisibility, 180);
     syncNavVisibility();

@@ -357,3 +357,9 @@ body.shell-v65::before{display:none;}
 #helpPanel.hifi .help-section p,#helpPanel.hifi .help-section b{color:#F3E3C0;}
 #resultPanel.hifi .btn-primary,#helpPanel.hifi .btn-primary{background:linear-gradient(180deg,#FFE9A8,#F5C242 45%,#E8A317 62%,#D18A0E);color:#5A0E0E;border:2px solid #7A4E08;box-shadow:inset 0 -3px 0 rgba(122,78,8,.4),0 5px 0 #7A4E08;font-weight:900;}
 #resultPanel.hifi .btn-secondary,#helpPanel.hifi .btn-secondary{background:linear-gradient(180deg,#8f897c,#6b665b);color:#e8e4d8;border:2px solid #4c483f;box-shadow:0 4px 0 #4c483f;font-weight:900;}
+/* 局内「待部署水果营」弹窗:统一烫金(审计 #6)*/
+#overflowPopup.hifi{background:rgba(10,6,3,.66);}
+#overflowPopup.hifi .panel-inner{background:linear-gradient(180deg,#3E2716,#241206);border:2px solid #F5C242;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.6);color:#F3E3C0;}
+#overflowPopup.hifi h2{color:#FFE9A8;font-family:'ZCOOL KuaiLe';-webkit-text-stroke:1px #6B0F0F;paint-order:stroke fill;text-shadow:0 2px 0 #8B1A1A;}
+#overflowPopup.hifi .sub{color:#C9B48A;}
+#overflowPopup.hifi .btn-secondary{background:linear-gradient(180deg,#8f897c,#6b665b);color:#e8e4d8;border:2px solid #4c483f;box-shadow:0 4px 0 #4c483f;font-weight:900;}
