@@ -72,7 +72,7 @@
     },
 
     async getMail() { return this.api('GET', '/api/mail'); },
-    async readMail(id) { return this.api('POST', '/api/mail/read', { id }); },
+    async readMail(id) { const r = await this.api('POST', '/api/mail/read', { id }); if (r.ok && this.user) { try { const prof = await this.api('GET', '/api/user/profile'); if (prof && !prof.error) { this.user.diamonds = prof.diamonds; this.user.gold = prof.gold; } } catch(e) {} } return r; },
     async announcements() { return this.api('GET', '/api/announcements'); },
     async leaderboard(type) { return this.api('GET', '/api/leaderboard/' + (type || 'power')); },
     async chatMessages() { return this.api('GET', '/api/chat'); },

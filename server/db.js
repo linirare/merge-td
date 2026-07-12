@@ -13,6 +13,9 @@ fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+db.pragma('busy_timeout = 5000');       // 防并发写入时 database is locked
+db.pragma('synchronous = NORMAL');      // WAL 模式下安全且快 ~2x
+db.pragma('journal_size_limit = 67108864'); // 防 WAL 文件无限膨胀
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -51,7 +54,7 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS announcements (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     body TEXT DEFAULT '',
     active INTEGER DEFAULT 1,
@@ -142,10 +145,33 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS replays (
     id TEXT PRIMARY KEY, uid1 TEXT, uid2 TEXT, actions_json TEXT DEFAULT '[]', result TEXT, created_at TEXT DEFAULT (datetime('now'))
   );
+
+  -- 聊天持久化(审计C1:两个写入路径统一落入此表;服务重启不丢)
+  CREATE TABLE IF NOT EXISTS chat_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    nickname TEXT DEFAULT '',
+    text TEXT NOT NULL,
+    source TEXT DEFAULT 'rest',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- 管理员操作审计日志(审计H4:记录操作人/类型/目标UID/详情)
+  CREATE TABLE IF NOT EXISTS admin_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_uid TEXT NOT NULL,
+    action TEXT NOT NULL,
+    target_uid TEXT DEFAULT '',
+    detail TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // 索引(消除全表扫描:邮件按 uid、排行按各分数列排序、好友反向查、回放按对手)
 db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_chat_logs_time ON chat_logs(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_chat_logs_uid ON chat_logs(uid);
+  CREATE INDEX IF NOT EXISTS idx_admin_logs_time ON admin_logs(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_mail_uid ON mail(uid);
   CREATE INDEX IF NOT EXISTS idx_mail_uid_read ON mail(uid, is_read);
   CREATE INDEX IF NOT EXISTS idx_leaderboard_power ON leaderboard(power DESC);

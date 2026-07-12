@@ -95,7 +95,23 @@ app.post('/api/save', authMiddleware, (req, res) => {
 });
 
 app.get('/api/mail', authMiddleware, (req, res) => res.json(db.prepare('SELECT * FROM mail WHERE uid=? ORDER BY created_at DESC LIMIT 50').all(req.uid)));
-app.post('/api/mail/read', authMiddleware, (req, res) => { const b = req.body || {}; if (!b.id) return res.status(400).json({ error: 'id required' }); db.prepare('UPDATE mail SET is_read=1 WHERE id=? AND uid=?').run(b.id, req.uid); res.json({ ok: true }); });
+// 邮件读取+附件奖励发放(审计C3:原来只标已读不发放rewards_json中的金币/钻石)
+app.post('/api/mail/read', authMiddleware, (req, res) => {
+  const b = req.body || {};
+  if (!b.id) return res.status(400).json({ error: 'id required' });
+  const mail = db.prepare('SELECT * FROM mail WHERE id=? AND uid=?').get(b.id, req.uid);
+  if (!mail) return res.status(404).json({ error: 'mail not found' });
+  if (!mail.is_read && mail.rewards_json && mail.rewards_json !== '{}') {
+    try {
+      const rewards = JSON.parse(mail.rewards_json);
+      const g = clampInt(rewards.gold || 0, 0, 50000, 0);     // 运营邮件上限(审计C10)
+      const d = clampInt(rewards.diamonds || 0, 0, 10000, 0);
+      if (g || d) db.prepare('UPDATE users SET gold=gold+?, diamonds=diamonds+? WHERE uid=?').run(g, d, req.uid);
+    } catch(e) {}
+  }
+  db.prepare('UPDATE mail SET is_read=1 WHERE id=? AND uid=?').run(b.id, req.uid);
+  res.json({ ok: true });
+});
 
 app.post('/api/checkin', authMiddleware, (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
@@ -124,9 +140,12 @@ app.post('/api/chat', authMiddleware, (req, res) => {
   const text = safeText((req.body || {}).text, 120);
   if (!text) return res.status(400).json({ error: 'empty message' });
   const u = db.prepare('SELECT nickname FROM users WHERE uid = ?').get(req.uid) || {};
-  const msg = { uid: req.uid, nickname: safeText(u.nickname || '玩家', 24), text, ts: Date.now() };
+  const nickname = safeText(u.nickname || '玩家', 24);
+  const msg = { uid: req.uid, nickname, text, ts: Date.now() };
   chatMessages.push(msg);
   if (chatMessages.length > 200) chatMessages.splice(0, chatMessages.length - 200);
+  // DB持久化(审计C1):聊天落库,服务重启不丢
+  try { db.prepare('INSERT INTO chat_logs (uid, nickname, text, source) VALUES (?,?,?,?)').run(req.uid, nickname, text, 'rest'); } catch(e) {}
   return res.json({ ok: true, message: msg });
 });
 

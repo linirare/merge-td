@@ -1,6 +1,7 @@
 /* Activity center + new player guide metadata */
 const db = require('./db');
 const { authMiddleware } = require('./auth');
+const { clampInt } = require('./util');
 
 function mountActivity(app) {
   const ACTIVITIES = [
@@ -19,7 +20,7 @@ function mountActivity(app) {
   });
 
   app.post('/api/guide', authMiddleware, (req, res) => {
-    const { step } = req.body || {};
+    const step = clampInt((req.body || {}).step, 0, 9, 0); // 审计S11:guide step校验,限定0-9范围
     const row = db.prepare("SELECT meta_json FROM user_saves WHERE uid = ?").get(req.uid);
     let meta = {};
     try { meta = JSON.parse(row ? row.meta_json : '{}'); } catch (e) {}

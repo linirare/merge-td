@@ -95,8 +95,10 @@ function mountSocial(app) {
     if (!task_id) return res.status(400).json({ error: 'task_id required' });
     const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(task_id);
     if (!t) return res.status(404).json({ error: 'task not found' });
+    // 审计S5:用原子UPDATE同时推进度+标记完成,避免并发双领奖励
     db.prepare('INSERT OR IGNORE INTO user_tasks (uid,task_id,progress) VALUES (?,?,0)').run(req.uid, task_id);
-    db.prepare('UPDATE user_tasks SET progress=progress+? WHERE uid=? AND task_id=? AND completed=0').run(delta || 1, req.uid, task_id);
+    const upResult = db.prepare('UPDATE user_tasks SET progress=progress+? WHERE uid=? AND task_id=? AND completed=0').run(delta || 1, req.uid, task_id);
+    if (upResult.changes === 0) return res.json({ ok: true, progress: t.target, already: true }); // 已完成,不再操作
     const up = db.prepare('SELECT progress FROM user_tasks WHERE uid=? AND task_id=?').get(req.uid, task_id);
     if (t && up && up.progress >= t.target) {
       db.prepare('UPDATE user_tasks SET completed=1 WHERE uid=? AND task_id=?').run(req.uid, task_id);
@@ -138,28 +140,43 @@ function mountSocial(app) {
     res.json({ tier: Math.min(30, lv), exp: xp });
   });
   app.post('/api/battlepass/buy', authMiddleware, (req, res) => {
-    const user = db.prepare('SELECT diamonds FROM users WHERE uid=?').get(req.uid);
-    if ((user.diamonds || 0) < 300) return res.json({ ok: false, msg: 'insufficient diamonds' });
-    db.prepare('UPDATE users SET diamonds=diamonds-300 WHERE uid=?').run(req.uid);
-    db.prepare('INSERT OR REPLACE INTO battle_pass (uid,season,tier,exp,premium) VALUES (?,?,0,0,1)').run(req.uid, 'S1');
-    res.json({ ok: true });
+    // 审计S4:事务包裹,避免并发双花钻石
+    try {
+      db.transaction(() => {
+        const user = db.prepare('SELECT diamonds FROM users WHERE uid=?').get(req.uid);
+        if ((user.diamonds || 0) < 300) throw new Error('insufficient');
+        db.prepare('UPDATE users SET diamonds=diamonds-300 WHERE uid=?').run(req.uid);
+        db.prepare('INSERT OR REPLACE INTO battle_pass (uid,season,tier,exp,premium) VALUES (?,?,0,0,1)').run(req.uid, 'S1');
+      })();
+      res.json({ ok: true });
+    } catch(e) { res.json({ ok: false, msg: e.message === 'insufficient' ? 'insufficient diamonds' : 'failed' }); }
   });
 
   /* ========== 皮肤 ========== */
   app.get('/api/skins', (req, res) => res.json(db.prepare('SELECT * FROM skins').all()));
   app.get('/api/skins/my', authMiddleware, (req, res) => res.json(db.prepare('SELECT s.*, us.equipped FROM user_skins us JOIN skins s ON us.skin_id=s.id WHERE us.uid=?').all(req.uid)));
   app.post('/api/skins/buy', authMiddleware, (req, res) => {
+    // 审计S3:事务包裹,避免并发双花钻石
     const { skin_id } = req.body || {};
     const s = db.prepare('SELECT * FROM skins WHERE id=?').get(skin_id);
     if (!s) return res.status(404).json({ error: 'not found' });
-    const user = db.prepare('SELECT diamonds FROM users WHERE uid=?').get(req.uid);
-    if ((user.diamonds || 0) < s.price) return res.json({ ok: false, msg: 'insufficient diamonds' });
-    db.prepare('UPDATE users SET diamonds=diamonds-? WHERE uid=?').run(s.price, req.uid);
-    db.prepare('INSERT OR IGNORE INTO user_skins (uid,skin_id) VALUES (?,?)').run(req.uid, skin_id);
-    res.json({ ok: true });
+    try {
+      db.transaction(() => {
+        const user = db.prepare('SELECT diamonds FROM users WHERE uid=?').get(req.uid);
+        if ((user.diamonds || 0) < s.price) throw new Error('insufficient');
+        db.prepare('UPDATE users SET diamonds=diamonds-? WHERE uid=?').run(s.price, req.uid);
+        db.prepare('INSERT OR IGNORE INTO user_skins (uid,skin_id) VALUES (?,?)').run(req.uid, skin_id);
+      })();
+      res.json({ ok: true });
+    } catch(e) { res.json({ ok: false, msg: e.message === 'insufficient' ? 'insufficient diamonds' : 'failed' }); }
   });
   app.post('/api/skins/equip', authMiddleware, (req, res) => {
     const { skin_id } = req.body || {};
+    // 审计S7:检查玩家是否实际拥有该皮肤
+    if (skin_id) {
+      const owned = db.prepare('SELECT * FROM user_skins WHERE uid=? AND skin_id=?').get(req.uid, skin_id);
+      if (!owned) return res.status(403).json({ error: 'skin not owned' });
+    }
     db.prepare('UPDATE user_skins SET equipped=0 WHERE uid=?').run(req.uid);
     if (skin_id) db.prepare('UPDATE user_skins SET equipped=1 WHERE uid=? AND skin_id=?').run(req.uid, skin_id);
     res.json({ ok: true });
@@ -188,7 +205,8 @@ function mountSocial(app) {
     res.json({ id });
   });
   app.get('/api/replay/:id', authMiddleware, (req, res) => {
-    const r = db.prepare('SELECT * FROM replays WHERE id=?').get(req.params.id);
+    // 审计S9:只允许参战双方查看回放(非围观)
+    const r = db.prepare('SELECT * FROM replays WHERE id=? AND (uid1=? OR uid2=?)').get(req.params.id, req.uid, req.uid);
     if (!r) return res.status(404).json({ error: 'not found' });
     res.json(r);
   });

@@ -4,16 +4,11 @@
    ============================================================ */
 const db = require('./db');
 const { authMiddleware } = require('./auth');
-const { safeText } = require('./util');
+const { clampInt, safeText } = require('./util');
 
 function isAdmin(uid) {
   const ADMIN_UIDS = (process.env.ADMIN_UIDS || '').split(',').filter(Boolean);
   return ADMIN_UIDS.includes(uid);
-}
-
-function adminAuth(req, res, next) {
-  if (!isAdmin(req.uid)) return res.status(403).json({ error: 'Admin only' });
-  next();
 }
 
 // 管理员 session token(独立于游戏 token;payload 带 admin:true)
@@ -44,8 +39,14 @@ function adminAuth(req, res, next) {
 }
 
 function mountAdmin(app) {
-  // 管理员登录:独立账号密码,不依赖游戏账号
+  // 管理员登录:独立账号密码+爆破限速(审计S10:5次/15min)
+  const loginAttempts = new Map();
   app.post('/api/admin/login', (req, res) => {
+    const ip = req.ip || req.socket.remoteAddress || '';
+    const now = Date.now();
+    const attempts = (loginAttempts.get(ip) || []).filter(t => now - t < 900000); // 15min窗口
+    if (attempts.length >= 5) return res.status(429).json({ error: '尝试过多,请15分钟后再试' });
+    attempts.push(now); loginAttempts.set(ip, attempts);
     const { username, password } = req.body || {};
     const adminUser = process.env.ADMIN_USER || 'admin';
     const adminPass = process.env.ADMIN_PASS || '';
@@ -62,18 +63,25 @@ function mountAdmin(app) {
     const total = db.prepare('SELECT COUNT(*) as n FROM users').get().n;
     const today = new Date().toISOString().slice(0,10);
     const todayNew = db.prepare("SELECT COUNT(*) as n FROM users WHERE created_at LIKE ?").get(today+'%').n;
-    res.json({ total, todayNew });
+    let onlineCount = 0; try { const { onlineUsers } = require('./pvp-server'); onlineCount = onlineUsers ? onlineUsers.size : 0; } catch(e) {}
+    res.json({ total, todayNew, onlineCount });
   });
 
   app.get('/api/admin/users', authMiddleware, adminAuth, (req, res) => {
-    res.json(db.prepare('SELECT uid, email, nickname, level, exp, power, diamonds, gold, highest_stage, ladder_rank, ladder_score, created_at, last_login FROM users ORDER BY created_at DESC LIMIT 500').all());
+    // 审计S1:移除email字段(防止泄露所有玩家邮箱PII)
+    const users = db.prepare('SELECT uid, nickname, level, exp, power, diamonds, gold, highest_stage, ladder_rank, ladder_score, created_at, last_login FROM users ORDER BY created_at DESC LIMIT 500').all();
+    const { onlineUsers } = require('./pvp-server');
+    const result = users.map(u => ({ ...u, is_online: onlineUsers ? onlineUsers.has(u.uid) : false }));
+    res.json(result);
   });
 
   app.post('/api/admin/mail', authMiddleware, adminAuth, (req, res) => {
     const { uid, title, body, rewards_json } = req.body || {};
     const safeTitle = safeText(title, 60);
     if (!uid || !safeTitle) return res.status(400).json({ error: 'uid and title required' });
-    db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)').run(uid, safeTitle, safeText(body, 500), rewards_json || '{}');
+    const rewards = typeof rewards_json === 'object' ? JSON.stringify(rewards_json) : (String(rewards_json || '{}')); // 审计S12:校验JSON合法性
+    try { JSON.parse(rewards); } catch(e) { return res.status(400).json({ error: 'invalid rewards_json' }); }
+    db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)').run(uid, safeTitle, safeText(body, 500), rewards);
     res.json({ ok: true });
   });
 
@@ -92,8 +100,33 @@ function mountAdmin(app) {
   app.post('/api/admin/resource', authMiddleware, adminAuth, (req, res) => {
     const { uid, gold, diamonds } = req.body || {};
     if (!uid) return res.status(400).json({ error: 'uid required' });
-    db.prepare('UPDATE users SET gold = gold + ?, diamonds = diamonds + ? WHERE uid = ?').run(gold || 0, diamonds || 0, uid);
+    const g = clampInt(gold, 0, 1000000, 0);   // 审计S2:clampInt替代||0,防负数扣资源
+    const d = clampInt(diamonds, 0, 100000, 0);
+    if (g === 0 && d === 0) return res.status(400).json({ error: 'amount required' });
+    const result = db.prepare('UPDATE users SET gold = gold + ?, diamonds = diamonds + ? WHERE uid = ?').run(g, d, uid);
+    if (result.changes === 0) return res.status(404).json({ error: 'user not found' }); // 审计C6:UID不存在提示
+    // 审计日志
+    try { db.prepare('INSERT INTO admin_logs (admin_uid, action, target_uid, detail) VALUES (?,?,?,?)').run(req.uid || 'admin', 'resource', uid, `gold:${g} diamonds:${d}`); } catch(e) {}
     res.json({ ok: true });
+  });
+
+  // 全服资源发放(审计H1)
+  app.post('/api/admin/resource-all', authMiddleware, adminAuth, (req, res) => {
+    const { gold, diamonds } = req.body || {};
+    const g = clampInt(gold, 0, 1000000, 0);
+    const d = clampInt(diamonds, 0, 100000, 0);
+    if (g === 0 && d === 0) return res.status(400).json({ error: 'amount required' });
+    const uids = db.prepare('SELECT uid FROM users').all();
+    if (!uids.length) return res.status(404).json({ error: 'no users' });
+    db.prepare('UPDATE users SET gold = gold + ?, diamonds = diamonds + ?').run(g, d); // 全服批量更新
+    try { db.prepare('INSERT INTO admin_logs (admin_uid, action, detail) VALUES (?,?,?)').run(req.uid || 'admin', 'resource_all', `gold:${g} diamonds:${d} to ${uids.length} users`); } catch(e) {}
+    res.json({ ok: true, count: uids.length });
+  });
+
+  // 已发送邮件记录(审计H8)
+  app.get('/api/admin/mail-log', authMiddleware, adminAuth, (req, res) => {
+    const rows = db.prepare("SELECT title, body, rewards_json, created_at, COUNT(*) as total, SUM(is_read) as read_count FROM mail GROUP BY title, strftime('%Y-%m-%d %H:%M', created_at) ORDER BY created_at DESC LIMIT 50").all();
+    res.json({ rows, total: rows.length });
   });
 
   app.get('/api/admin/chat', authMiddleware, adminAuth, (req, res) => {

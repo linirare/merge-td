@@ -4,6 +4,7 @@ const { PvpBattle } = require('./pvp-sim');
 
 const rooms = new Map();
 const allClients = new Set();
+const onlineUsers = new Map(); // uid→{ws,nickname,level,lastHeartbeat} 在线追踪(审计C2)
 
 function makeRoomId() {
   let id = '';
@@ -266,6 +267,7 @@ function leaveRoom(client, notify = true) {
 function disconnectClient(client) {
   leaveObserve(client);
   leaveRoom(client, true);
+  if (client._uid) onlineUsers.delete(client._uid); // 离线追踪清理(审计C2)
   allClients.delete(client);
 }
 
@@ -420,15 +422,15 @@ function pushChat(client, message) {
   const nick = client._uid
     ? (sanitizeText(client._nick || '', 24) || ('玩家' + String(client._uid).slice(0, 4)))
     : '游客';
+  const uid = sanitizeText(client._uid || '', 32);
   const msg = {
-    uid: sanitizeText(client._uid || '', 32),
-    nick,
-    nickname: nick,
-    text,
+    uid, nick, nickname: nick, text,
     time: new Date().toISOString(),
   };
   chat.push(msg);
-  if (chat.length > 100) chat.shift();
+  if (chat.length > 200) chat.splice(0, chat.length - 200); // 统一上限200(审计D1)
+  // DB 持久化(审计C1):WS 聊天写入 chat_logs,服务重启不丢
+  try { const db = require('./db'); db.prepare('INSERT INTO chat_logs (uid, nickname, text, source) VALUES (?,?,?,?)').run(uid, nick, text, 'ws'); } catch(e) {}
   broadcastAll(client, { type: 'chat', message: msg });
 }
 
@@ -456,7 +458,7 @@ function flushClientBuffer(client) {
   client.buffer = decoded.rest;
   for (const message of decoded.messages) {
     if (message.close) return client.socket.end();
-    if (message.ping) { sendPong(client, message.ping); continue; }
+    if (message.ping) { sendPong(client, message.ping); if (client._uid && onlineUsers.has(client._uid)) onlineUsers.get(client._uid).lastHeartbeat = Date.now(); continue; }
     if (message.text) handleMessage(client, message.text);
   }
 }
@@ -466,6 +468,7 @@ function attachSocket(socket, head = null, auth = null) {
     socket, buffer: Buffer.alloc(0), roomId: '', index: -1, ready: false, deck: [], _observer: '',
     _uid: (auth && auth.uid) || '', _nick: (auth && auth.nick) || '',
   };
+  if (client._uid) onlineUsers.set(client._uid, { ws: socket, nickname: client._nick, level: 1, lastHeartbeat: Date.now() }); // 在线追踪(审计C2)
   allClients.add(client);
   // 空闲超时:120s 无任何数据自动断开,清理半开(掉线未发 FIN)连接
   socket.setTimeout(120000, () => { try { socket.end(); } catch (e) {} });
@@ -541,6 +544,9 @@ function attachPvp(httpServer) {
 module.exports = {
   handlePvpUpgrade,
   attachPvp,
+  broadcastAll,
+  onlineUsers,
+  getOnlineCount: () => onlineUsers.size,
   _internals: {
     rooms,
     allClients,

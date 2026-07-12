@@ -153,6 +153,22 @@
       const win = !!(message.result && message.result.winner === pvp.playerIndex);
       setStatus(win ? 'PVP 结果:胜利' : 'PVP 结果:失败');
       if (state.mode === 'pvp' && state.phase === 'playing') { state.phase = win ? 'won' : 'lost'; showPvpResult(win); }
+    } else if (message.type === 'chat') {
+      // WS 实时聊天(审计C9):推入全局聊天数组
+      if (message.message && typeof window.chatMessages !== 'undefined' && Array.isArray(window.chatMessages)) {
+        window.chatMessages.push(message.message);
+        if (window.chatMessages.length > 200) window.chatMessages.shift();
+      }
+    } else if (message.type === 'new_mail') {
+      if (typeof account !== 'undefined' && account.getMail) account.getMail().catch(() => {});
+    } else if (message.type === 'new_announcement') {
+      if (typeof account !== 'undefined' && account.announcements) account.announcements().catch(() => {});
+    } else if (message.type === 'resource_grant') {
+      if (typeof account !== 'undefined' && account.user && (message.uid === account.user.uid || message.all)) {
+        account.api('GET', '/api/user/profile').then(prof => {
+          if (prof && !prof.error && account.user) { account.user.diamonds = prof.diamonds; account.user.gold = prof.gold; }
+        }).catch(() => {});
+      }
     } else if (message.type === 'error') {
       setStatus(message.message || 'PVP 错误');
     }

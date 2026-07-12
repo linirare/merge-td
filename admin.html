@@ -140,7 +140,7 @@
     <h1 id="pageTitle">数据概览</h1>
     <div class="search"><svg class="icon"><use href="#i-search"/></svg><input placeholder="搜索 UID / 昵称…" /></div>
     <span class="sp"></span>
-    <span class="badge-live"><span class="dot"></span>服务在线 · 当前 1,284 人</span>
+    <span class="badge-live"><span class="dot"></span>服务在线 · 当前 <b id="liveCount">--</b> 人</span>
   </div>
 
   <div class="content">
@@ -219,7 +219,7 @@
       <div class="panel" style="max-width:520px">
         <h3><svg class="icon"><use href="#i-gift"/></svg>快捷资源发放</h3>
         <div class="field"><label>目标 UID</label><input placeholder="输入玩家 UID,留空=全服" /></div>
-        <div class="field"><label>资源类型</label><select><option>金币</option><option>钻石</option><option>碎片(指定英雄)</option><option>改名卡</option></select></div>
+        <div class="field"><label>资源类型</label><select id="resType"><option value="gold">金币</option><option value="diamonds">钻石</option></select></div>
         <div class="field"><label>数量</label><input value="1000" /></div>
         <div class="field"><label>发放理由(记录日志)</label><input placeholder="例:客服补偿 / 活动奖励" /></div>
         <button class="btn" onclick="toast('资源已发放,操作已记入日志')"><svg class="icon"><use href="#i-send"/></svg>确认发放</button>
@@ -287,13 +287,16 @@
   // —— 数据概览 ——
   async function loadDash() {
     try {
+      const stats = await api('GET', '/api/admin/stats');
+      document.querySelectorAll('.stat b')[0].textContent = (stats.total || 0).toLocaleString();
+      document.querySelectorAll('.stat b')[1].textContent = (stats.todayNew || 0).toLocaleString();
+      document.querySelectorAll('.stat b')[2].textContent = (stats.onlineCount || 0).toLocaleString();
+      document.querySelectorAll('.stat b')[3].textContent = '--';
+      document.querySelectorAll('.stat span')[3].textContent = '付费系统待接入';
+      document.querySelectorAll('.stat .up').forEach(el => el.remove());
+      const el = document.getElementById('liveCount'); if (el) el.textContent = (stats.onlineCount || 0).toLocaleString();
       const users = await api('GET', '/api/admin/users');
       if (!Array.isArray(users)) return;
-      const total = users.length;
-      const today = new Date().toISOString().slice(0, 10);
-      const todayCount = users.filter(u => (u.created_at || '').slice(0, 10) === today).length;
-      document.querySelectorAll('.stat b')[0].textContent = total.toLocaleString();
-      document.querySelectorAll('.stat b')[1].textContent = todayCount.toLocaleString();
       const recent = users.slice(0, 5);
       document.getElementById('recentReg').innerHTML = recent.map(u => {
         const date = (u.created_at || '').slice(0, 16).replace('T', ' ');
@@ -314,7 +317,7 @@
         return `<tr><td class="uid-cell">${esc(u.uid)}</td><td>${av}${esc(u.nickname || '玩家')}</td>
           <td><span class="tag gold">Lv.${u.level || 1}</span></td><td>${(u.power || 0).toLocaleString()}</td>
           <td>${esc(rank)}</td><td>${date}</td>
-          <td><span class="tag on">正常</span></td>
+          <td>${u.is_online ? '<span class="tag on">● 在线</span>' : '<span class="tag">离线</span>'}</td>
           <td><div class="op"><button onclick="toast('给 ${esc(u.nickname)} 发邮件')">发邮件</button>
           <button onclick="toast('给 ${esc(u.nickname)} 发资源')">发资源</button></div></td></tr>`;
       }).join('') || '<tr><td colspan="8" style="color:var(--muted)">暂无用户</td></tr>';
@@ -386,11 +389,17 @@
   document.querySelector('#p-res .btn')?.addEventListener('click', async () => {
     const p = document.getElementById('p-res');
     const uid = p.querySelector('input[placeholder*="UID"]')?.value?.trim();
-//    const type = p.querySelector('select')?.value || '';
+    const type = p.querySelector('select')?.value || 'gold';
     const amount = parseInt(p.querySelectorAll('input')[2]?.value) || 0;
-    if (!uid) { toast('请输入目标UID'); return; }
+    const payload = { gold: 0, diamonds: 0 };
+    if (type === 'gold') payload.gold = amount; else payload.diamonds = amount;
+    if (!uid) {
+      // 全服资源发放(留空UID)
+      try { const r = await api('POST', '/api/admin/resource-all', payload); toast('已发放至全服 ' + (r.count || '') + ' 名玩家'); } catch(e) { toast('发放失败: ' + e.message); }
+      return;
+    }
     if (!amount) { toast('请输入数量'); return; }
-    try { await api('POST', '/api/admin/resource', { uid, gold: amount, diamonds: 0 }); toast('资源已发放'); } catch(e) { toast('发放失败: ' + e.message); }
+    try { await api('POST', '/api/admin/resource', { uid, ...payload }); toast('资源已发放'); } catch(e) { toast('发放失败: ' + e.message); }
   });
 </script>
 </body>
