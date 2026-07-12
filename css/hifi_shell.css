@@ -96,7 +96,7 @@ button:disabled{opacity:0.40;cursor:default}
 @keyframes badgePulse{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-4px);}}
 
 /* ---- 首页两大主按钮:开始对战 / 开始竞技 ---- */
-.hifi .homecta{position:absolute;left:20px;right:20px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:10;display:flex;gap:12px;}
+.hifi .homecta{position:absolute;left:20px;right:20px;bottom:calc(130px + env(safe-area-inset-bottom));z-index:10;display:flex;gap:12px;}
 .hifi .homecta::before{content:"";position:absolute;left:-12px;right:-12px;top:-13px;bottom:-15px;z-index:-1;border-radius:22px;
   background:linear-gradient(180deg,rgba(22,12,30,.82),rgba(10,6,16,.92));border:1.5px solid rgba(245,194,66,.5);
   box-shadow:0 10px 26px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,233,168,.3);}
@@ -368,7 +368,7 @@ body.shell-v65::after{
 #rankPanel.hifi .hifi-scroll{padding-bottom:calc(150px + env(safe-area-inset-bottom));}
 
 /* 首页"选关"按钮 */
-.hifi .hifi-levelsel{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(184px + env(safe-area-inset-bottom));z-index:10;font-family:'ZCOOL KuaiLe';font-size:13px;color:#FFE9A8;background:rgba(20,12,30,.72);border:1.5px solid rgba(245,194,66,.5);border-radius:999px;padding:6px 16px;box-shadow:0 4px 10px rgba(0,0,0,.4);}
+.hifi .hifi-levelsel{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(214px + env(safe-area-inset-bottom));z-index:10;font-family:'ZCOOL KuaiLe';font-size:13px;color:#FFE9A8;background:rgba(20,12,30,.72);border:1.5px solid rgba(245,194,66,.5);border-radius:999px;padding:6px 16px;box-shadow:0 4px 10px rgba(0,0,0,.4);}
 .hifi .hifi-levelsel:active{transform:translateX(-50%) scale(.94);}
 
 /* ---- M6 账号/社交弹层 ---- */

@@ -682,22 +682,16 @@
               ${GACHA_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
             </div></div>
           </div>
-          <div class="gpanel">
-            <div class="pity-row"><span>史诗 保底</span><span><b>${pityE}</b> / 29 抽</span></div>
-            <div class="bar"><span style="width:${Math.round(pityE / 29 * 100)}%;background:linear-gradient(90deg,#5B9FE0,#FF6B35)"></span></div>
-          </div>
           <div class="draw2">
             <button class="gbtn ${canG1 ? '' : 'gray'}" id="hifiGacha1"><span class="display">单抽</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${GACHA_COST_1}</small></button>
             <button class="gbtn ${canG10 ? '' : 'gray'}" id="hifiGacha10"><span class="display">十连 ×10</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${GACHA_COST_10} · 稀保底</small></button>
           </div>
           <div class="shead" style="margin-top:20px"><h2 class="display" style="font-size:20px">🎯 精英卡池 T0-T2</h2><span class="line"></span></div>
           <div class="banner" style="background:linear-gradient(160deg,#2a1a2e,#1a1020)">
+            <div style="width:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:64px;gap:12px;background:linear-gradient(160deg,#3a1a3e,#1a0820)">🫒<span style="font-size:40px">⚔️</span>🍒</div>
             <div class="cap"><h3 style="color:#FF6B35">传说英雄集结</h3><div class="rar">
               ${T0T2_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
             </div></div>
-          </div>
-          <div class="gpanel">
-            <div class="pity-row"><span>🎯 高碎片保底 · 碎片×2-5倍</span><span>十连必出T1+</span></div>
           </div>
           <div class="draw2">
             <button class="gbtn ${canT1 ? '' : 'gray'}" id="hifiT0Gacha1"><span class="display">单抽</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${T0T2_COST_1}</small></button>
