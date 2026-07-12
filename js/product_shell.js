@@ -51,7 +51,7 @@
   let rankTab = 'power';
   const RANK_TABS = [['power', '战力榜'], ['stage', '关卡榜'], ['ladder', '竞技榜']];
   const RAR_KEY = { normal: 'N', rare: 'R', epic: 'E' };
-  const RAR_COLOR = { normal: '#9AA6B2', rare: '#57B0E8', epic: '#C77BE8' };
+  const RAR_COLOR = { normal: '#8FE0A0', rare: '#5B9FE0', epic: '#C77BE8' };
   const ROLE_ZH = { tank: '坦克', back: '远程', rush: '突击', front: '前排', siege: '攻城', control: '控制', support: '辅助', merge: '合成' };
   const LV_KEY = { 4: '解锁技能', 5: '强化·金徽', 6: '质变', 7: '满级质变' };
   const SKILL_ZH = { shield: '周期护盾', first_shield: '首战护盾', rapid: '连射', snipe: '狙击', dash: '突进', first_crit: '首击暴击', anti_rush: '反突击', siege: '攻城', death_roll: '死亡爆炸', slow: '减速/冰冻', heal: '治疗', wildcard: '万能合成', copy: '复制', charge: '冲锋', immune: '免伤', burn: '点燃', stealth: '隐身首击', aoe: '范围炸弹', weaken: '削弱', sp_regen: '回能提速', kill_sp: '击杀回能', sp_refund: '操作返能', sp_bank: '储蓄产能', sp_discount: '操作减费' };
@@ -459,7 +459,7 @@
   function hifiDisc(id, size) {
     const t = fruit(id);
     const col = t.color || '#F5C242';
-    return `<span class="fdisc" style="width:${size}px;height:${size}px;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.55),${col});font-size:${Math.round(size * 0.52)}px">${t.icon || '🍏'}</span>`;
+    return `<span class="fdisc" style="width:${size}px;height:${size}px;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.18),${col}88);font-size:${Math.round(size * 0.72)}px">${t.icon || '🍏'}</span>`;
   }
   function roleZh(r) { return ROLE_ZH[r] || r || '单位'; }
   function skillZh(t) { return SKILL_ZH[t.skill] || '专属技能'; }
