@@ -282,6 +282,16 @@
     else if (p === 'users') loadUsers();
     else if (p === 'chat') loadChat();
     else if (p === 'notice') loadNotices();
+    else if (p === 'mail') loadMailLog();
+  }
+
+  async function loadMailLog() {
+    try {
+      const data = await api('GET', '/api/admin/mail-log');
+      document.getElementById('mailLog').innerHTML = Array.isArray(data.rows)
+        ? data.rows.map(m => `<tr><td>${esc(m.title)}</td><td>${m.total > 1 ? '全服 ('+m.total+'人)' : '单人'}</td><td>${(m.created_at||'').slice(0,16)}</td><td>${m.total ? Math.round(m.read_count/m.total*100):0}%</td></tr>`).join('')
+        : '<tr><td colspan="4">暂无记录</td></tr>';
+    } catch(e) {}
   }
 
   // —— 数据概览 ——
@@ -332,8 +342,13 @@
     const toAll = panel.querySelector('input[name="mailto"]:checked')?.parentElement?.textContent?.includes('全服');
     const uidInput = panel.querySelector('input[placeholder*="UID"]');
     if (!title) { toast('请输入标题'); return; }
+    // 读取附件奖励输入框(金币/钻石/碎片)
+    const goldAmt = parseInt(panel.querySelectorAll('.attach input')[0]?.value) || 0;
+    const gemAmt = parseInt(panel.querySelectorAll('.attach input')[1]?.value) || 0;
+    const fragAmt = parseInt(panel.querySelectorAll('.attach input')[2]?.value) || 0;
+    const rewards_json = JSON.stringify({ gold: goldAmt, diamonds: gemAmt, fragments: fragAmt });
     try {
-      const payload = { title, body: body || '', rewards_json: '{}' };
+      const payload = { title, body: body || '', rewards_json };
       if (toAll) {
         const r = await api('POST', '/api/admin/mail-all', payload);
         toast('已发送至全服 ' + (r.count || '') + ' 名玩家');
@@ -361,7 +376,8 @@
     const p = document.getElementById('p-notice');
     const title = p.querySelector('input[placeholder*="标题"]')?.value?.trim();
     if (!title) { toast('请输入公告标题'); return; }
-    try { const r = await api('POST', '/api/admin/announcement', { title, body: p.querySelector('textarea')?.value || '' }); if (r.ok) { toast('公告已发布'); loadNotices(); p.querySelector('input')?.value && (p.querySelector('input').value = ''); } } catch(e) { toast('发布失败: ' + e.message); }
+    const start_time = p.querySelector('input[placeholder*="时间"]')?.value || '';
+    try { const r = await api('POST', '/api/admin/announcement', { title, body: p.querySelector('textarea')?.value || '', start_time, end_time: '' }); if (r.ok) { toast('公告已发布'); loadNotices(); p.querySelectorAll('input')[0]?.value && (p.querySelectorAll('input')[0].value = ''); } } catch(e) { toast('发布失败: ' + e.message); }
   });
 
   // —— 聊天管理 ——

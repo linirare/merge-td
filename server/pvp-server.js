@@ -5,6 +5,16 @@ const { PvpBattle } = require('./pvp-sim');
 const rooms = new Map();
 const allClients = new Set();
 const onlineUsers = new Map(); // uid→{ws,nickname,level,lastHeartbeat} 在线追踪(审计C2)
+// 僵尸连接清理:每60s扫描,90s无心跳→关闭(审计P0-6)
+setInterval(() => {
+  const now = Date.now();
+  for (const [uid, data] of onlineUsers) {
+    if (now - data.lastHeartbeat > 90000) {
+      try { data.ws.close(); } catch(e) {}
+      onlineUsers.delete(uid);
+    }
+  }
+}, 60000);
 
 function makeRoomId() {
   let id = '';

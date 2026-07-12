@@ -58,6 +58,8 @@ db.exec(`
     title TEXT NOT NULL,
     body TEXT DEFAULT '',
     active INTEGER DEFAULT 1,
+    start_time TEXT DEFAULT '',
+    end_time TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
   );
 

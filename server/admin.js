@@ -82,6 +82,7 @@ function mountAdmin(app) {
     const rewards = typeof rewards_json === 'object' ? JSON.stringify(rewards_json) : (String(rewards_json || '{}')); // 审计S12:校验JSON合法性
     try { JSON.parse(rewards); } catch(e) { return res.status(400).json({ error: 'invalid rewards_json' }); }
     db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)').run(uid, safeTitle, safeText(body, 500), rewards);
+    try { const { broadcastAll } = require('./pvp-server'); broadcastAll(null, { type: 'new_mail', uid }); } catch(e) {}
     res.json({ ok: true });
   });
 
@@ -94,6 +95,7 @@ function mountAdmin(app) {
     const stmt = db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)');
     const tx = db.transaction(() => { for (const u of uids) stmt.run(u.uid, safeTitle, safeBody, rewards_json || '{}'); });
     tx();
+    try { const { broadcastAll } = require('./pvp-server'); broadcastAll(null, { type: 'new_mail', all: true }); } catch(e) {}
     res.json({ ok: true, count: uids.length });
   });
 
@@ -107,6 +109,7 @@ function mountAdmin(app) {
     if (result.changes === 0) return res.status(404).json({ error: 'user not found' }); // 审计C6:UID不存在提示
     // 审计日志
     try { db.prepare('INSERT INTO admin_logs (admin_uid, action, target_uid, detail) VALUES (?,?,?,?)').run(req.uid || 'admin', 'resource', uid, `gold:${g} diamonds:${d}`); } catch(e) {}
+    try { const { broadcastAll } = require('./pvp-server'); broadcastAll(null, { type: 'resource_grant', uid, gold: g, diamonds: d }); } catch(e) {}
     res.json({ ok: true });
   });
 
@@ -120,6 +123,7 @@ function mountAdmin(app) {
     if (!uids.length) return res.status(404).json({ error: 'no users' });
     db.prepare('UPDATE users SET gold = gold + ?, diamonds = diamonds + ?').run(g, d); // 全服批量更新
     try { db.prepare('INSERT INTO admin_logs (admin_uid, action, detail) VALUES (?,?,?)').run(req.uid || 'admin', 'resource_all', `gold:${g} diamonds:${d} to ${uids.length} users`); } catch(e) {}
+    try { const { broadcastAll } = require('./pvp-server'); broadcastAll(null, { type: 'resource_grant', all: true, gold: g, diamonds: d }); } catch(e) {}
     res.json({ ok: true, count: uids.length });
   });
 
@@ -130,8 +134,9 @@ function mountAdmin(app) {
   });
 
   app.get('/api/admin/chat', authMiddleware, adminAuth, (req, res) => {
-    const { chatMessages } = require('./index');
-    res.json(chatMessages || []);
+    // 审计P0-4:查chat_logs表,非内存(重启后内存空但DB有数据→后台看到空白)
+    const msgs = db.prepare('SELECT uid, nickname, text, source, created_at FROM chat_logs ORDER BY created_at DESC LIMIT 200').all();
+    res.json(msgs.reverse()); // 时间升序,和内存版接口一致
   });
 
   app.delete('/api/admin/chat', authMiddleware, adminAuth, (req, res) => {
@@ -140,13 +145,14 @@ function mountAdmin(app) {
     res.json({ ok: true });
   });
 
-  // 公告管理:创建
+  // 公告管理:创建(审计P0-3:加start_time/end_time)
   app.post('/api/admin/announcement', authMiddleware, adminAuth, (req, res) => {
-    const { title, body, active } = req.body || {};
+    const { title, body, active, start_time, end_time } = req.body || {};
     const safeTitle = safeText(title, 120);
     if (!safeTitle) return res.status(400).json({ error: 'title required' });
     const id = require('crypto').randomBytes(6).toString('hex');
-    db.prepare('INSERT INTO announcements (id,title,body,active) VALUES (?,?,?,?)').run(id, safeTitle, safeText(body, 500), (active === false ? 0 : 1));
+    db.prepare('INSERT INTO announcements (id,title,body,active,start_time,end_time) VALUES (?,?,?,?,?,?)').run(id, safeTitle, safeText(body, 500), (active === false ? 0 : 1), safeText(start_time, 40) || '', safeText(end_time, 40) || '');
+    try { const { broadcastAll } = require('./pvp-server'); broadcastAll(null, { type: 'new_announcement', id }); } catch(e) {}
     res.json({ ok: true, id });
   });
 
