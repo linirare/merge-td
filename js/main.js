@@ -270,15 +270,21 @@ function onGameOver(win) {
     meta.gold += totalReward;
     meta.totalWins++;
 
-    title.textContent = state.levelConfig.isBoss ? '🏆 腐坏果堡攻破！' : '🎉 水果突击胜利！';
-    const starsStr = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+    const isBoss = state.levelConfig.isBoss;
+    title.textContent = isBoss ? '🏆 腐坏果堡攻破！' : '🎉 水果突击胜利！';
+    const starsHtml = '<span class="res-stars">' + '⭐'.repeat(stars) + '<span class="res-gray">' + '☆'.repeat(3 - stars) + '</span></span>';
     const bestType = state.maxSoldierType ? (TYPES[state.maxSoldierType]?.name || '') : '';
     detail.innerHTML = `
-      ${starsStr}<br>
-      第 ${state.currentLevel} 关 · ${elapsed}秒 · 果堡剩余${Math.round(wallRatio * 100)}%<br>
-      🍋 +${totalReward}（基础${state.levelConfig.reward}${bonus > 0 ? ' + 星级'+bonus : ''}）<br>
-      ⚔ 击破 ${state.kills} · 合成 ${state.merges} 次${bestType ? ' · 王牌: ' + bestType + ' ' + state.maxSoldierAtk + '攻' : ''}
-      ${reportHtml()}
+      <div class="res-hero">${starsHtml}</div>
+      <div class="res-stat-row">
+        <div class="res-stat"><span class="res-num">${elapsed}</span><span class="res-lbl">秒</span></div>
+        <div class="res-stat"><span class="res-num">${Math.round(wallRatio * 100)}%</span><span class="res-lbl">果堡剩余</span></div>
+        <div class="res-stat"><span class="res-num">${state.kills}</span><span class="res-lbl">击破</span></div>
+        <div class="res-stat"><span class="res-num">${state.merges}</span><span class="res-lbl">合成</span></div>
+      </div>
+      <div class="res-reward">🪙 <b>+${totalReward}</b> 金币入库${bonus > 0 ? ' <small>(含星级+' + bonus + ')</small>' : ''}</div>
+      ${bestType ? '<div class="res-mvp">🏅 王牌 · <b>' + bestType + '</b> ' + state.maxSoldierAtk + '攻</div>' : ''}
+      ${reportHtml() ? '<div class="res-report">' + reportHtml() + '</div>' : ''}
     `;
     playSfx('win');
     if (state.currentLevel >= meta.highestLevel) meta.highestLevel = state.currentLevel + 1;
@@ -287,10 +293,15 @@ function onGameOver(win) {
     title.textContent = '💀 果堡失守';
     const elapsed = Math.floor(state.time);
     detail.innerHTML = `
-      腐坏水果突破了我方果堡。<br>
-      建议点击空格消耗果汁召唤水果营，或双击高等级水果营消耗果汁急派兵救线。<br>
-      ⚔ 击破 ${state.kills} · 合成 ${state.merges} 次 · ${elapsed}秒
-      ${reportHtml()}
+      <div class="res-hero fail">⚔️</div>
+      <p class="res-fail-msg">腐坏水果突破了我方防线</p>
+      <div class="res-stat-row">
+        <div class="res-stat"><span class="res-num">${state.kills}</span><span class="res-lbl">击破</span></div>
+        <div class="res-stat"><span class="res-num">${state.merges}</span><span class="res-lbl">合成</span></div>
+        <div class="res-stat"><span class="res-num">${elapsed}</span><span class="res-lbl">秒</span></div>
+      </div>
+      <div class="res-tip">💡 空格消耗果汁召唤水果营 · 双击高级水果营急派兵救线</div>
+      ${reportHtml() ? '<div class="res-report">' + reportHtml() + '</div>' : ''}
     `;
     playSfx('lose');
     nextBtn.classList.add('hide');
