@@ -534,7 +534,7 @@ body.shell-v65.battle-shell-active #game{
 }
 .battle-shell-hud{
   position:fixed;
-  top:calc(env(safe-area-inset-top) + 8px);
+  top:calc(var(--phone-top, 0px) + env(safe-area-inset-top, 0px) + 8px);
   left:var(--phone-left,0);
   width:var(--phone-w,100vw);
   padding:0 10px;

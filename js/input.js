@@ -49,23 +49,9 @@ function onDown(ev) {
   ev.preventDefault();
   const p = eventPoint(ev);
 
-  if (hitRect(p, PAUSE_RECT)) {
-    state.phase = state.phase === 'paused' ? 'playing' : 'paused';
-    return;
-  }
+  // 暂停/速度/帮助已迁移至壳HUD(#battleShellHud),Canvas不再处理这些点击
 
   if (state.phase === 'paused') return;
-
-  if (hitRect(p, HELP_RECT)) {
-    document.getElementById('helpPanel').classList.remove('hide');
-    return;
-  }
-
-  if (hitRect(p, SPEED_RECT)) {
-    state.speed = state.speed >= 3 ? 1 : state.speed + 1;
-    addFx(SPEED_RECT.x + SPEED_RECT.w / 2, SPEED_RECT.y + 42, `速度 ×${state.speed}`, THEME.gold, 12);
-    return;
-  }
 
   if (state.overflowQueue.length > 0 && hitRect(p, OVERFLOW_RECT)) {
     showOverflowPopup();

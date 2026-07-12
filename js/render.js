@@ -625,9 +625,7 @@ function draw() {
   drawProjectiles();
   drawAttackFx();
   drawRings();
-  drawSpeedBtn();
-  drawPauseBtn();
-  drawHelpBtn();
+  // 暂停/速度/帮助已迁移至壳HUD(#battleShellHud),Canvas不再重复绘制
   drawFx();
 
   // 暂停遮罩
