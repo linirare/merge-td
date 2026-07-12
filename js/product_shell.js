@@ -874,9 +874,9 @@
         <button class="ltab ${!isReg ? 'on' : ''}" data-auth="login">登录</button>
         <button class="ltab ${isReg ? 'on' : ''}" data-auth="register">注册</button>
       </div>
-      <input class="linput" id="authEmail" type="text" placeholder="邮箱" autocomplete="off">
-      <input class="linput" id="authPass" type="password" placeholder="密码">
-      ${isReg ? '<input class="linput" id="authNick" type="text" placeholder="昵称(可留空)" maxlength="12">' : ''}
+      <input class="linput" id="authEmail" type="email" inputmode="email" autocomplete="username" aria-label="邮箱" placeholder="邮箱">
+      <input class="linput" id="authPass" type="password" autocomplete="${isReg ? 'new-password' : 'current-password'}" aria-label="密码" placeholder="密码">
+      ${isReg ? '<input class="linput" id="authNick" type="text" autocomplete="nickname" aria-label="昵称" placeholder="昵称(可留空)" maxlength="12">' : ''}
       <button class="gbtn blk" id="authGo" style="margin-top:4px">${isReg ? '注册并登录' : '登录'}</button>
       <button class="gbtn blk" id="authGuest" style="margin-top:10px;background:linear-gradient(180deg,#8f897c,#6b665b);border-color:#4c483f;box-shadow:0 4px 0 #4c483f;color:#e8e4d8;text-shadow:none">游客继续(本地存档)</button>
       <p style="text-align:center;font-size:11px;color:#8a7a5a;margin-top:12px;line-height:1.6">登录后云端存档 · 解锁邮件/排行/世界聊天<br>需连接后端服务器</p>
@@ -884,10 +884,13 @@
     body.querySelectorAll('[data-auth]').forEach(b => b.addEventListener('click', () => { authMode = b.dataset.auth; openAuthSheet(); }));
     body.querySelector('#authGuest')?.addEventListener('click', () => closeSheet());
     body.querySelector('#authGo')?.addEventListener('click', async () => {
+      const btn = body.querySelector('#authGo');
       const email = (body.querySelector('#authEmail').value || '').trim();
       const pass = body.querySelector('#authPass').value || '';
       if (!email || !pass) { hifiToast('请填写邮箱和密码'); return; }
       if (!window.account || !account.register) { hifiToast('需要连接后端服务器'); return; }
+      const label = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = isReg ? '注册中…' : '登录中…'; }  // 防重复提交(审计 D)
       try {
         const r = isReg
           ? await account.register(email, pass, (body.querySelector('#authNick')?.value || '').trim())
@@ -895,6 +898,7 @@
         if (r && r.token) { hifiToast(isReg ? '注册成功,欢迎!' : '登录成功,欢迎回来'); closeSheet(); ensureShellData(); refreshResourceNumbers(); renderHome(); }
         else hifiToast(r && r.error ? r.error : '失败,请重试');
       } catch (e) { hifiToast('连接失败,请检查服务器'); }
+      finally { if (btn) { btn.disabled = false; btn.textContent = label; } }
     });
   }
 

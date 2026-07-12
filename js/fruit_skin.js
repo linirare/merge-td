@@ -164,7 +164,7 @@ function drawBall(ball, cx, cy, radius, extraY = 0, isEnemy = false) {
   const t = TYPES[ball.type] || TYPES[DEFAULT_DECK[0]];
   const level = Math.max(1, Math.min(7, ball.level || 1));
   const bounceOff = ball.bounce ? -Math.sin(ball.bounce * Math.PI) * 9 : 0;
-  const floatOff = Math.sin((state.time || 0) * 1.45 + cx * 0.06 + cy * 0.06) * 0.7;
+  const floatOff = window.REDUCE_MOTION ? 0 : Math.sin((state.time || 0) * 1.45 + cx * 0.06 + cy * 0.06) * 0.7;
   const drawY = cy - bounceOff + floatOff + extraY;
   const lvScale = fruitBoardLvScale(level);
   const emojiSize = Math.round(radius * 1.66 * lvScale);

@@ -6,6 +6,14 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 let scale = 1;
 
+// 无障碍:尊重系统"减弱动态效果"(审计 C)。各动画源用 window.REDUCE_MOTION 置零。
+window.REDUCE_MOTION = false;
+try {
+  const _rmq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  window.REDUCE_MOTION = _rmq.matches;
+  _rmq.addEventListener('change', e => { window.REDUCE_MOTION = e.matches; });
+} catch (e) { /* 老浏览器无 matchMedia,保持 false */ }
+
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   scale = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.96;

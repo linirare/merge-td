@@ -263,7 +263,7 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 .hifi .field{display:flex;flex-direction:column;gap:6px;position:relative;z-index:1;}
 .hifi .field label{font-weight:800;font-size:13px;color:#C9B48A;padding-left:4px;}
 .hifi .field input{padding:13px;border-radius:10px;border:2px solid rgba(245,194,66,.5);background:rgba(0,0,0,.35);color:#FFE9A8;font-size:16px;font-weight:700;font-family:'ZCOOL KuaiLe';}
-.hifi .field input::placeholder{color:#8a7a5a;} .hifi .field input:focus{outline:none;border-color:var(--gold);}
+.hifi .field input::placeholder{color:#b6a179;} .hifi .field input:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
 
 /* ---- M5 排行榜 ---- */
 .hifi .rtabs{display:flex;gap:8px;background:rgba(0,0,0,.35);padding:5px;border-radius:12px;margin-bottom:14px;border:1px solid rgba(245,194,66,.3);}
@@ -303,7 +303,7 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 
 /* ---- M6 账号/社交弹层 ---- */
 .hifi .linput{width:100%;padding:13px;border-radius:12px;border:2px solid rgba(245,194,66,.4);background:rgba(0,0,0,.35);color:#FFE9A8;font-size:16px;font-weight:700;margin-bottom:10px;font-family:'Nunito';}
-.hifi .linput::placeholder{color:#8a7a5a;} .hifi .linput:focus{outline:none;border-color:#F5C242;}
+.hifi .linput::placeholder{color:#b6a179;} .hifi .linput:focus{outline:2px solid #F5C242;outline-offset:1px;border-color:#F5C242;}
 .hifi .ltabs{display:flex;gap:8px;margin-bottom:14px;}
 .hifi .ltab{flex:1;padding:10px;border-radius:12px;font-family:'ZCOOL KuaiLe';font-size:16px;color:#B99A6E;text-align:center;background:rgba(0,0,0,.3);border:1.5px solid rgba(245,194,66,.25);}
 .hifi .ltab.on{background:linear-gradient(180deg,#F5C242,#D18A0E);color:#3a1e08;}
@@ -329,7 +329,7 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 .hifi .cmsg.me .cb .nm{color:#5A0E0E;} .hifi .cmsg.me .cb .tx{color:#3a1e08;}
 .hifi .chat-in{display:flex;gap:8px;margin-top:12px;}
 .hifi .chat-in input{flex:1;padding:12px;border-radius:12px;border:2px solid rgba(245,194,66,.4);background:rgba(0,0,0,.35);color:#FFE9A8;font-weight:700;font-family:'Nunito';}
-.hifi .chat-in input:focus{outline:none;border-color:#F5C242;}
+.hifi .chat-in input:focus{outline:2px solid #F5C242;outline-offset:1px;border-color:#F5C242;}
 
 /* 菜单态藏底层游戏画布;壳屏与战斗共用同一暖深底(避免进战斗四周变绿、与壳屏不协调) */
 body.hifi-menu #wrap{display:none;}

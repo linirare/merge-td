@@ -554,7 +554,7 @@ function drawHUD() {
 /* ——— 主绘制 ——— */
 function draw() {
   ctx.save();
-  if (state.shake > 0.05) ctx.translate(
+  if (!window.REDUCE_MOTION && state.shake > 0.05) ctx.translate(
     (Math.random() - 0.5) * state.shake * 12,
     (Math.random() - 0.5) * state.shake * 12
   );
