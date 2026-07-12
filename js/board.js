@@ -190,7 +190,7 @@ function initLevel(k) {
   const eLv = Math.floor(lv.enemyInitLevel);
   const eFrac = lv.enemyInitLevel - eLv;
   const eLevel = eFrac > 0.68 ? eLv + 1 : eLv;
-  initEnemyOpening(k, eLevel);
+  // 敌方也不再预置水果营:由AI用敌方果汁自行召唤(见 juice_economy.js tryEnemyJuiceSummon)
 
   state.playerWallHp = BASE_WALL_HP + getWallBonus(meta);
   state.playerWallMax = state.playerWallHp;

@@ -152,24 +152,7 @@ function update(dt) {
 
   // 玩家不再自动补球：空格由玩家点击消耗果汁主动召唤。
 
-  // 敌方自动补充水果营：PVE 压力仍由关卡节奏控制。
-  state.enemyBallTimer += dt;
-  const enemyBallInterval = state.levelConfig?.enemySpawnInterval || BALL_SPAWN_INTERVAL;
-  if (state.enemyBallTimer >= enemyBallInterval) {
-    state.enemyBallTimer -= enemyBallInterval;
-    const added = autoSpawnBall(state.enemySlots, 1, true);
-    if (!added) state.enemyOverflow++;
-    if (state.enemyOverflow > 0) {
-      const empties = emptySlots(state.enemySlots);
-      let placed = 0;
-      while (state.enemyOverflow > 0 && placed < empties.length) {
-        const [r, c] = empties[placed];
-        state.enemySlots[r][c] = createBall(randomEnemyType(), 1);
-        state.enemyOverflow--;
-        placed++;
-      }
-    }
-  }
+  // 敌方不再用旧版 timer 自动补球:由 juice_economy.js 的 tryEnemyJuiceSummon 消耗敌方果汁召唤
 
   updateAI(dt);
 
