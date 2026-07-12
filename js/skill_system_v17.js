@@ -184,11 +184,13 @@ function patchFruitPassiveSkillsV17() {
         }
       }
 
-      // 保留非默认水果的原有基础被动，避免已解锁内容空掉。
+      // 修#10:椰子首盾/蜜桃治疗恢复 fruit_mechanics 原版数值(v17 REPLACE 时被悄悄削弱 ~20-25%;
+      //        叠加已修的 #3(去掉每帧2倍调用)后更弱 → 改回原值,达到与 WRAP 等效但无双重衰减风险)。
       if (s.type === 'coconut_guard' && !s._firstShield && s.battleReady) {
         s._firstShield = true;
-        s.shield = Math.max(s.shield || 0, Math.round(s.maxHp * (0.30 + s.level * 0.035)));
+        s.shield = Math.max(s.shield || 0, Math.round(s.maxHp * (0.38 + s.level * 0.04)));
         s.maxShield = Math.max(s.maxShield || 0, s.shield);
+        if (typeof addFx === 'function') addFx(s.x, s.y - 26, '椰壳护盾', '#9be7ff', 11);
         state.rings.push({ x: s.x, y: s.y, r: 7, life: 0.28, maxLife: 0.28, color: '#9be7ff' });
       }
 
@@ -197,13 +199,13 @@ function patchFruitPassiveSkillsV17() {
         if (s.skillTimer <= 0) {
           const ally = nearestAllyOnLane(s.side, s.laneIndex);
           if (ally) {
-            const heal = Math.round(6 + s.level * 4 + s.atk * 0.38);
+            const heal = Math.round(8 + s.level * 5 + s.atk * 0.55);
             ally.hp = Math.min(ally.maxHp, ally.hp + heal);
             s.damageDone = (s.damageDone || 0) + heal;
             if (s.side === 'player') state.damageByType[s.type] = (state.damageByType[s.type] || 0) + heal;
             state.rings.push({ x: ally.x, y: ally.y, r: 6, life: 0.25, maxLife: 0.25, color: '#ff9fbd' });
           }
-          s.skillTimer = Math.max(2.4, 5.2 - s.level * 0.18);
+          s.skillTimer = Math.max(1.8, 4.4 - s.level * 0.22);
         }
       }
     }

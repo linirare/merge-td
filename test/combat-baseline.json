@@ -60,5 +60,8 @@
   "cross_lane_engage_70px": {
     "sideGap": 70,
     "targeted": true
+  },
+  "coconut_first_shield_pct": {
+    "shieldPct": 50
   }
 }

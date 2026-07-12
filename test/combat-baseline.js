@@ -177,6 +177,10 @@ const DRIVER = `
   function crossLaneEngage(){ fresh(); const my=midY(); const p=place('grape_archer',3,'player',2,my); const e=place('banana_raider',3,'enemy',3,my); e.laneIndex=3; e.x=p.laneX+70; e.laneX=e.x; state.playerSoldiers=[p]; state.enemySoldiers=[e]; const tgt=findTarget(p,state.enemySoldiers); return { sideGap:70, targeted:!!tgt }; }
   R.cross_lane_engage_70px = crossLaneEngage();
 
+  // #10 椰子首盾恢复原版数值:Lv3 应为 maxHp*(0.38+3*0.04)=50%(v17 削弱版是 0.30+3*0.035=40.5%→41%)
+  function coconutShield(){ fresh(); const c=place('coconut_guard',3,'player',2,300); c.shield=0; c._firstShield=false; state.playerSoldiers=[c]; state.enemySoldiers=[]; state.enemyWallHp=state.enemyWallMax=1e6; updateCombat(); return { shieldPct: Math.round((c.shield/c.maxHp)*100) }; }
+  R.coconut_first_shield_pct = coconutShield();
+
   globalThis.__BASELINE__ = R;
 })();
 `;
