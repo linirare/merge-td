@@ -1,48 +1,25 @@
+/* ============================================================
+   水果突击 · style.css —— 仅保留游戏结构/布局必需规则
+   皮肤统一由 hifi_shell.css 提供(唯一皮肤)。
+   老绿皮(shell-v65 之前)规则已全部删除,不再与烫金皮共存/闪现。
+   ============================================================ */
 * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+
 html, body {
   width: 100%; height: 100%;
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   overflow: hidden;
   touch-action: none;
 }
-/* 老绿皮默认文字色:仅当 hifi_shell 未生效(无 shell-v65)时用;
-   带壳时 hifi_shell 的 body{} 已设 color:#1a1c2a */
-body:not(.shell-v65) { color: #315326; }
-/* 老绿皮背景+光晕:仅当新皮 ui_redesign.css 未生效(未带 ui-redesign class)时渲染。
-   带了则交给 ui_redesign.css 的 body.ui-redesign 奶油渐变接管——消除 FOUC。 */
-body:not(.shell-v65) {
-  background: radial-gradient(circle at 50% 12%, #fff7b8 0%, #dfff9b 33%, #8ee7a8 70%, #4dbb79 100%);
-}
-body:not(.ui-redesign)::before {
-  content: "";
-  position: fixed; inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 16% 20%, rgba(255,125,135,0.18), transparent 22%),
-    radial-gradient(circle at 84% 16%, rgba(155,92,255,0.16), transparent 20%),
-    radial-gradient(circle at 50% 90%, rgba(255,211,71,0.24), transparent 34%),
-    linear-gradient(90deg, rgba(255,255,255,0.22), transparent 18%, transparent 82%, rgba(255,255,255,0.16));
-}
+
 #wrap {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
-body:not(.shell-v65) #game {
-  background: #efffc9;
-  border-radius: 22px;
-  box-shadow: 0 18px 54px rgba(30,115,64,0.24), 0 0 0 2px rgba(255,255,255,0.52), inset 0 0 0 1px rgba(80,180,88,0.14);
-}
-#game {
-  touch-action: none;
-}
+#game { touch-action: none; }
 
-/* 老玻璃态遮罩+白绿卡片:带 shell-v65 时由 ui_redesign.css 的玻璃面板接管 */
-body:not(.shell-v65) .panel {
-  background: rgba(58, 123, 55, 0.34);
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
-}
+/* 面板容器定位/显隐(皮肤外观由 hifi_shell 提供) */
 .panel {
   position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
@@ -52,124 +29,25 @@ body:not(.shell-v65) .panel {
   padding: 18px;
 }
 .panel.hide { display: none !important; opacity: 0; visibility: hidden; pointer-events: none; }
-body:not(.shell-v65) .panel-inner {
-  width: min(88vw, 350px);
-  background: linear-gradient(180deg, #fffbe4 0%, #eaffc3 100%);
-  border: 2px solid #ffffff;
-  border-radius: 24px;
-  padding: 24px 20px;
-  display: flex; flex-direction: column; gap: 12px;
-  align-items: center;
-  box-shadow: 0 16px 42px rgba(45,126,66,0.26), inset 0 0 0 1px rgba(255,255,255,0.70);
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
 .panel.hide .panel-inner { transform: scale(0.94) translateY(12px); }
 .panel:not(.hide) .panel-inner { transform: scale(1) translateY(0); }
-body:not(.shell-v65) .panel-inner h1 { color: #2c8d3f; font-size: 30px; line-height: 1; letter-spacing: 1px; text-shadow: 0 2px 0 rgba(255,255,255,0.65); }
-body:not(.shell-v65) .panel-inner h2 { color: #2c8d3f; font-size: 22px; font-weight: 900; }
-body:not(.shell-v65) .panel-inner .sub { color: #668f46; font-size: 12.5px; text-align: center; line-height: 1.5; }
 
-/* 老首页静态内容(menu-card/hero-preview/logo/castle/troop/menu-stats):仅无新皮时渲染,
-   带 shell-v65 后由 product_shell.js 的 renderHome 烫金版取代 */
-body:not(.shell-v65) .menu-card { gap: 14px; }
-body:not(.shell-v65) .game-logo { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
-body:not(.shell-v65) .logo-mark { font-size: 34px; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(180deg, #fff176, #65d66e); border: 2px solid rgba(255,255,255,0.78); box-shadow: 0 7px 16px rgba(87,171,73,0.22); }
-body:not(.shell-v65) .hero-preview {
-  position: relative;
-  width: 100%; height: 156px;
-  border-radius: 20px;
-  overflow: hidden;
-  border: 2px solid rgba(255,255,255,0.78);
-  background:
-    linear-gradient(180deg, rgba(255,248,188,0.94), rgba(162,239,137,0.92)),
-    radial-gradient(circle at 50% 54%, rgba(255,211,71,0.36), transparent 34%);
-}
-body:not(.shell-v65) .hero-preview::before {
-  content: ""; position: absolute; inset: 18px 28px;
-  border: 1px dashed rgba(48,153,64,0.28);
-  border-radius: 999px;
-}
-body:not(.shell-v65) .castle {
-  position: absolute; left: 50%; transform: translateX(-50%);
-  padding: 5px 18px; border-radius: 999px;
-  font-size: 12px; font-weight: 900;
-  color: #fff; border: 2px solid rgba(255,255,255,0.72);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.10);
-}
-body:not(.shell-v65) .enemy-castle { top: 15px; background: linear-gradient(180deg, #ff7891, #f13d5d); }
-body:not(.shell-v65) .player-camp { bottom: 13px; background: linear-gradient(180deg, #69dc73, #25a953); }
-body:not(.shell-v65) .lane-line { position: absolute; left: 50%; top: 44px; bottom: 42px; width: 5px; transform: translateX(-50%); border-radius: 8px; background: linear-gradient(#ff5d6c, #ffc93c, #53c96a); opacity: 0.92; }
-body:not(.shell-v65) .troop-row { position: absolute; left: 50%; top: 62px; transform: translateX(-50%); display: flex; gap: 8px; }
-body:not(.shell-v65) .troop-row span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 13px; background: rgba(255,255,255,0.58); border: 2px solid rgba(255,255,255,0.78); font-size: 18px; box-shadow: 0 5px 10px rgba(75,158,70,0.12); }
-body:not(.shell-v65) .menu-stats { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-body:not(.shell-v65) .menu-stats span { padding: 8px 10px; border-radius: 14px; text-align: center; background: rgba(255,255,255,0.58); border: 1px solid rgba(52,180,78,0.16); font-size: 13px; color: #5f8540; }
-body:not(.shell-v65) .menu-stats b { color: #2c8d3f; }
-body:not(.shell-v65) .feature-chips { width: 100%; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
-body:not(.shell-v65) .feature-chips span { padding: 5px 8px; border-radius: 999px; font-size: 11px; color: #3d8a39; background: rgba(255,255,255,0.62); border: 1px solid rgba(66,190,86,0.16); }
-
-/* 老绿按钮:带 shell-v65 后用 .gbtn(金皮)/.shell-primary-cta 等替代 */
-body:not(.shell-v65) .btn-primary, body:not(.shell-v65) .btn-secondary {
-  width: 100%; padding: 13px 0;
-  font-size: 16px; font-weight: 900;
-  border: 0; border-radius: 16px; cursor: pointer;
-  color: #fff; text-align: center;
-  position: relative; overflow: hidden;
-  transition: transform 0.12s, filter 0.12s, box-shadow 0.12s;
-  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.12), 0 8px 16px rgba(44,151,70,0.18);
-}
-body:not(.shell-v65) .btn-primary { background: linear-gradient(180deg, #78df61 0%, #2eb45a 100%); }
-body:not(.shell-v65) .btn-secondary { background: linear-gradient(180deg, #ffcf52 0%, #ff9f37 100%); color:#5b3f05; }
-body:not(.shell-v65) .btn-secondary.small { padding: 10px 0; font-size: 13px; background: linear-gradient(180deg, #9be7ff 0%, #4db6ff 100%); color:#0f4e72; }
-.btn-primary:active, .btn-secondary:active { transform: scale(0.96); filter: brightness(0.96); box-shadow: inset 0 2px 7px rgba(0,0,0,0.20); }
-.btn-primary.hide, .btn-secondary.hide { display: none; }
-.btn-reset {
-  width: 100%; padding: 7px 0;
-  font-size: 11px;
-  border: 1px solid rgba(255,93,108,0.18);
-  border-radius: 12px; cursor: pointer;
-  color: rgba(220,78,92,0.62); text-align: center;
-  background: rgba(255,255,255,0.42);
-  transition: color 0.2s, border-color 0.2s;
-}
-.btn-reset:hover { color: #ff5d6c; border-color: rgba(255,93,108,0.44); }
-
-body:not(.shell-v65) #resultDetail { color: #486b35; font-size: 13.5px; text-align: center; line-height: 1.7; }
-.result-card { border-color: #ffffff; }
+/* 尺寸/布局(无颜色,不与烫金皮冲突) */
 .panel-inner.wide { width: min(92vw, 420px); }
 .tech-panel { max-height: 84vh; }
+.sim-panel { max-height: 84vh; }
+.help-panel { text-align: left; gap: 9px; max-height: 76vh; overflow-y: auto; align-items: stretch; }
+.help-panel h2 { text-align: center; }
 #upgradeList { width: 100%; max-height: 430px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 2px; }
-.upgrade-section { width: 100%; padding: 9px; border-radius: 16px; background: rgba(255,255,255,0.46); border: 1px solid rgba(72,174,70,0.12); }
-body:not(.shell-v65) .upgrade-section h3 { color: #2c8d3f; font-size: 13px; margin-bottom: 7px; }
-body:not(.shell-v65) .upgrade-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.58); border: 1px solid rgba(83,201,106,0.14); border-radius: 14px; padding: 10px 12px; cursor: pointer; transition: background 0.15s, transform 0.12s; margin-top: 6px; }
-.upgrade-item:active { transform: scale(0.98); }
-body:not(.shell-v65) .upgrade-item .uilabel { font-size: 14px; color: #315326; line-height: 1.35; }
-body:not(.shell-v65) .upgrade-item .uilabel .uilevel { color: #ff9f37; }
-body:not(.shell-v65) .upgrade-item .uilabel small { color:#6f9251;font-size:10px; }
-body:not(.shell-v65) .upgrade-item .uicost { font-size: 13px; color: #7a995a; padding: 4px 9px; border-radius: 10px; background: rgba(255,255,255,0.68); white-space: nowrap; margin-left: 8px; }
-body:not(.shell-v65) .upgrade-item .uicost.can-afford { color: #209b4b; background: rgba(83,201,106,0.16); }
-body:not(.shell-v65) .upgrade-item .uicost.maxed { color: #a4b68e; }
-.upgrade-item.disabled { opacity: 0.55; cursor: default; }
 .overflow-list { width:100%; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; min-height:42px; }
+.btn-primary.hide, .btn-secondary.hide { display: none; }
 
-body:not(.shell-v65) .sim-panel { max-height: 84vh; }
-body:not(.shell-v65) .sim-result { width: 100%; max-height: 460px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; color: #486b35; font-size: 12px; }
-body:not(.shell-v65) .sim-head { padding: 8px 10px; border-radius: 12px; background: rgba(255,201,60,0.20); border: 1px solid rgba(255,201,60,0.26); color: #9d6c00; line-height: 1.45; }
-body:not(.shell-v65) .sim-row { display: grid; grid-template-columns: 34px 1fr 48px 52px 70px; gap: 5px; align-items: center; padding: 7px 8px; border-radius: 12px; background: rgba(255,255,255,0.52); border: 1px solid rgba(83,201,106,0.10); }
-body:not(.shell-v65) .sim-row.ok { border-color: rgba(83,201,106,0.30); }
-body:not(.shell-v65) .sim-row.warn { border-color: rgba(255,201,60,0.38); }
-body:not(.shell-v65) .sim-row.bad { border-color: rgba(255,93,108,0.32); }
-body:not(.shell-v65) .sim-row b { color: #2c8d3f; }
-body:not(.shell-v65) .sim-row small { color: #7fa05a; }
-
-body:not(.shell-v65) .help-panel { text-align: left; gap: 9px; max-height: 76vh; overflow-y: auto; align-items: stretch; }
-body:not(.shell-v65) .help-panel h2 { text-align: center; }
-body:not(.shell-v65) .help-section { padding: 9px 10px; border-radius: 14px; background: rgba(255,255,255,0.50); border: 1px solid rgba(83,201,106,0.12); }
-body:not(.shell-v65) .help-section h3 { color: #2c8d3f; font-size: 13px; margin-bottom: 4px; }
-body:not(.shell-v65) .help-section p { color: #486b35; font-size: 12px; line-height: 1.65; }
+/* 语义工具色(飘字/提示复用,非皮肤背景) */
 .red { color:#ff5d6c; } .green { color:#2eb45a; } .blue { color:#4db6ff; } .gold { color:#ff9f37; }
 
+/* 横屏提示 */
 @media (orientation: landscape) and (max-height: 500px) { #rotate-hint { display: flex !important; } }
-#rotate-hint { display: none; position: fixed; inset: 0; background: #e8ffc0; z-index: 999; align-items: center; justify-content: center; flex-direction: column; color: #2c8d3f; font-size: 18px; gap: 6px; }
-#rotate-hint small { color: #6f9251; font-size: 12px; }
+#rotate-hint { display: none; position: fixed; inset: 0; background: #201510; z-index: 999; align-items: center; justify-content: center; flex-direction: column; color: #FFE9A8; font-size: 18px; gap: 6px; }
+#rotate-hint small { color: #C9B48A; font-size: 12px; }
 .phone-rotate { font-size: 50px; animation: rotateHint 1.5s infinite alternate ease-in-out; }
 @keyframes rotateHint { from { transform: rotate(-90deg); } to { transform: rotate(0deg); } }
