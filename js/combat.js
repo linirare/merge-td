@@ -14,7 +14,7 @@ const TARGET_STICK_RANGE = 220;
 const WALL_ATTACK_INTERVAL = 1.05;
 const BOW_SAFE_MIN = 66;
 const CROSS_LANE_EMERGENCY_RANGE = 120; // 修#6:50→120。邻路正常间距(~72px)原来看不见→径直去撞墙;放宽后邻路近敌可见
-const FIGHT_X_LEASH = 18;
+const FIGHT_X_LEASH = 32;
 
 const ATTACK_RANGES = {
   bow: 116,
@@ -261,7 +261,7 @@ function moveTowardEnemy(s, target) {
 
   if (Math.abs(dx) > 3) s.x += Math.sign(dx) * Math.min(Math.abs(dx), xStep);
   if (Math.abs(dy) > 3) s.y += Math.sign(dy) * Math.min(Math.abs(dy), yStep);
-  if (Math.abs(target.x - s.laneX) > FIGHT_X_LEASH) steerToLane(s, 0.35);
+  if (Math.abs(s.x - s.laneX) > FIGHT_X_LEASH + 12) steerToLane(s, 0.15);
   keepInsideBattlefield(s);
 }
 
@@ -514,8 +514,9 @@ function updateSoldier(s, enemies) {
     ensureLane(target);
     // 近战转路收敛(来自 lane_block_fix)
     if (typeof isMeleeRoleLB === 'function' && isMeleeRoleLB(s.type) && target.laneIndex !== s.laneIndex) {
-      s.laneIndex = clamp(target.laneIndex, 0, COLS - 1);
-      s.laneX = laneXByIndex(s.laneIndex);
+      const tLaneX = laneXByIndex(clamp(target.laneIndex, 0, COLS - 1));
+      const step = 140 * dt_global;
+      s.laneX += Math.sign(tLaneX - s.laneX) * Math.min(Math.abs(tLaneX - s.laneX), step);
     }
     s.target = target.id;
     attackTarget(s, target);
@@ -555,7 +556,7 @@ function applySeparation(soldiers) {
       if (dist < sepDist && dist > 0.1) {
         const force = (sepDist - dist) / sepDist;
         fx += (dx / dist) * force;
-        fy += (dy / dist) * force * 0.30;
+        fy += (dy / dist) * force * 0.80;
       } else if (dist <= 0.1) {
         fx += (i % 2 === 0 ? 1 : -1) * 0.45;
         fy += (i % 3 - 1) * 0.12;
@@ -568,7 +569,12 @@ function applySeparation(soldiers) {
       // 修#4:攻城单位只做水平分散,Y 完全不碰。否则 y(城墙≈278) 被 clamp 到 fieldTop(296),
       //       每帧被弹离城墙 ~18px,attackWall 又把它拉回 → 墙边上下抖动。
       const sieging = a.mode === 'siege' || a.mode === 'siege_queue' || a.mode === 'siege_support';
-      if (!sieging) a.y = clamp(a.y + fy * speed, fieldTop(), fieldBottom());
+      if (sieging) {
+        const w = wallDataFor(a);
+        a.y = clamp(a.y + fy * speed * 0.5, w.attackY - 10, w.attackY + 10);
+      } else {
+        a.y = clamp(a.y + fy * speed, fieldTop(), fieldBottom());
+      }
     }
   }
 }
