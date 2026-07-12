@@ -22,7 +22,7 @@
 
 /* ---- 首页容器 ---- */
 .hifi-home{position:absolute;inset:0;overflow:hidden;font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;color:#fff;}
-.hifi-home .bg{position:absolute;inset:0;background:url('../art/bg-clean_002.jpg') center/cover;}
+.hifi-home .bg{position:absolute;inset:0;background:url('../art/bg-clean_002.jpg') center/cover;background-image:image-set(url('../art/bg-clean_002.webp') type('image/webp'),url('../art/bg-clean_002.jpg') type('image/jpeg'));background-position:center;background-size:cover;}
 .hifi-home .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,246,214,.06) 0%,transparent 18%,transparent 66%,rgba(40,20,6,.30) 100%);}
 
 /* ---- 顶栏 ---- */
@@ -128,7 +128,7 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 .hifi-screen{position:absolute;inset:0;overflow:hidden;color:#fff;font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;}
 .hifi-screen>.bg{position:absolute;inset:0;background-position:center;background-size:cover;}
 .hifi-screen>.scrim{position:absolute;inset:0;}
-.hifi-screen.shop-bg>.bg{background-image:url('../art/bg-hall_001.jpg');}
+.hifi-screen.shop-bg>.bg{background-image:url('../art/bg-hall_001.jpg');background-image:image-set(url('../art/bg-hall_001.webp') type('image/webp'),url('../art/bg-hall_001.jpg') type('image/jpeg'));}
 .hifi-screen.shop-bg>.scrim{background:linear-gradient(180deg,rgba(34,18,4,.42),rgba(22,11,3,.58));}
 .hifi .hifi-scroll{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:calc(env(safe-area-inset-top) + 60px) 14px calc(138px + env(safe-area-inset-bottom));}

@@ -664,7 +664,7 @@
         <div class="hifi-scroll">
           <div class="shead"><h2 class="display">山货集市</h2><span class="line"></span></div>
           <div class="banner">
-            <img src="art/banner-gacha_001.jpg" alt="卡池">
+            <picture><source srcset="art/banner-gacha_001.webp" type="image/webp"><img src="art/banner-gacha_001.jpg" alt="卡池"></picture>
             <div class="cap"><h3>缤纷水果祭</h3><div class="rar">
               ${GACHA_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
             </div></div>
