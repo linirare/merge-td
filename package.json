@@ -9,6 +9,7 @@
     "test:security": "node test/server-security.js",
     "test:pvp": "node test/pvp-handshake.js",
     "test:pvp-auth": "node test/pvp-auth.js",
+    "test:pvp-sim": "node test/pvp-sim-unit.js",
     "test:power-cap": "node test/power-cap.js",
     "test:social-security": "node test/social-security.js",
     "test:ui-security": "node test/ui-safe-render.mjs",
@@ -16,7 +17,7 @@
     "test:stage-sim": "node test/stage-sim.js",
     "test:stage-real": "node test/stage-real-sim.js",
     "visual": "node test/visual-check.mjs",
-    "check": "npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:ui-security",
+    "check": "npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:ui-security && npm run test:pvp-sim",
     "check:full": "node test/full-check.js"
   },
   "dependencies": {
