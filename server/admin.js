@@ -127,6 +127,12 @@ function mountAdmin(app) {
     res.json({ ok: true, count: uids.length });
   });
 
+  // 审计日志查看(审计P2-14):查询admin_logs表
+  app.get('/api/admin/logs', authMiddleware, adminAuth, (req, res) => {
+    const rows = db.prepare('SELECT * FROM admin_logs ORDER BY created_at DESC LIMIT 200').all();
+    res.json({ rows, total: rows.length });
+  });
+
   // 已发送邮件记录(审计H8)
   app.get('/api/admin/mail-log', authMiddleware, adminAuth, (req, res) => {
     const rows = db.prepare("SELECT title, body, rewards_json, created_at, COUNT(*) as total, SUM(is_read) as read_count FROM mail GROUP BY title, strftime('%Y-%m-%d %H:%M', created_at) ORDER BY created_at DESC LIMIT 50").all();

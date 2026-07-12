@@ -99,9 +99,9 @@ function mountSocial(app) {
     db.prepare('INSERT OR IGNORE INTO user_tasks (uid,task_id,progress) VALUES (?,?,0)').run(req.uid, task_id);
     const upResult = db.prepare('UPDATE user_tasks SET progress=progress+? WHERE uid=? AND task_id=? AND completed=0').run(delta || 1, req.uid, task_id);
     if (upResult.changes === 0) return res.json({ ok: true, progress: t.target, already: true }); // 已完成,不再操作
-    const up = db.prepare('SELECT progress FROM user_tasks WHERE uid=? AND task_id=?').get(req.uid, task_id);
-    if (t && up && up.progress >= t.target) {
-      db.prepare('UPDATE user_tasks SET completed=1 WHERE uid=? AND task_id=?').run(req.uid, task_id);
+    // 审计P2-17:用原子UPDATE同时检查进度+标记完成,避免SELECT→UPDATE之间的竞态
+    const done = db.prepare('UPDATE user_tasks SET completed=1 WHERE uid=? AND task_id=? AND completed=0 AND progress>=?').run(req.uid, task_id, t.target);
+    if (done.changes > 0) {
       const rew = safeRewardJson(t.reward_json);
       db.prepare('UPDATE users SET gold=gold+?, diamonds=diamonds+? WHERE uid=?').run(rew.gold || 0, rew.gems || 0, req.uid);
       return res.json({ ok: true, completed: true, reward: rew });

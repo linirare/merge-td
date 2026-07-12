@@ -215,4 +215,9 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// 优雅关闭(审计P2-15):SIGTERM时关闭HTTP/WS,清理pending连接
+process.on('SIGTERM', () => { console.log('SIGTERM — shutting down'); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000); });
+// 未捕获异步异常不崩进程(审计P2-16)
+process.on('unhandledRejection', (reason) => console.error('unhandledRejection:', reason));
+
 module.exports = { app, server, chatMessages, clampInt, safeText, safeJsonText, POWER_MAX };
