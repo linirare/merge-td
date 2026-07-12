@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    Fruit Assault - Mobile Game Product Shell v65
    Rebuilds the out-of-battle product shell without changing combat,
    economy numbers, gacha odds, stage rules, or PVP contracts.
@@ -205,6 +205,49 @@
     return `${reward}🪙`;
   }
 
+  function stageInfo(lv) {
+    const cfg = typeof generateLevel === 'function' ? generateLevel(lv) : null;
+    return cfg || { type: 'normal', tutorialHint: '', bossMechanic: '' };
+  }
+
+  function stageTypeText(type) {
+    return ({ normal: '普通关', mechanic: '机制关', boss: 'Boss关', resource: '资源关', challenge: '挑战关' })[type] || '普通关';
+  }
+
+  function hintText(key) {
+    return ({
+      merge_pair: '合成同类水果营，优先做出 Lv2 主力。',
+      hold_frontline: '前排要站住路线，别让敌人直接压到果堡。',
+      urgent_dispatch: '危急路线双击高等级水果营，急派士兵救线。',
+      lane_pressure: '观察哪一路压力最高，优先补前排或控制。',
+      break_shield_with_siege: '护盾 Boss 怕攻城火力，带橙子炮压盾。',
+      counter_rush: '突击敌人多时，用前排和控制拖住节奏。',
+      bring_siege: '敌方果堡更厚，阵容里需要攻城单位。',
+      farm_juice: '资源关要控果汁节奏，不要一次铺空。',
+      protect_backline: '后排输出要有前排保护，别让刺客贴脸。',
+      avoid_midline_stack: '炮击 Boss 会惩罚扎堆，分散三路推进。',
+      control_counter: '控制单位能打断高压路线，适合防快攻。',
+      burst_before_roll: '冲锋单位成型前，集中爆发先处理。',
+      focus_support: '先打治疗和辅助，避免敌方越拖越强。',
+      anti_assassin_front: '刺客多时，前排轮换比纯输出更重要。',
+      split_lanes: '双生 Boss 会给两路压力，别只守一路。',
+      frontline_rotation: '中后期要补第二前排，轮换承伤。',
+      sustain_damage: '持续伤害关别急着爆发，保证墙血和续航。',
+      win_siege_race: '攻城赛道要抢速度，输出和炮手一起推进。',
+      protect_support: '辅助被切会崩盘，给后排留保护位。',
+      control_summons_then_siege: '先控召唤物，再用攻城单位打 Boss 本体。',
+    })[key] || '根据敌方职责补足前排、输出、攻城、控制或辅助。';
+  }
+
+  function bossMechanicText(key) {
+    return ({
+      shield: '护盾：先用攻城破盾',
+      artillery: '炮击：分散站位避开中路堆叠',
+      twin_pressure: '双生：同时防两路突破',
+      summon_aura: '召唤光环：先清小怪再压 Boss',
+    })[key] || '';
+  }
+
   function clearChildren(el) {
     if (el) el.innerHTML = '';
   }
@@ -363,6 +406,8 @@
     const current = currentStage();
     const maxShow = Math.max(20, highest + 3);
     const boss = current % 5 === 0;
+    const info = stageInfo(current);
+    const mechanic = bossMechanicText(info.bossMechanic);
     root.innerHTML = `
       <div class="hifi-screen shop-bg">
         <div class="bg"></div><div class="scrim"></div>
@@ -374,6 +419,7 @@
               <small style="font-size:11px;font-weight:800;color:#F5C242">${boss ? 'BOSS 关' : '下一关'}</small>
               <h3 style="font-family:'ZCOOL KuaiLe';font-size:22px;color:#FFE9A8;margin:2px 0">第 ${current} 关</h3>
               <p style="font-size:12px;color:#C9B48A;font-weight:700">奖励 ${stageRewardText(current)} · ${starsText(current)}</p>
+              <p style="font-size:12px;color:#F3E3C0;font-weight:800;line-height:1.45;margin-top:6px">${stageTypeText(info.type)}${mechanic ? ' · ' + mechanic : ''}<br>${hintText(info.tutorialHint)}</p>
             </div>
             <button class="gbtn" id="campaignStartBtn" style="position:relative;z-index:1">挑战</button>
           </div>
@@ -389,10 +435,12 @@
     for (let lv = 1; lv <= maxShow; lv++) {
       const open = lv <= highest;
       const isBoss = lv % 5 === 0;
+      const lvInfo = stageInfo(lv);
+      const lvTag = isBoss ? (bossMechanicText(lvInfo.bossMechanic) || 'Boss') : stageTypeText(lvInfo.type);
       const btn = document.createElement('button');
       btn.className = `lvnode${lv === current ? ' current' : ''}${isBoss ? ' boss' : ''}${open ? '' : ' locked'}`;
       btn.disabled = !open;
-      btn.innerHTML = `<b>${isBoss ? '🏰' : '🍓'} ${lv}</b><small>${open ? starsText(lv) : '未解锁'}</small>`;
+      btn.innerHTML = `<b>${isBoss ? '🏰' : '🍓'} ${lv}</b><small>${open ? lvTag + ' · ' + starsText(lv) : '未解锁'}</small>`;
       if (open) btn.addEventListener('click', () => startCampaign(lv));
       map.appendChild(btn);
     }
@@ -928,12 +976,14 @@
     const el = document.getElementById('pvpStatus');
     const readyBtn = document.getElementById('btnPvpReady');
     const input = document.getElementById('pvpRoomInput');
-    if (input && s.roomId) input.value = s.roomId;
+    if (input && s.roomId) input.value = String(s.roomId).slice(0, 6);
     if (readyBtn) readyBtn.textContent = s.ready ? '取消准备' : '准备';
     if (!el) return;
     const seat = s.playerIndex >= 0 ? `P${s.playerIndex + 1}` : '未入座';
     const peer = s.peerJoined ? (s.peerReady ? '对手已准备' : '对手未准备') : '等待对手';
-    el.innerHTML = `${s.status || '未连接'} · ${seat}<br>房间 ${s.roomId || '----'} · ${s.ready ? '我方已准备' : '我方未准备'} · ${peer}`;
+    const room = s.roomId || '----';
+    const ready = s.ready ? '我方已准备' : '我方未准备';
+    el.innerHTML = `<b>${escapeHtml(s.status || '未连接')}</b> · ${escapeHtml(seat)}<br><span>房间 ${escapeHtml(room)} · ${escapeHtml(ready)} · ${escapeHtml(peer)}</span>`;
   }
 
   function showTab(tab) {
@@ -1167,29 +1217,6 @@
   }
 
   function installSystemHooks() {
-    if (typeof generateLevel === 'function' && !generateLevel._shellStagesV65) {
-      const oldGenerate = generateLevel;
-      generateLevel = function generateLevelV65(k) {
-        if (k >= 1 && k <= 20) {
-          const boss = k % 5 === 0;
-          const enemyLv = Number((1 + (k - 1) * 0.18 + (boss ? 0.20 : 0)).toFixed(2));
-          const wallBase = boss ? 96 : 58;
-          const wallGrow = boss ? 1.125 : 1.088;
-          return {
-            id: k,
-            isBoss: boss,
-            enemyInitLevel: enemyLv,
-            enemyWallHp: Math.round(wallBase * Math.pow(wallGrow, k - 1)),
-            enemySpawnInterval: Math.max(4.15, 6.05 - k * 0.12),
-            reward: stageReward(k) + (boss ? 28 : 0),
-            desc: boss ? `第 ${k} 关 · 腐坏果堡 Boss` : `第 ${k} 关 · 腐坏水果 Lv${enemyLv.toFixed(1)}`,
-          };
-        }
-        return oldGenerate(k);
-      };
-      generateLevel._shellStagesV65 = true;
-    }
-
     if (typeof createBall === 'function' && !createBall._shellInitLvV65) {
       const oldCreateBall = createBall;
       createBall = function createBallWithInitialLevel(typeId, level = 1) {

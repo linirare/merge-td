@@ -291,10 +291,34 @@ function drawSoldier(s) {
   ctx.fillStyle = '#fff';
   ctx.fillText(t.icon, vis.x, vis.y - r * 0.38);
 
+  if (s._boss) drawBossBadgeV59(s, vis.x, vis.y - r - 30, Math.max(86, r * 2.8));
   drawBattleUnitHpV59(s, vis.x, vis.y - r - 10, Math.max(24, r * 1.75));
 
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
+}
+
+function drawBossBadgeV59(s, x, y, w) {
+  const ratio = clamp01(s.hp / Math.max(1, s.maxHp));
+  ctx.save();
+  ctx.shadowColor = 'rgba(226,59,78,.42)';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = 'rgba(70,16,24,.88)';
+  ctx.strokeStyle = '#FFE9A8';
+  ctx.lineWidth = 1.6;
+  roundRect(x - w / 2, y, w, 18, 8);
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#F06B79';
+  roundRect(x - w / 2 + 4, y + 13, Math.max(4, (w - 8) * ratio), 3.2, 2);
+  ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '700 10px sans-serif';
+  ctx.fillStyle = '#FFE9A8';
+  ctx.fillText(s.name || 'BOSS', x, y + 8.5);
+  ctx.restore();
 }
 
 function drawBattleUnitHpV59(s, x, y, w) {

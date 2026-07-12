@@ -28,6 +28,14 @@
     return BOSS_DEFS[20];
   }
 
+  function bossHintFor(k) {
+    if (k === 5) return 'Boss机制：护盾，带攻城破盾';
+    if (k === 10) return 'Boss机制：炮击，分散站位';
+    if (k === 15) return 'Boss机制：双路压力，保留救线';
+    if (k === 20) return 'Boss机制：召唤光环，先清小怪';
+    return 'Boss机制：稳住前排再攻城';
+  }
+
   function spawnBoss(cfg, k) {
     const s = createSoldier(cfg.base, BOSS_LEVEL_UNIT);
     const scale = 1 + Math.max(0, k - 5) * 0.05;
@@ -121,6 +129,7 @@
       if (state.levelConfig && state.levelConfig.isBoss) {
         const defs = bossDefsFor(k);
         for (const cfg of defs) spawnBoss(cfg, k);
+        if (typeof addFx === 'function') addFx(W / 2, LAYOUT.fieldY + 28, bossHintFor(k), '#FFE9A8', 15);
       }
     };
     initLevel._bossV63 = true;

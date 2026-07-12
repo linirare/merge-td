@@ -176,7 +176,7 @@ let last = 0;
 function reportHtml() {
   const report = state.lastBattleReport;
   if (!report || !report.tips || report.tips.length === 0) return '';
-  return `<br><span style="color:#ffc93c">战斗复盘</span><br>${report.tips.slice(0, 4).map(t => `· ${t}`).join('<br>')}`;
+  return `<br><span style="color:#ffc93c">战斗复盘</span><br>${report.tips.slice(0, 6).map(t => `· ${t}`).join('<br>')}`;
 }
 
 function onGameOver(win) {

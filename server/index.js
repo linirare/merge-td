@@ -29,7 +29,7 @@ function clampInt(value, min, max, fallback = min) {
 }
 
 function safeText(value, max = 32) {
-  const clean = String(value == null ? '' : value).replace(/[\u0000-\u001f\u007f]/g, '').trim();
+  const clean = String(value == null ? '' : value).replace(/[\u0000-\u001f\u007f<>]/g, '').trim();
   return Array.from(clean).slice(0, max).join('');
 }
 

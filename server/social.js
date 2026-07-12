@@ -2,6 +2,42 @@
 const db = require('./db');
 const { authMiddleware } = require('./auth');
 
+function clampInt(value, min, max, fallback = min) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(n)));
+}
+
+function safeText(value, max = 32) {
+  const clean = String(value == null ? '' : value)
+    .replace(/[\u0000-\u001f\u007f<>]/g, '')
+    .trim();
+  return Array.from(clean).slice(0, max).join('');
+}
+
+function safeId(value, max = 64) {
+  const text = safeText(value, max);
+  return /^[a-zA-Z0-9_-]+$/.test(text) ? text : '';
+}
+
+function safeRewardJson(value) {
+  try {
+    const raw = typeof value === 'string' ? JSON.parse(value || '{}') : (value || {});
+    return {
+      gold: clampInt(raw.gold, 0, 5000, 0),
+      gems: clampInt(raw.gems ?? raw.diamonds, 0, 300, 0),
+    };
+  } catch (e) {
+    return { gold: 0, gems: 0 };
+  }
+}
+
+function safeJsonText(value, maxBytes = 64000) {
+  let text = typeof value === 'string' ? value : JSON.stringify(value == null ? [] : value);
+  if (Buffer.byteLength(text, 'utf8') > maxBytes) return null;
+  try { JSON.parse(text); return text; } catch (e) { return null; }
+}
+
 function mountSocial(app) {
   /* ========== 好友 ========== */
   app.get('/api/friends', authMiddleware, (req, res) => {
@@ -12,7 +48,7 @@ function mountSocial(app) {
     res.json(db.prepare(`SELECT u.uid,u.nickname,u.avatar FROM friends f JOIN users u ON f.uid1=u.uid WHERE f.uid2=? AND f.status='pending'`).all(req.uid));
   });
   app.post('/api/friends/add', authMiddleware, (req, res) => {
-    const { uid } = req.body || {};
+    const uid = safeId((req.body || {}).uid, 64);
     if (!uid || uid === req.uid) return res.status(400).json({ error: 'invalid uid' });
     const exists = db.prepare('SELECT * FROM friends WHERE (uid1=? AND uid2=?) OR (uid1=? AND uid2=?)').get(req.uid, uid, uid, req.uid);
     if (exists) return res.json({ ok: false, msg: 'already friends or pending' });
@@ -20,24 +56,27 @@ function mountSocial(app) {
     res.json({ ok: true });
   });
   app.post('/api/friends/accept', authMiddleware, (req, res) => {
-    const { uid } = req.body || {};
+    const uid = safeId((req.body || {}).uid, 64);
+    if (!uid) return res.status(400).json({ error: 'invalid uid' });
     db.prepare('UPDATE friends SET status=\'accepted\' WHERE uid1=? AND uid2=? AND status=\'pending\'').run(uid, req.uid);
     res.json({ ok: true });
   });
   app.post('/api/friends/reject', authMiddleware, (req, res) => {
-    const { uid } = req.body || {};
+    const uid = safeId((req.body || {}).uid, 64);
+    if (!uid) return res.status(400).json({ error: 'invalid uid' });
     db.prepare('DELETE FROM friends WHERE uid1=? AND uid2=? AND status=\'pending\'').run(uid, req.uid);
     res.json({ ok: true });
   });
   app.delete('/api/friends', authMiddleware, (req, res) => {
-    const { uid } = req.body || {};
+    const uid = safeId((req.body || {}).uid, 64);
+    if (!uid) return res.status(400).json({ error: 'invalid uid' });
     db.prepare('DELETE FROM friends WHERE (uid1=? AND uid2=?) OR (uid1=? AND uid2=?)').run(req.uid, uid, uid, req.uid);
     res.json({ ok: true });
   });
 
   /* ========== 公会 ========== */
   app.post('/api/guild/create', authMiddleware, (req, res) => {
-    const { name } = req.body || {}; if (!name) return res.status(400).json({ error: 'name required' });
+    const name = safeText((req.body || {}).name, 18); if (!name) return res.status(400).json({ error: 'name required' });
     const exists = db.prepare('SELECT id FROM guilds WHERE name=?').get(name);
     if (exists) return res.json({ ok: false, msg: 'name taken' });
     const id = Math.random().toString(36).slice(2,8);
@@ -47,7 +86,7 @@ function mountSocial(app) {
     res.json({ ok: true, id, name, invite_code: code });
   });
   app.post('/api/guild/join', authMiddleware, (req, res) => {
-    const { code } = req.body || {};
+    const code = safeId((req.body || {}).code, 12);
     const g = db.prepare('SELECT id,name FROM guilds WHERE invite_code=?').get(code);
     if (!g) return res.json({ ok: false, msg: 'invalid code' });
     const exists = db.prepare('SELECT * FROM guild_members WHERE uid=?').get(req.uid);
@@ -68,15 +107,17 @@ function mountSocial(app) {
     res.json(tasks.map(t => { const p = progress.find(x => x.task_id === t.id); return { ...t, progress: p ? p.progress : 0, completed: !!(p && p.completed) }; }));
   });
   app.post('/api/tasks/progress', authMiddleware, (req, res) => {
-    const { task_id, delta } = req.body || {};
+    const task_id = safeId((req.body || {}).task_id, 64);
+    const delta = clampInt((req.body || {}).delta, 1, 20, 1);
     if (!task_id) return res.status(400).json({ error: 'task_id required' });
+    const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(task_id);
+    if (!t) return res.status(404).json({ error: 'task not found' });
     db.prepare('INSERT OR IGNORE INTO user_tasks (uid,task_id,progress) VALUES (?,?,0)').run(req.uid, task_id);
     db.prepare('UPDATE user_tasks SET progress=progress+? WHERE uid=? AND task_id=? AND completed=0').run(delta || 1, req.uid, task_id);
-    const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(task_id);
     const up = db.prepare('SELECT progress FROM user_tasks WHERE uid=? AND task_id=?').get(req.uid, task_id);
     if (t && up && up.progress >= t.target) {
       db.prepare('UPDATE user_tasks SET completed=1 WHERE uid=? AND task_id=?').run(req.uid, task_id);
-      const rew = JSON.parse(t.reward_json || '{}');
+      const rew = safeRewardJson(t.reward_json);
       db.prepare('UPDATE users SET gold=gold+?, diamonds=diamonds+? WHERE uid=?').run(rew.gold || 0, rew.gems || 0, req.uid);
       return res.json({ ok: true, completed: true, reward: rew });
     }
@@ -90,20 +131,22 @@ function mountSocial(app) {
     res.json(all.map(a => ({ ...a, unlocked: user.includes(a.id) })));
   });
   app.post('/api/achievements/unlock', authMiddleware, (req, res) => {
-    const { achv_id } = req.body || {};
+    const achv_id = safeId((req.body || {}).achv_id, 64);
     if (!achv_id) return res.status(400).json({ error: 'achv_id required' });
+    const a = db.prepare('SELECT * FROM achievements WHERE id=?').get(achv_id);
+    if (!a) return res.status(404).json({ error: 'achievement not found' });
     const exists = db.prepare('SELECT * FROM user_achievements WHERE uid=? AND achv_id=?').get(req.uid, achv_id);
     if (exists) return res.json({ ok: false, msg: 'already unlocked' });
     db.prepare('INSERT INTO user_achievements (uid,achv_id) VALUES (?,?)').run(req.uid, achv_id);
-    const a = db.prepare('SELECT * FROM achievements WHERE id=?').get(achv_id);
-    if (a) { const r = JSON.parse(a.reward_json || '{}'); db.prepare('UPDATE users SET diamonds=diamonds+? WHERE uid=?').run(r.gems || 0, req.uid); }
-    res.json({ ok: true, reward: a ? JSON.parse(a.reward_json || '{}') : {} });
+    const r = safeRewardJson(a.reward_json);
+    db.prepare('UPDATE users SET diamonds=diamonds+? WHERE uid=?').run(r.gems || 0, req.uid);
+    res.json({ ok: true, reward: r });
   });
 
   /* ========== 通行证 ========== */
   app.get('/api/battlepass', authMiddleware, (req, res) => res.json(db.prepare('SELECT * FROM battle_pass WHERE uid=?').get(req.uid) || { tier: 0, exp: 0, premium: 0 }));
   app.post('/api/battlepass/exp', authMiddleware, (req, res) => {
-    const { exp } = req.body || {}; if (!exp) return res.json({ ok: false });
+    const exp = clampInt((req.body || {}).exp, 1, 500, 0); if (!exp) return res.json({ ok: false });
     db.prepare('INSERT OR IGNORE INTO battle_pass (uid,season,tier,exp) VALUES (?,?,0,0)').run(req.uid, 'S1');
     const bp = db.prepare('SELECT tier,exp FROM battle_pass WHERE uid=?').get(req.uid);
     let lv = bp.tier, xp = bp.exp + exp;
@@ -143,7 +186,8 @@ function mountSocial(app) {
   app.get('/api/events', (req, res) => res.json(db.prepare("SELECT * FROM events WHERE datetime(start) <= datetime('now') AND datetime(end) >= datetime('now')").all()));
   app.get('/api/events/my', authMiddleware, (req, res) => res.json(db.prepare('SELECT e.*, ue.score FROM events e JOIN user_events ue ON e.id=ue.event_id WHERE ue.uid=?').all(req.uid)));
   app.post('/api/events/score', authMiddleware, (req, res) => {
-    const { event_id, score } = req.body || {};
+    const event_id = safeId((req.body || {}).event_id, 64);
+    const score = clampInt((req.body || {}).score, 0, 100000, 0);
     const e = db.prepare("SELECT * FROM events WHERE id=? AND datetime(start) <= datetime('now') AND datetime(end) >= datetime('now')").get(event_id);
     if (!e) return res.json({ ok: false, msg: 'event not active' });
     db.prepare('INSERT INTO user_events (uid,event_id,score) VALUES (?,?,?) ON CONFLICT(uid,event_id) DO UPDATE SET score=MAX(score,?)').run(req.uid, event_id, score, score);
@@ -152,7 +196,10 @@ function mountSocial(app) {
 
   /* ========== 战斗回放 ========== */
   app.post('/api/replay/save', authMiddleware, (req, res) => {
-    const { uid2, actions_json, result } = req.body || {};
+    const uid2 = safeId((req.body || {}).uid2, 64);
+    const actions_json = safeJsonText((req.body || {}).actions_json);
+    const result = safeText((req.body || {}).result, 32);
+    if (actions_json === null) return res.status(413).json({ error: 'replay too large or invalid' });
     const id = Math.random().toString(36).slice(2, 14);
     db.prepare('INSERT INTO replays (id,uid1,uid2,actions_json,result) VALUES (?,?,?,?,?)').run(id, req.uid, uid2 || '', actions_json || '[]', result || '');
     res.json({ id });

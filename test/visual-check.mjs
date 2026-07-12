@@ -1,16 +1,3 @@
-/* ============================================================
-   水果突击 · 视觉验收自动化 (D)
-   ------------------------------------------------------------
-   进真游戏(真皮/真分辨率 390x844)截关键屏 → 可选喂 MiniMax 视觉
-   转文字评估 → 结构化输出。用于每次改渲染后自检,替代"每次叫人肉眼看"。
-
-     npm run visual                 # 截图 + MiniMax 视觉评估
-     npm run visual -- --no-vision  # 只截图,不调 mmx
-     VISUAL_URL=http://host:port npm run visual
-
-   前提:游戏服务在 VISUAL_URL(默认 http://localhost:3000)已启动。
-   本模型无法解码图片,靠 mmx CLI(key 在其 config.json);无 mmx 时自动跳过视觉。
-   ============================================================ */
 import { chromium } from 'playwright';
 import { exec } from 'child_process';
 import path from 'path';
@@ -20,45 +7,141 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const BASE = process.env.VISUAL_URL || 'http://localhost:3000';
 const NO_VISION = process.argv.includes('--no-vision');
+const STRICT = process.argv.includes('--strict');
 
-// 走 shell 调 mmx(Windows 上 .cmd 必须经 shell;路径/prompt 用双引号包住,里面的
-// () ? 等 shell 特殊字符即被当字面量)。prompt 内不含双引号(由本文件控制),仍做防御性替换。
 function mmxDescribe(imgPath, prompt) {
   return new Promise(resolve => {
-    const p = String(prompt).replace(/"/g, "'");
-    const cmd = `mmx vision describe --image "${imgPath}" --prompt "${p}" --quiet --output json`;
+    const safePrompt = String(prompt).replace(/"/g, "'");
+    const cmd = `mmx vision describe --image "${imgPath}" --prompt "${safePrompt}" --quiet --output json`;
     exec(cmd, { timeout: 120000, maxBuffer: 4 * 1024 * 1024 }, (err, stdout) => {
       if (err) return resolve(null);
-      try { const j = JSON.parse(stdout); resolve(j.content || j.reply || stdout); }
-      catch (e) { resolve(String(stdout || '').trim() || null); }
+      try {
+        const json = JSON.parse(stdout);
+        resolve(json.content || json.reply || stdout);
+      } catch (e) {
+        resolve(String(stdout || '').trim() || null);
+      }
     });
   });
 }
 
 async function reachable(page) {
-  try { const r = await page.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 8000 }); return r && r.ok(); }
-  catch (e) { return false; }
+  try {
+    const response = await page.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 10000 });
+    return response && response.ok();
+  } catch (e) {
+    return false;
+  }
+}
+
+async function showTab(page, tab) {
+  await page.evaluate(name => {
+    if (typeof window.productShellShowTab === 'function') window.productShellShowTab(name);
+  }, tab);
+  await page.waitForTimeout(900);
+}
+
+async function startStage(page, level, waitMs = 3000) {
+  await page.evaluate(lv => {
+    if (typeof meta !== 'undefined') meta.highestLevel = Math.max(Number(meta.highestLevel || 1), lv);
+    if (typeof state !== 'undefined') state.trainingMode = true;
+    if (typeof window.productShellShowTab === 'function') window.productShellShowTab('battle');
+  }, level);
+  await page.waitForTimeout(700);
+  const node = page.locator('.lvnode').nth(Math.max(0, level - 1));
+  if (await node.count()) await node.click({ timeout: 5000 });
+  else await page.locator('#campaignStartBtn').click();
+  await page.waitForTimeout(waitMs);
+}
+
+async function forceResult(page) {
+  await page.evaluate(() => {
+    if (typeof state !== 'undefined') {
+      state.lastBattleReport = {
+        tips: [
+          '被突破路线：第2路',
+          '阵容缺口：前排 / 攻城，可试西瓜卫士、橙子炮',
+          '升级方向：先升前排血量和果堡，再补主力攻击。',
+        ],
+      };
+    }
+    if (typeof onGameOver === 'function') onGameOver(false);
+  });
+  await page.waitForTimeout(900);
+}
+
+async function createPvpRoom(page) {
+  await showTab(page, 'arena');
+  await page.evaluate(() => window.pvpClient && window.pvpClient.createRoom && window.pvpClient.createRoom());
+  await page.waitForTimeout(1400);
+}
+
+async function assertVisiblePage(page, shotName) {
+  const info = await page.evaluate(() => {
+    const body = document.body;
+    const rect = body.getBoundingClientRect();
+    const text = (body.innerText || '').replace(/\s+/g, '');
+    const visiblePanels = Array.from(document.querySelectorAll('.panel:not(.hide), canvas'))
+      .filter(el => {
+        const r = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        return r.width > 20 && r.height > 20 && style.visibility !== 'hidden' && style.display !== 'none';
+      }).length;
+    return { width: rect.width, height: rect.height, textLength: text.length, visiblePanels };
+  });
+  if (info.width < 300 || info.height < 500 || info.visiblePanels < 1) {
+    throw new Error(`${shotName} appears blank: ${JSON.stringify(info)}`);
+  }
 }
 
 const SHOTS = [
   {
-    name: 'home', file: 'shot_home.jpg',
-    async setup(page) { await page.waitForTimeout(2500); },
-    prompt: '这是手游首页。中文简评:1)整体UI风格与精致度(1-10)?2)顶栏/底栏/主视觉分别是什么?3)有无明显视觉问题(错位/溢出/糊)?',
+    name: 'home',
+    file: 'shot_home.jpg',
+    setup: async page => { await page.waitForTimeout(1200); },
+    prompt: 'Mobile game home screen. Rate polish, readability, overlap, blank areas, and button hierarchy.',
   },
   {
-    name: 'battle', file: 'shot_battle.jpg',
-    async setup(page) {
-      for (const t of ['开始对战', '开始闯关', '选关', '开始']) {
-        const el = page.locator(`text=${t}`).first();
-        if (await el.count() && await el.isVisible().catch(() => false)) { await el.click().catch(() => {}); break; }
-      }
-      await page.waitForTimeout(1500);
-      const lvl = page.locator('.level, .stage, [data-stage], .hifi-level, .lvnode').first();
-      if (await lvl.count() && await lvl.isVisible().catch(() => false)) await lvl.click().catch(() => {});
-      await page.waitForTimeout(9000);
-    },
-    prompt: '这是手游实时战斗画面。聚焦战场上的小兵渲染,中文简评:1)小兵辨识度/头身武器比例是否协调(1-10)?2)敌我是否分得清?3)小兵精致度是否配得上周围UI,有无违和?4)最该改的一点。',
+    name: 'campaign',
+    file: 'shot_campaign.jpg',
+    setup: async page => showTab(page, 'battle'),
+    prompt: 'Campaign stage selection screen. Check chapter information, stage nodes, tutorial hint readability, and button overlap.',
+  },
+  {
+    name: 'squad',
+    file: 'shot_squad.jpg',
+    setup: async page => showTab(page, 'upgrade'),
+    prompt: 'Squad and roster screen. Check role tags, card readability, scrolling density, and text overlap.',
+  },
+  {
+    name: 'shop',
+    file: 'shot_shop.jpg',
+    setup: async page => showTab(page, 'shop'),
+    prompt: 'Shop screen. Check simulated payment copy, pack cards, reward clarity, and no forced-pay impression.',
+  },
+  {
+    name: 'battle',
+    file: 'shot_battle.jpg',
+    setup: async page => startStage(page, 1, 3500),
+    prompt: 'Live battle screen. Check player green/gold versus enemy red/purple readability, lane danger, damage noise, and crowded units.',
+  },
+  {
+    name: 'boss',
+    file: 'shot_boss.jpg',
+    setup: async page => startStage(page, 5, 8000),
+    prompt: 'Boss battle screen. Check boss outline, boss HP bar, entrance/readability, and whether it is distinct from normal enemies.',
+  },
+  {
+    name: 'result',
+    file: 'shot_result.jpg',
+    setup: async page => { await startStage(page, 1, 1000); await forceResult(page); },
+    prompt: 'Failure result screen. Check whether failure advice is visible, actionable, and not overlapping controls.',
+  },
+  {
+    name: 'pvp_room',
+    file: 'shot_pvp_room.jpg',
+    setup: async page => createPvpRoom(page),
+    prompt: 'PVP room screen. Check room code, ready button, leave button, connection status, and no overlap.',
   },
 ];
 
@@ -66,10 +149,13 @@ const SHOTS = [
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, reducedMotion: 'reduce' });
   const errors = [];
-  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+  page.on('pageerror', err => errors.push(err.message));
 
   if (!(await reachable(page))) {
-    console.error(`✗ 无法访问 ${BASE} —— 请先启动游戏服务(npm start),再跑 npm run visual`);
+    console.error(`Cannot reach ${BASE}. Start the game server first, or set VISUAL_URL.`);
     await browser.close();
     process.exit(2);
   }
@@ -77,18 +163,22 @@ const SHOTS = [
   const results = [];
   for (const shot of SHOTS) {
     await page.goto(BASE + '/', { waitUntil: 'networkidle' });
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(700);
     await shot.setup(page);
+    await assertVisiblePage(page, shot.name);
     const abs = path.join(ROOT, shot.file);
     await page.screenshot({ path: abs, type: 'jpeg', quality: 88 });
-    let vision = null;
-    if (!NO_VISION) vision = await mmxDescribe(abs, shot.prompt);
+    const vision = NO_VISION ? null : await mmxDescribe(abs, shot.prompt);
     results.push({ name: shot.name, file: shot.file, vision });
     console.log(`\n===== [${shot.name}] ${shot.file} =====`);
-    if (vision) console.log(vision);
-    else console.log(NO_VISION ? '(已跳过视觉评估)' : '(mmx 视觉不可用,已跳过 —— 截图仍已保存)');
+    console.log(vision || (NO_VISION ? '(vision skipped)' : '(vision unavailable; screenshot saved)'));
   }
 
   await browser.close();
-  console.log(`\n--- 完成:截图 ${results.map(r => r.file).join(', ')} | console 错误 ${errors.length ? errors.slice(0, 4).join(' | ') : '无'} ---`);
-})().catch(err => { console.error(err); process.exit(1); });
+  const errorSummary = errors.length ? errors.slice(0, 8).join(' | ') : 'none';
+  console.log(`\n--- done: ${results.map(r => r.file).join(', ')} | console errors: ${errorSummary} ---`);
+  if (STRICT && errors.length) process.exit(3);
+})().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

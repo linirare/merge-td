@@ -116,15 +116,25 @@ class RawWs {
     });
   }
 
-  async nextType(type) {
+  async nextType(type, timeoutMs = 1000) {
     for (;;) {
-      const message = await this.next();
+      let message;
+      try {
+        message = await this.next(timeoutMs);
+      } catch (err) {
+        err.message = `timed out waiting for ${type}; queued=${this.messages.map(m => m.type).join(',') || 'none'}`;
+        throw err;
+      }
       if (message.type === type) return message;
     }
   }
 
   close() {
     this.socket.destroy();
+  }
+
+  disconnect() {
+    this.socket.end();
   }
 }
 
@@ -138,6 +148,7 @@ class RawWs {
 
   const host = await RawWs.connect(port);
   const guest = await RawWs.connect(port);
+  let completed = false;
   try {
     host.send({ type: 'create_room' });
     const created = await host.nextType('room_created');
@@ -161,14 +172,47 @@ class RawWs {
     assert.strictEqual(peerAction.action.seed, startA.seed);
     assert.strictEqual(peerAction.action.type, 'summon_cell');
 
-    console.log('OK: pvp room handshake, start, and action sync work');
+    host.send({ type: 'action', action: { seq: 1, seed: startA.seed, timestamp: Date.now(), type: 'summon_cell', payload: { r: 0, c: 0 } } });
+    const duplicate = await host.nextType('error');
+    assert.strictEqual(duplicate.message, 'invalid_action');
+
+    host.send({ type: 'action', action: { seq: 2, seed: startA.seed, timestamp: Date.now(), type: 'hack_gold', payload: { gold: 999999 } } });
+    const invalidType = await host.nextType('error');
+    assert.strictEqual(invalidType.message, 'invalid_action');
+
+    host.send({ type: 'action', action: { seq: 2, seed: startA.seed, timestamp: Date.now(), type: 'summon_cell', payload: { r: 1, c: 1, blob: 'x'.repeat(2048) } } });
+    const hugePayload = await host.nextType('error');
+    assert.strictEqual(hugePayload.message, 'invalid_action');
+
+    host.send({ type: 'result', result: { seed: startA.seed, winner: 0, duration: 42, wallLeft: 66, actionCount: 3, reason: 'normal' } });
+    const result = await guest.nextType('match_result');
+    assert.strictEqual(result.result.seed, startA.seed);
+    assert.strictEqual(result.result.winner, 0);
+    assert.strictEqual(result.result.duration, 42);
+
+    for (let seq = 2; seq <= 18; seq++) {
+      host.send({ type: 'action', action: { seq, seed: startA.seed, timestamp: Date.now(), type: 'summon_cell', payload: { r: seq % 3, c: seq % 5 } } });
+    }
+    const limited = await host.nextType('error');
+    assert.strictEqual(limited.message, 'action_rate_limited');
+
+    guest.disconnect();
+    const left = await host.nextType('peer_left', 3000);
+    assert.strictEqual(left.roomId, created.roomId);
+
+    completed = true;
   } finally {
     host.close();
     guest.close();
-    await new Promise(resolve => server.close(resolve));
+    await new Promise(resolve => {
+      const timer = setTimeout(resolve, 250);
+      server.close(() => { clearTimeout(timer); resolve(); });
+    });
     _internals.rooms.clear();
     _internals.allClients.clear();
   }
+  assert.ok(completed, 'pvp flow should complete all assertions');
+  if (completed) process.stdout.write('OK: pvp room handshake, action sync, seq/rate guard, result, and disconnect work\n');
 })().catch(err => {
   console.error(err);
   process.exit(1);

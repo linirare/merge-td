@@ -86,12 +86,31 @@ function patchBattleReportV15() {
       for (const st of state.laneStats || []) if (st.danger > maxD) { maxD = st.danger; dangerLane = st.lane; }
     }
     const enemyType = dangerLane >= 0 ? dominantEnemyType(dangerLane) : null;
-    const recommendType = enemyType ? (bestCounterForEnemy(enemyType, activeDeck()) || bestCounterForEnemy(enemyType, progressUnlocked(meta))) : null;
+    const unlocked = typeof progressUnlocked === 'function' ? progressUnlocked(meta) : activeDeck();
+    const recommendType = enemyType ? (bestCounterForEnemy(enemyType, activeDeck()) || bestCounterForEnemy(enemyType, unlocked)) : null;
+    const deckRoles = new Set((activeDeck() || []).map(id => TYPES[id]?.role).filter(Boolean));
+    const missingRoles = [];
+    if (!deckRoles.has('tank')) missingRoles.push('前排');
+    if (!deckRoles.has('back') && !deckRoles.has('rush')) missingRoles.push('输出');
+    if (!deckRoles.has('siege')) missingRoles.push('攻城');
+    if (!deckRoles.has('control')) missingRoles.push('控制');
+    if (!deckRoles.has('support') && state.currentLevel >= 8) missingRoles.push('辅助');
+    const rolePick = role => (unlocked || []).find(id => TYPES[id]?.role === role) || '';
+    const bossTip = ({
+      shield: 'Boss机制：护盾期用攻城单位破盾，别只堆普攻。',
+      artillery: 'Boss机制：炮击会惩罚中路扎堆，三路分散推进。',
+      twin_pressure: 'Boss机制：双生压力会同时压两路，至少保留一支救线队。',
+      summon_aura: 'Boss机制：先清召唤物，再让攻城单位压 Boss 本体。',
+    })[state.levelConfig?.bossMechanic || ''];
     const tips = [];
     if (bestType) tips.push(`本局主力：${TYPES[bestType].name}，贡献约 ${Math.round(bestDamage)} 伤害`);
     if (state.enemyWallDamageDealt > 0) tips.push(`攻城伤害：${Math.round(state.enemyWallDamageDealt)}`);
     if (!win && dangerLane >= 0) tips.push(`被突破路线：第${dangerLane + 1}路`);
     if (!win && recommendType && enemyType) tips.push(`建议：补 ${TYPES[recommendType].name}，职责克制 ${TYPES[enemyType].name}`);
+    if (!win && missingRoles.length) tips.push(`阵容缺口：${missingRoles.slice(0, 3).join(' / ')}${rolePick('tank') ? `，可试 ${TYPES[rolePick('tank')].name}` : ''}${rolePick('siege') ? `、${TYPES[rolePick('siege')].name}` : ''}`);
+    if (!win && bossTip) tips.push(bossTip);
+    if (!win && state.playerWallDamageTaken > state.enemyWallDamageDealt) tips.push('升级方向：先升前排血量和果堡，再补主力攻击。');
+    else if (!win) tips.push('升级方向：优先升本局主力攻击，攻城关同步升攻城单位。');
     if (state.merges < 2 && state.currentLevel >= 3) tips.push('建议：至少合成 2 次再进入中期交战');
     if (state.sp <= 1) tips.push('建议：保留 1～2 点果汁给高等级水果营双击救线');
     if (win && state.playerWallHp / state.playerWallMax < 0.45) tips.push('险胜：优先升级城墙或盾/枪血量');

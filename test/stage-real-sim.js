@@ -73,12 +73,24 @@ function buildSandbox() {
   return sandbox;
 }
 
+const isFullRun = process.argv.includes('--full');
+const verbose = process.argv.includes('--verbose');
+const simRunsPerStage = isFullRun ? 3 : 1;
+const simMaxSeconds = isFullRun ? 90 : 65;
+
 const DRIVER = `
 ;(function () {
-  const DT = 1 / 60;
+  const DT = 1 / 30;
   const SUMMON_COST = 1;                 // 与 input.js 一致
   const MAX_FRAMES = 90 * 60;            // 90s 超时上限(目标 35-85s,超此即判过慢/僵持)
-  const RUNS_PER_STAGE = 4;
+  const MAX_SIM_FRAMES = Math.round(${simMaxSeconds} / DT);
+  const RUNS_PER_STAGE = ${simRunsPerStage};
+  const VERBOSE = ${verbose ? 'true' : 'false'};
+  const STRATEGIES = [
+    { id: 'no_action', label: 'No Op', botEvery: 999, summon: 0, urgentEvery: 999 },
+    { id: 'light', label: 'Light', botEvery: 1.0, summon: 1, urgentEvery: 7.0 },
+    { id: 'standard', label: 'Standard', botEvery: 0.45, summon: 2, urgentEvery: 3.5 },
+  ];
 
   // —— 复刻 main.js 的出兵封装(渲染副作用走 stub) ——
   function spawnSoldierFromBall(ball, r, c, side, forced = false) {
@@ -120,16 +132,88 @@ const DRIVER = `
   }
 
   // —— 玩家 bot:果汁够就往空格召唤(复刻 input.js summonFruitAt 的经济) ——
-  function botSummon() {
+  const botMergeOnce = botMerge;
+  botMerge = function botMergeMultiPass() {
+    for (let i = 0; i < 4; i++) botMergeOnce();
+  };
+
+  function botActionCost() {
+    const cfg = TUNING && TUNING.juice ? TUNING.juice : {};
+    state.summonCostCounter = Math.max(1, Number(state.summonCostCounter || 1));
+    return Math.min(Number(cfg.maxActionCost || 12), state.summonCostCounter);
+  }
+
+  function botPickType(strategy) {
+    const k = state.currentLevel || 1;
+    const boss = k % 5 === 0;
+    const pattern = boss
+      ? ['orange_cannon', 'watermelon_guard', 'grape_archer', 'pineapple_lancer', 'banana_raider']
+      : ['watermelon_guard', 'grape_archer', 'orange_cannon', 'banana_raider', 'pineapple_lancer'];
+    const deck = activeDeck();
+    const preferred = pattern.filter(id => deck.includes(id));
+    const pool = preferred.length ? preferred : deck;
+    return pool[(state.summonCount || 0) % pool.length] || randomType(deck);
+  }
+
+  function botSummonLevel(strategy) {
+    if (strategy.id !== 'standard') return 1;
+    const k = state.currentLevel || 1;
+    if (k >= 16) return 3;
+    if (k >= 8) return 2;
+    return 1;
+  }
+
+  function botSummon(limit, strategy) {
+    let placed = 0;
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      if (state.sp < SUMMON_COST) return;
+      if (placed >= limit) return;
+      const cost = botActionCost();
+      if (state.sp < cost) return;
       if (state.playerSlots[r][c]) continue;
-      state.sp -= SUMMON_COST;
+      state.sp -= cost;
+      state.summonCostCounter = cost + 1;
       state.summonCount = (state.summonCount || 0) + 1;
-      const type = randomType(activeDeck());
-      const ball = createBall(type, 1);
+      const type = botPickType(strategy);
+      const ball = createBall(type, botSummonLevel(strategy));
       ball.spawnTimer = Math.max(ball.spawnTimer, 2.2);
       state.playerSlots[r][c] = ball;
+      placed++;
+    }
+  }
+
+  function botUrgentDispatch() {
+    let best = null;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const ball = state.playerSlots[r][c];
+      if (!ball || ball.level < 2) continue;
+      if (!best || ball.level > best.ball.level) best = { r, c, ball };
+    }
+    if (!best) return;
+    const cost = botActionCost();
+    if (state.sp < cost) return;
+    state.sp -= cost;
+    state.summonCostCounter = cost + 1;
+    spawnSoldierFromBall(best.ball, best.r, best.c, 'player', true);
+    best.ball.spawnTimer = Math.max(best.ball.spawnTimer || 0, 1.2);
+  }
+
+  function prepareMetaForStrategy(k, strategy) {
+    meta = createMeta();
+    meta.highestLevel = k;
+    meta.gold = 999999;
+    meta.deck = DEFAULT_DECK.slice();
+    meta.unlocked = typeof progressUnlocked === 'function' ? progressUnlocked(meta) : DEFAULT_DECK.slice();
+    const growth = strategy.id === 'standard'
+      ? Math.min(10, Math.floor((k + 1) / 2))
+      : strategy.id === 'light'
+        ? Math.min(5, Math.floor((k + 2) / 4))
+        : 0;
+    meta.wallLv = strategy.id === 'standard' ? Math.min(WALL_UPGRADE_MAX, Math.floor(k / 3)) : (strategy.id === 'light' ? Math.min(WALL_UPGRADE_MAX, Math.floor(k / 6)) : 0);
+    meta.spLv = strategy.id === 'standard' ? Math.min(SP_UPGRADE_MAX, Math.floor(k / 4)) : (strategy.id === 'light' ? Math.min(SP_UPGRADE_MAX, Math.floor(k / 8)) : 0);
+    for (const id of DEFAULT_DECK) {
+      meta.upgrades[id + '_atk'] = growth;
+      meta.upgrades[id + '_hp'] = Math.max(0, growth - 1);
+      meta.shardsTotal[id] = strategy.id === 'standard' ? k * 12 : (strategy.id === 'light' ? k * 5 : 0);
     }
   }
 
@@ -140,11 +224,13 @@ const DRIVER = `
     if (state.phase !== 'playing') return;
     state.time += dt;
 
+    const juiceCfg = TUNING && TUNING.juice ? TUNING.juice : {};
+    const passiveInterval = Number(juiceCfg.passiveInterval || SP_PASSIVE || 5);
     if (!state._spTimer) state._spTimer = 0;
     state._spTimer += dt;
-    if (state._spTimer >= SP_PASSIVE && state.sp < getSpRecoverCap(meta)) {
-      state._spTimer -= SP_PASSIVE;
-      state.sp = Math.min(state.sp + 1, getSpMax(meta));
+    while (state._spTimer >= passiveInterval) {
+      state._spTimer -= passiveInterval;
+      state.sp = (state.sp || 0) + 1;
     }
 
     state.enemyBallTimer += dt;
@@ -187,42 +273,66 @@ const DRIVER = `
     updateCombat();
   }
 
-  function runStage(k) {
+  function runStage(k, strategy) {
+    prepareMetaForStrategy(k, strategy);
     if (typeof resetAI === 'function') resetAI();
     if (typeof resetJuiceEconomyForLevel === 'function') resetJuiceEconomyForLevel(k);
     initLevel(k);
     state.phase = 'playing';
+    state.sp = Number((TUNING && TUNING.juice && TUNING.juice.start) || state.sp || 8);
+    state.summonCostCounter = 1;
     let botTimer = 0;
-    for (let f = 0; f < MAX_FRAMES; f++) {
+    let urgentTimer = 0;
+    let peakJuice = state.sp || 0;
+    let maxUnits = 0;
+    for (let f = 0; f < MAX_SIM_FRAMES; f++) {
       botTimer += DT;
-      if (botTimer >= 0.4) { botTimer -= 0.4; botMerge(); botSummon(); }
+      urgentTimer += DT;
+      if (botTimer >= strategy.botEvery) {
+        botTimer -= strategy.botEvery;
+        botMerge();
+        if (strategy.summon > 0) botSummon(strategy.summon, strategy);
+      }
+      if (urgentTimer >= strategy.urgentEvery) {
+        urgentTimer -= strategy.urgentEvery;
+        botUrgentDispatch();
+      }
       stepFrame();
-      if (state.enemyWallHp <= 0) return { win: 1, time: state.time, wall: state.playerWallHp / state.playerWallMax };
-      if (state.playerWallHp <= 0) return { win: 0, time: state.time, wall: 0 };
+      peakJuice = Math.max(peakJuice, state.sp || 0);
+      maxUnits = Math.max(maxUnits, (state.playerSoldiers || []).filter(s => s && s.alive).length);
+      if (state.enemyWallHp <= 0) return { win: 1, time: state.time, wall: state.playerWallHp / state.playerWallMax, peakJuice, maxUnits };
+      if (state.playerWallHp <= 0) return { win: 0, time: state.time, wall: 0, peakJuice, maxUnits };
     }
-    return { win: 0, time: state.time, wall: state.playerWallHp / state.playerWallMax, timeout: 1 };
+    return { win: 0, time: state.time, wall: state.playerWallHp / state.playerWallMax, timeout: 1, peakJuice, maxUnits };
   }
 
   const rows = [];
   for (let k = 1; k <= 20; k++) {
-    let wins = 0, timeouts = 0, tSum = 0, wallSum = 0;
-    for (let i = 0; i < RUNS_PER_STAGE; i++) {
-      const r = runStage(k);
-      if (r.win) { wins++; tSum += r.time; wallSum += r.wall; }
-      if (r.timeout) timeouts++;
-    }
     const def = getStageDefinition(k);
-    rows.push({
-      stage: k,
-      type: def.type,
-      boss: k % 5 === 0 ? 1 : 0,
-      runs: RUNS_PER_STAGE,
-      winRate: Math.round((wins / RUNS_PER_STAGE) * 100),
-      avgWinTime: wins ? +(tSum / wins).toFixed(1) : null,
-      avgWallLeft: wins ? Math.round((wallSum / wins) * 100) : 0,
-      timeouts,
-    });
-    console.error('  stage ' + k + ' done (' + wins + '/' + RUNS_PER_STAGE + ' win, ' + timeouts + ' timeout)');
+    for (const strategy of STRATEGIES) {
+      let wins = 0, timeouts = 0, tSum = 0, wallSum = 0, peakJuice = 0, maxUnits = 0;
+      for (let i = 0; i < RUNS_PER_STAGE; i++) {
+        const r = runStage(k, strategy);
+        if (r.win) { wins++; tSum += r.time; wallSum += r.wall; }
+        if (r.timeout) timeouts++;
+        peakJuice += r.peakJuice || 0;
+        maxUnits += r.maxUnits || 0;
+      }
+      rows.push({
+        stage: k,
+        type: def.type,
+        boss: k % 5 === 0 ? 1 : 0,
+        strategy: strategy.id,
+        runs: RUNS_PER_STAGE,
+        winRate: Math.round((wins / RUNS_PER_STAGE) * 100),
+        avgWinTime: wins ? +(tSum / wins).toFixed(1) : null,
+        avgWallLeft: wins ? Math.round((wallSum / wins) * 100) : 0,
+        avgPeakJuice: Math.round(peakJuice / RUNS_PER_STAGE),
+        avgMaxUnits: Math.round(maxUnits / RUNS_PER_STAGE),
+        timeouts,
+      });
+      if (VERBOSE) console.error('  stage ' + k + ' ' + strategy.id + ' done (' + wins + '/' + RUNS_PER_STAGE + ' win, ' + timeouts + ' timeout)');
+    }
   }
   globalThis.__STAGE_REAL__ = { rows, tuning: TUNING.pve };
 })();
@@ -241,20 +351,23 @@ const check = process.argv[2] === '--check';
 
 function band(v, [lo, hi]) { return v >= lo && v <= hi ? 'OK ' : (v < lo ? 'LOW' : 'HIGH'); }
 
-console.log('\n=== 真战斗仿真 · 20 关平衡报告 (bot 玩家, 每关 4 局) ===');
-console.log('关 类型      胜率   胜均时长  城墙剩% 超时  vs目标(时长/胜率)');
+console.log(`\n=== 真战斗仿真 · 20关 x 3档操作 (${simRunsPerStage} run/stage, ${simMaxSeconds}s cap) ===`);
+console.log('关 操作档      类型      胜率   胜均时长  城墙剩% 果汁峰 单位峰 超时  vs目标(时长/胜率)');
 for (const r of rows) {
-  const winTarget = r.boss ? tuning.bossWinRate : tuning.standardWinRate;
+  const winTarget = r.strategy === 'no_action' ? [0, 0.45] : (r.strategy === 'light' ? [0.35, 0.85] : (r.boss ? tuning.bossWinRate : tuning.standardWinRate));
   const timeTarget = r.boss ? tuning.bossTargetSeconds : tuning.normalTargetSeconds;
   const wr = (r.winRate / 100);
   const wrFlag = band(wr, winTarget);
   const tFlag = r.avgWinTime == null ? ' - ' : band(r.avgWinTime, timeTarget);
   console.log(
     String(r.stage).padStart(2) + ' ' +
+    String(r.strategy).padEnd(11) + ' ' +
     String(r.type).padEnd(9) + ' ' +
     (r.winRate + '%').padStart(5) + '  ' +
     String(r.avgWinTime == null ? '-' : r.avgWinTime + 's').padStart(7) + '  ' +
     String(r.avgWallLeft + '%').padStart(5) + '  ' +
+    String(r.avgPeakJuice).padStart(5) + '  ' +
+    String(r.avgMaxUnits).padStart(5) + '  ' +
     String(r.timeouts).padStart(3) + '   ' +
     'time:' + tFlag + ' win:' + wrFlag
   );
@@ -262,10 +375,11 @@ for (const r of rows) {
 
 // 结构性断言(CI 安全:失衡只报告不 fail)
 const assert = require('assert');
-assert.strictEqual(rows.length, 20, 'should cover stages 1-20');
+assert.strictEqual(rows.length, 60, 'should cover stages 1-20 across three strategies');
 for (const r of rows) {
   assert.ok(r.winRate >= 0 && r.winRate <= 100, 'winRate in range');
-  assert.ok(r.runs === 4, 'ran 4 runs');
+  assert.ok(r.runs === simRunsPerStage, 'ran configured runs');
+  assert.ok(['no_action', 'light', 'standard'].includes(r.strategy), 'known strategy');
 }
-assert.strictEqual(rows.filter(r => r.boss).length, 4, 'four boss stages in 1-20');
-console.log('\nOK: real-combat sim ran stages 1-20 (structure valid)');
+assert.strictEqual(rows.filter(r => r.boss && r.strategy === 'standard').length, 4, 'four boss stages in 1-20');
+console.log('\nOK: real-combat sim ran stages 1-20 x 3 strategies (structure valid)');

@@ -15,6 +15,13 @@ function adminMiddleware(req, res, next) {
   next();
 }
 
+function safeText(value, max = 200) {
+  const clean = String(value == null ? '' : value)
+    .replace(/[\u0000-\u001f\u007f<>]/g, '')
+    .trim();
+  return Array.from(clean).slice(0, max).join('');
+}
+
 function mountAdmin(app) {
   app.get('/api/admin/users', authMiddleware, adminMiddleware, (req, res) => {
     res.json(db.prepare('SELECT uid, email, nickname, level, exp, power, diamonds, gold, highest_stage, ladder_rank, ladder_score, created_at, last_login FROM users ORDER BY created_at DESC LIMIT 500').all());
@@ -22,17 +29,20 @@ function mountAdmin(app) {
 
   app.post('/api/admin/mail', authMiddleware, adminMiddleware, (req, res) => {
     const { uid, title, body, rewards_json } = req.body || {};
-    if (!uid || !title) return res.status(400).json({ error: 'uid and title required' });
-    db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)').run(uid, title, body || '', rewards_json || '{}');
+    const safeTitle = safeText(title, 60);
+    if (!uid || !safeTitle) return res.status(400).json({ error: 'uid and title required' });
+    db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)').run(uid, safeTitle, safeText(body, 500), rewards_json || '{}');
     res.json({ ok: true });
   });
 
   app.post('/api/admin/mail-all', authMiddleware, adminMiddleware, (req, res) => {
     const { title, body, rewards_json } = req.body || {};
-    if (!title) return res.status(400).json({ error: 'title required' });
+    const safeTitle = safeText(title, 60);
+    if (!safeTitle) return res.status(400).json({ error: 'title required' });
+    const safeBody = safeText(body, 500);
     const uids = db.prepare('SELECT uid FROM users').all();
     const stmt = db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)');
-    const tx = db.transaction(() => { for (const u of uids) stmt.run(u.uid, title, body || '', rewards_json || '{}'); });
+    const tx = db.transaction(() => { for (const u of uids) stmt.run(u.uid, safeTitle, safeBody, rewards_json || '{}'); });
     tx();
     res.json({ ok: true, count: uids.length });
   });

@@ -123,6 +123,49 @@ function sanitizeDeck(deck) {
     .slice(0, 5);
 }
 
+const ACTION_TYPES = new Set(['summon_cell', 'move_cell', 'merge_or_swap_cell', 'urgent_dispatch']);
+const ACTION_PAYLOAD_MAX_BYTES = 1024;
+
+function clampCell(value, maxExclusive) {
+  return Math.round(clampNumber(value, 0, maxExclusive - 1, 0));
+}
+
+function actionPayloadBytes(payload) {
+  try { return Buffer.byteLength(JSON.stringify(payload || {}), 'utf8'); }
+  catch (e) { return ACTION_PAYLOAD_MAX_BYTES + 1; }
+}
+
+function normalizeActionPayload(type, payload) {
+  if (!payload || typeof payload !== 'object') payload = {};
+  if (actionPayloadBytes(payload) > ACTION_PAYLOAD_MAX_BYTES) return null;
+  if (type === 'summon_cell') {
+    return {
+      r: clampCell(payload.r, 3),
+      c: clampCell(payload.c, 5),
+      type: sanitizeText(payload.type || '', 40),
+      level: Math.round(clampNumber(payload.level, 1, 8, 1)),
+      spawnTimer: clampNumber(payload.spawnTimer, 0, 30, 0),
+      cost: Math.round(clampNumber(payload.cost, 0, 20, 0)),
+    };
+  }
+  if (type === 'move_cell' || type === 'merge_or_swap_cell') {
+    return {
+      fromR: clampCell(payload.fromR, 3),
+      fromC: clampCell(payload.fromC, 5),
+      toR: clampCell(payload.toR, 3),
+      toC: clampCell(payload.toC, 5),
+    };
+  }
+  if (type === 'urgent_dispatch') {
+    return {
+      r: clampCell(payload.r, 3),
+      c: clampCell(payload.c, 5),
+      cost: Math.round(clampNumber(payload.cost, 0, 20, 0)),
+    };
+  }
+  return null;
+}
+
 function roomState(room) {
   return {
     roomId: room.id,
@@ -177,7 +220,7 @@ function createRoom(client) {
   leaveRoom(client, false);
 
   const id = makeRoomId();
-  const room = { id, seed: 0, players: [null, null], observers: [] };
+  const room = { id, seed: 0, players: [null, null], observers: [], result: null };
   client.roomId = id;
   client.index = 0;
   client.ready = false;
@@ -216,6 +259,7 @@ function setReady(client, ready, deck) {
   if (room.players[0] && room.players[1] && room.players.every(player => player.ready)) {
     room.seed = makeSeed();
     for (const player of room.players) player._lastActionSeq = 0;
+    room.result = null;
     broadcast(room, {
       type: 'match_start',
       roomId: room.id,
@@ -230,6 +274,11 @@ function normalizeAction(client, room, action) {
   const now = Date.now();
   const seq = Number.isInteger(action.seq) && action.seq > 0 ? action.seq : client._lastActionSeq + 1;
   if (seq <= (client._lastActionSeq || 0)) return null;
+  if (Number.isInteger(action.seed) && action.seed !== room.seed) return null;
+  const type = sanitizeText(action.type, 48);
+  if (!ACTION_TYPES.has(type)) return null;
+  const payload = normalizeActionPayload(type, action.payload);
+  if (!payload) return null;
   client._lastActionSeq = seq;
 
   return {
@@ -237,8 +286,8 @@ function normalizeAction(client, room, action) {
     seed: Number.isInteger(action.seed) ? action.seed : room.seed,
     timestamp: Number.isFinite(action.timestamp) ? action.timestamp : now,
     matchTime: Number.isFinite(action.matchTime) ? action.matchTime : 0,
-    type: sanitizeText(action.type, 48),
-    payload: action.payload && typeof action.payload === 'object' ? action.payload : {},
+    type,
+    payload,
   };
 }
 
@@ -258,6 +307,47 @@ function forwardAction(client, action) {
 
   const message = { type: 'peer_action', from: client.index, action: normalized };
   send(peer, message);
+  if (room.observers) for (const obs of room.observers) send(obs, message);
+}
+
+function clampNumber(value, min, max, fallback = min) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function summarizeResult(client, room, result) {
+  if (!result || typeof result !== 'object') return null;
+  if (Number.isInteger(result.seed) && result.seed !== room.seed) return null;
+  const winner = clampNumber(result.winner, 0, 1, client.index);
+  const duration = Math.round(clampNumber(result.duration, 0, 900, 0));
+  const wallLeft = Math.round(clampNumber(result.wallLeft, 0, 100, 0));
+  const actionCount = Math.round(clampNumber(result.actionCount, 0, 5000, 0));
+  return {
+    seed: room.seed,
+    winner,
+    duration,
+    wallLeft,
+    actionCount,
+    reason: sanitizeText(result.reason || 'normal', 24) || 'normal',
+  };
+}
+
+function reportResult(client, result) {
+  const room = rooms.get(client.roomId);
+  if (!room) return sendError(client, 'not_in_room');
+  const summary = summarizeResult(client, room, result);
+  if (!summary) return sendError(client, 'invalid_result');
+  if (room.result && (
+    room.result.seed !== summary.seed ||
+    room.result.winner !== summary.winner ||
+    Math.abs(room.result.duration - summary.duration) > 10
+  )) {
+    return sendError(client, 'result_conflict');
+  }
+  room.result = room.result || summary;
+  const message = { type: 'match_result', roomId: room.id, from: client.index, result: room.result };
+  broadcast(room, message);
   if (room.observers) for (const obs of room.observers) send(obs, message);
 }
 
@@ -304,6 +394,7 @@ function handleMessage(client, raw) {
   else if (message.type === 'join_room') joinRoom(client, message.roomId);
   else if (message.type === 'ready') setReady(client, message.ready, message.deck);
   else if (message.type === 'action') forwardAction(client, message.action);
+  else if (message.type === 'result') reportResult(client, message.result);
   else if (message.type === 'leave' || message.type === 'leave_room') { leaveObserve(client); leaveRoom(client); }
   else if (message.type === 'observe') observeRoom(client, message.roomId);
   else if (message.type === 'chat') pushChat(client, message);
@@ -341,6 +432,7 @@ function attachSocket(socket, head = null, auth = null) {
   };
 
   socket.on('data', onData);
+  socket.on('end', () => disconnectClient(client));
   socket.on('close', () => disconnectClient(client));
   socket.on('error', () => disconnectClient(client));
 

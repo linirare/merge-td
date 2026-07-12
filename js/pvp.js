@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    水果突击 · 实时 PVP V1
    房间码对战 / 指令同步 / 本地战斗模拟。
    ============================================================ */
@@ -21,6 +21,7 @@
     rngState: 1,
     spawnCounters: { player: 0, enemy: 0 },
     onStatus: null,
+    resultReported: false,
   };
 
   function notify() {
@@ -102,6 +103,23 @@
     notify();
   }
 
+  function sendResult(win, reason) {
+    if (!pvp.roomId || !pvp.seed) return false;
+    const ok = send({
+      type: 'result',
+      result: {
+        seed: pvp.seed,
+        winner: win ? pvp.playerIndex : (pvp.playerIndex === 0 ? 1 : 0),
+        duration: Math.floor(state.time || 0),
+        wallLeft: Math.round(100 * Math.max(0, state.playerWallHp || 0) / Math.max(1, state.playerWallMax || 1)),
+        actionCount: pvp.seq || 0,
+        reason: reason || 'normal',
+      },
+    });
+    if (ok) pvp.resultReported = true;
+    return ok;
+  }
+
   function handleServerMessage(message) {
     if (message.type === 'room_created' || message.type === 'room_joined') {
       pvp.roomId = message.roomId;
@@ -128,6 +146,9 @@
       applyRemoteAction(message.action);
     } else if (message.type === 'peer_left') {
       handlePeerLeft();
+    } else if (message.type === 'match_result') {
+      pvp.resultReported = true;
+      setStatus(message.result && message.result.winner === pvp.playerIndex ? 'PVP 结果已确认：胜利' : 'PVP 结果已确认：失败');
     } else if (message.type === 'error') {
       setStatus(message.message || 'PVP 错误');
     }
@@ -251,6 +272,7 @@
     seeded(pvp.seed);
     pvp.seq = 0;
     pvp.expectedSeq = 1;
+    pvp.resultReported = false;
     pvp.spawnCounters = { player: 0, enemy: 0 };
 
     const playerIndex = Number(config.playerIndex || 0);
@@ -380,7 +402,7 @@
     if (!panel || !title || !detail) return;
     nextBtn?.classList.add('hide');
     title.textContent = '对手离线';
-    detail.innerHTML = `房间 ${state.pvpRoomId || pvp.roomId || '-'}<br>本局已暂停，V1 暂不做断线重连。`;
+    detail.innerHTML = `房间 ${state.pvpRoomId || pvp.roomId || '-'}<br>对手断线，本局按胜利上报。<br>${pvp.resultReported ? '结果已提交服务器' : '结果等待上报'}`;
     if (retry) {
       const clone = retry.cloneNode(true);
       retry.parentNode.replaceChild(clone, retry);
@@ -398,6 +420,7 @@
   }
 
   function handlePeerLeft() {
+    sendResult(true, 'peer_left');
     setStatus('对手离线');
     if (state.mode === 'pvp' && state.phase === 'playing') {
       state.phase = 'paused';
@@ -478,6 +501,7 @@
   }
 
   function showPvpResult(win) {
+    sendResult(win, 'normal');
     const panel = document.getElementById('resultPanel');
     const title = document.getElementById('resultTitle');
     const detail = document.getElementById('resultDetail');
@@ -494,7 +518,7 @@
       retryClone.addEventListener('click', () => returnToArenaFromPvp(panel));
     }
     title.textContent = win ? 'PVP 胜利' : 'PVP 失败';
-    detail.innerHTML = `房间 ${state.pvpRoomId || pvp.roomId}<br>用时 ${Math.floor(state.time || 0)} 秒<br>击破 ${state.kills || 0}`;
+    detail.innerHTML = `房间 ${state.pvpRoomId || pvp.roomId}<br>用时 ${Math.floor(state.time || 0)} 秒<br>击破 ${state.kills || 0}<br>${pvp.resultReported ? '结果已提交服务器' : '结果等待上报'}`;
     if (menu) {
       const clone = menu.cloneNode(true);
       menu.parentNode.replaceChild(clone, menu);
