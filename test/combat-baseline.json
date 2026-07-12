@@ -18,7 +18,7 @@
       "engage": 26,
       "frames": 85,
       "winner": "player",
-      "pHp": 33,
+      "pHp": 36,
       "eHp": 0
     },
     "sniper_vs_banana": {
@@ -26,25 +26,25 @@
       "frames": 21,
       "winner": "enemy",
       "pHp": 0,
-      "eHp": 57
+      "eHp": 61
     },
     "frost_vs_coconut": {
       "engage": 21,
-      "frames": 578,
+      "frames": 382,
       "winner": "enemy",
       "pHp": 0,
       "eHp": 167
     }
   },
   "wallDps": {
-    "orange_cannon_600f": 160,
-    "watermelon_600f": 40,
-    "pumpkin_600f": 90
+    "orange_cannon_600f": 170,
+    "watermelon_600f": 50,
+    "pumpkin_600f": 100
   },
   "skirmish_900f": {
     "pAlive": 0,
     "eAlive": 3,
-    "pWall": 495,
+    "pWall": 494,
     "eWall": 600,
     "phase": "playing"
   },
