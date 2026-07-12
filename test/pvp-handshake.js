@@ -166,39 +166,55 @@ class RawWs {
     assert.strictEqual(startA.seed, startB.seed);
     assert.ok(Number.isInteger(startA.seed));
 
-    host.send({ type: 'action', action: { seq: 1, seed: startA.seed, timestamp: Date.now(), type: 'summon_cell', payload: { r: 1, c: 2 } } });
-    const peerAction = await guest.nextType('peer_action');
-    assert.strictEqual(peerAction.action.seq, 1);
-    assert.strictEqual(peerAction.action.seed, startA.seed);
-    assert.strictEqual(peerAction.action.type, 'summon_cell');
+    // 服务器权威:match_start 后服务端逐帧推进并广播快照,双方都应收到
+    const snap0 = await host.nextType('snapshot', 2500);
+    assert.ok(snap0.snap && snap0.snap.walls && Array.isArray(snap0.snap.soldiers), 'snapshot 应含 walls + soldiers');
+    assert.ok(snap0.snap.boards && snap0.snap.boards.p && snap0.snap.boards.e, 'snapshot 应含双方棋盘');
+    await guest.nextType('snapshot', 2500);
 
-    host.send({ type: 'action', action: { seq: 1, seed: startA.seed, timestamp: Date.now(), type: 'summon_cell', payload: { r: 0, c: 0 } } });
+    // 合法操作打进权威模拟:host(index0)召唤应落到快照 boards.p[1][2]
+    host.send({ type: 'action', action: { seq: 1, seed: startA.seed, timestamp: Date.now(), type: 'summon_cell', payload: { r: 1, c: 2, type: 'watermelon_guard', level: 1 } } });
+    let applied = false;
+    for (let i = 0; i < 25 && !applied; i++) {
+      const s = await host.nextType('snapshot', 2500);
+      if (s.snap.boards.p[1] && s.snap.boards.p[1][2]) applied = true;
+    }
+    assert.ok(applied, '合法召唤应被服务端应用到本方棋盘(权威)');
+
+    // 重复 seq → invalid_action
+    host.send({ type: 'action', action: { seq: 1, seed: startA.seed, timestamp: Date.now(), type: 'summon_cell', payload: { r: 0, c: 0, type: 'grape_archer' } } });
     const duplicate = await host.nextType('error');
     assert.strictEqual(duplicate.message, 'invalid_action');
 
+    // 非法操作类型 → invalid_action
     host.send({ type: 'action', action: { seq: 2, seed: startA.seed, timestamp: Date.now(), type: 'hack_gold', payload: { gold: 999999 } } });
     const invalidType = await host.nextType('error');
     assert.strictEqual(invalidType.message, 'invalid_action');
 
+    // 超大 payload → invalid_action
     host.send({ type: 'action', action: { seq: 2, seed: startA.seed, timestamp: Date.now(), type: 'summon_cell', payload: { r: 1, c: 1, blob: 'x'.repeat(2048) } } });
     const hugePayload = await host.nextType('error');
     assert.strictEqual(hugePayload.message, 'invalid_action');
 
-    host.send({ type: 'result', result: { seed: startA.seed, winner: 0, duration: 42, wallLeft: 66, actionCount: 3, reason: 'normal' } });
-    const result = await guest.nextType('match_result');
-    assert.strictEqual(result.result.seed, startA.seed);
-    assert.strictEqual(result.result.winner, 0);
-    assert.strictEqual(result.result.duration, 42);
-
-    for (let seq = 2; seq <= 18; seq++) {
-      host.send({ type: 'action', action: { seq, seed: startA.seed, timestamp: Date.now(), type: 'summon_cell', payload: { r: seq % 3, c: seq % 5 } } });
+    // 频率限制:洪水式发操作,错误流里应出现 action_rate_limited
+    for (let seq = 2; seq <= 22; seq++) {
+      host.send({ type: 'action', action: { seq, seed: startA.seed, timestamp: Date.now(), type: 'summon_cell', payload: { r: seq % 3, c: seq % 5, type: 'banana_raider' } } });
     }
-    const limited = await host.nextType('error');
-    assert.strictEqual(limited.message, 'action_rate_limited');
+    let sawRateLimit = false;
+    for (let i = 0; i < 30 && !sawRateLimit; i++) {
+      const e = await host.nextType('error', 2000);
+      if (e.message === 'action_rate_limited') sawRateLimit = true;
+    }
+    assert.ok(sawRateLimit, '洪水操作应触发 action_rate_limited');
 
+    // 掉线:服务器权威判剩者(host=index0)胜,广播 match_result(不再信客户端自报)
     guest.disconnect();
     const left = await host.nextType('peer_left', 3000);
     assert.strictEqual(left.roomId, created.roomId);
+    const result = await host.nextType('match_result', 3000);
+    assert.strictEqual(result.result.winner, 0, '剩下的 host(index0)应判胜');
+    assert.strictEqual(result.result.reason, 'peer_left');
+    assert.strictEqual(result.result.seed, startA.seed);
 
     completed = true;
   } finally {

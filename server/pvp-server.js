@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { verifyToken } = require('./auth');
+const { PvpBattle } = require('./pvp-sim');
 
 const rooms = new Map();
 const allClients = new Set();
@@ -108,6 +109,51 @@ function broadcastAll(except, message) {
   for (const client of allClients) if (client !== except) send(client, message);
 }
 
+// —— 服务器权威战斗:每房一份 PvpBattle,服务端逐帧推进 + 广播快照 ——
+function broadcastRoom(room, message) {
+  broadcast(room, message);
+  if (room.observers) for (const obs of room.observers) send(obs, message);
+}
+
+const PVP_TICK_MS = 1000 / 30;   // 权威步长 30fps
+const PVP_SNAPSHOT_EVERY = 2;    // 每 2 帧发一次快照(~15/s)
+const PVP_MATCH_MAX_S = 180;     // 单局硬上限,防僵持不散
+
+function stopBattleLoop(room) {
+  if (room._loop) { clearInterval(room._loop); room._loop = null; }
+  room.battle = null;
+}
+
+function finishMatch(room, result) {
+  if (!room || room._finished) return;
+  room._finished = true;
+  room.result = result;
+  broadcastRoom(room, { type: 'match_result', roomId: room.id, result });
+  stopBattleLoop(room);
+}
+
+function startBattleLoop(room, decks) {
+  stopBattleLoop(room);
+  room._finished = false;
+  try { room.battle = new PvpBattle(room.seed, decks[0], decks[1]); }
+  catch (e) { return finishMatch(room, { seed: room.seed, winner: 0, duration: 0, reason: 'sim_init_error' }); }
+  let frame = 0;
+  room._loop = setInterval(() => {
+    if (!room.battle) return stopBattleLoop(room);
+    try { room.battle.tick(1 / 30); }
+    catch (e) { return finishMatch(room, { seed: room.seed, winner: 0, duration: frame / 30, reason: 'sim_error' }); }
+    frame++;
+    if (frame % PVP_SNAPSHOT_EVERY === 0) broadcastRoom(room, { type: 'snapshot', snap: room.battle.snapshot() });
+    const res = room.battle.result;
+    if (res) { finishMatch(room, { seed: room.seed, winner: res.winner, duration: res.duration, reason: res.reason }); return; }
+    if (frame / 30 >= PVP_MATCH_MAX_S) {
+      const snap = room.battle.snapshot();
+      const winner = snap.walls.e < snap.walls.p ? 0 : (snap.walls.p < snap.walls.e ? 1 : 0); // 墙多者胜,平则 side0
+      finishMatch(room, { seed: room.seed, winner, duration: PVP_MATCH_MAX_S, reason: 'timeout' });
+    }
+  }, PVP_TICK_MS);
+}
+
 function sanitizeText(value, max = 40) {
   const clean = String(value == null ? '' : value)
     .replace(/[\u0000-\u001f\u007f<>]/g, '')
@@ -201,6 +247,14 @@ function leaveRoom(client, notify = true) {
     broadcast(room, { type: 'peer_left', roomId: room.id }, client);
     if (room.observers) for (const obs of room.observers) send(obs, { type: 'peer_left', roomId: room.id });
   }
+  // 对局进行中有人离开:剩下的人判胜,停权威战斗
+  if (room.battle && !room._finished) {
+    const remaining = room.players[0] || room.players[1];
+    if (remaining) {
+      let t = 0; try { t = Math.floor((room.battle.snapshot().t) || 0); } catch (e) {}
+      finishMatch(room, { seed: room.seed, winner: remaining.index, duration: t, reason: 'peer_left' });
+    } else { stopBattleLoop(room); }
+  }
   if (!room.players[0] && !room.players[1]) rooms.delete(room.id);
 
   client.roomId = '';
@@ -260,12 +314,9 @@ function setReady(client, ready, deck) {
     room.seed = makeSeed();
     for (const player of room.players) player._lastActionSeq = 0;
     room.result = null;
-    broadcast(room, {
-      type: 'match_start',
-      roomId: room.id,
-      seed: room.seed,
-      decks: room.players.map(player => sanitizeDeck(player.deck || [])),
-    });
+    const decks = room.players.map(player => sanitizeDeck(player.deck || []));
+    broadcast(room, { type: 'match_start', roomId: room.id, seed: room.seed, decks });
+    startBattleLoop(room, decks); // 服务器起权威战斗,开始逐帧推进+广播快照
   }
 }
 
@@ -294,8 +345,7 @@ function normalizeAction(client, room, action) {
 function forwardAction(client, action) {
   const room = rooms.get(client.roomId);
   if (!room) return sendError(client, 'not_in_room');
-  const peer = room.players[client.index === 0 ? 1 : 0];
-  if (!peer) return sendError(client, 'peer_offline');
+  if (!room.battle) return sendError(client, 'match_not_started');
 
   const now = Date.now();
   client._actionTimes = (client._actionTimes || []).filter(t => now - t < 1000);
@@ -305,9 +355,9 @@ function forwardAction(client, action) {
   const normalized = normalizeAction(client, room, action);
   if (!normalized) return sendError(client, 'invalid_action');
 
-  const message = { type: 'peer_action', from: client.index, action: normalized };
-  send(peer, message);
-  if (room.observers) for (const obs of room.observers) send(obs, message);
+  // 服务器权威:操作打进本方(client.index)棋盘,不再转发给对手;下一帧快照体现
+  const r = room.battle.applyAction(client.index, normalized);
+  if (!r || !r.ok) return sendError(client, 'action_rejected:' + ((r && r.err) || 'unknown'));
 }
 
 function clampNumber(value, min, max, fallback = min) {
@@ -394,7 +444,7 @@ function handleMessage(client, raw) {
   else if (message.type === 'join_room') joinRoom(client, message.roomId);
   else if (message.type === 'ready') setReady(client, message.ready, message.deck);
   else if (message.type === 'action') forwardAction(client, message.action);
-  else if (message.type === 'result') reportResult(client, message.result);
+  else if (message.type === 'result') { /* 服务器权威:结果由服务端模拟决定,忽略客户端自报(杜绝作弊) */ }
   else if (message.type === 'leave' || message.type === 'leave_room') { leaveObserve(client); leaveRoom(client); }
   else if (message.type === 'observe') observeRoom(client, message.roomId);
   else if (message.type === 'chat') pushChat(client, message);
