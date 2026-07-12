@@ -479,9 +479,12 @@
           <div class="team">
             ${Array.from({ length: DECK_SIZE }, (_, i) => {
               const id = d[i];
-              return id
-                ? `<div class="slot f" data-detail="${id}">${hifiDisc(id, 40)}</div>`
-                : `<div class="slot"><svg class="icon plus2"><use href="#i-plus"/></svg></div>`;
+              if (id) {
+                const st = fruit(id);
+                const src = RAR_COLOR[st.rarity] || '#8FE0A0';
+                return `<div class="slot f" data-detail="${id}" style="background:${src}33;border:2px solid ${src}">${hifiDisc(id, 40)}<span class="slot-rc" style="background:${src}">${RAR_KEY[st.rarity]||'T2'}</span></div>`;
+              }
+              return `<div class="slot"><svg class="icon plus2"><use href="#i-plus"/></svg></div>`;
             }).join('')}
           </div>
           <div class="gpanel" style="display:flex;align-items:center;justify-content:space-around;gap:10px;padding:16px 14px">

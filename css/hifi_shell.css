@@ -233,6 +233,7 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 .hifi .slot.f{border-style:solid;cursor:pointer;}
 .hifi .fdisc{position:relative;display:grid;place-items:center;flex:none;font-family:'Fredoka';font-weight:700;color:#fff;border-radius:16px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));}
 .hifi .slot .plus2{color:rgba(245,194,66,.6);width:26px;height:26px;}
+.hifi .slot .slot-rc{position:absolute;top:2px;left:2px;font-size:8px;font-weight:900;padding:1px 4px;border-radius:4px;color:#20140a;font-family:'Nunito';}
 .hifi .roster{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
 .hifi .card{position:relative;aspect-ratio:.78;border-radius:12px;padding:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   background:linear-gradient(160deg,var(--rc,#4a6a30),color-mix(in srgb,var(--rc,#4a6a30) 60%,#1a1008));border:2px solid var(--rc,#4a6a30);box-shadow:0 3px 8px rgba(0,0,0,.4),0 0 12px -2px var(--rc);cursor:pointer;transition:transform .12s;}
