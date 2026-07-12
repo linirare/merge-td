@@ -145,17 +145,8 @@ mountActivity(app);
 mountSocial(app);
 
 // 管理后台页面:仅管理员可打开(URL?token=JWT,浏览器无法带 Authorization 头加载页面)
-app.get('/admin', (req, res) => {
-  const t = String(req.query.token || '');
-  if (!t) return res.status(401).send('需要登录令牌 — 请先在游戏中登录,然后访问 /admin?token=你的token');
-  try {
-    const { verifyToken } = require('./auth');
-    const d = verifyToken(t);
-    if (!d || !d.uid) return res.status(401).send('令牌无效');
-    if (!isAdmin(d.uid)) return res.status(403).send('仅管理员可访问');
-    res.sendFile(path.join(PUBLIC_ROOT, 'admin.html'));
-  } catch (e) { return res.status(401).send('验证失败'); }
-});
+// 管理后台页面(HTML 静态直出,登录由页面内 JS 调 /api/admin/login 完成)
+app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'admin.html')));
 
 // Ladder promotion logic
 app.post('/api/ladder/report', authMiddleware, (req, res) => {
