@@ -50,8 +50,8 @@
   let detailTab = 'attr';
   let rankTab = 'power';
   const RANK_TABS = [['power', '战力榜'], ['stage', '关卡榜'], ['ladder', '竞技榜']];
-  const RAR_KEY = { normal: 'N', rare: 'R', epic: 'E' };
-  const RAR_COLOR = { normal: '#8FE0A0', rare: '#5B9FE0', epic: '#C77BE8' };
+  const RAR_KEY = { epic: 'T0', rare: 'T1', normal: 'T2' };
+  const RAR_COLOR = { epic: '#FF6B35', rare: '#5B9FE0', normal: '#8FE0A0' };
   const ROLE_ZH = { tank: '坦克', back: '远程', rush: '突击', front: '前排', siege: '攻城', control: '控制', support: '辅助', merge: '合成' };
   const LV_KEY = { 4: '解锁技能', 5: '强化·金徽', 6: '质变', 7: '满级质变' };
   const SKILL_ZH = { shield: '周期护盾', first_shield: '首战护盾', rapid: '连射', snipe: '狙击', dash: '突进', first_crit: '首击暴击', anti_rush: '反突击', siege: '攻城', death_roll: '死亡爆炸', slow: '减速/冰冻', heal: '治疗', wildcard: '万能合成', copy: '复制', charge: '冲锋', immune: '免伤', burn: '点燃', stealth: '隐身首击', aoe: '范围炸弹', weaken: '削弱', sp_regen: '回能提速', kill_sp: '击杀回能', sp_refund: '操作返能', sp_bank: '储蓄产能', sp_discount: '操作减费' };
