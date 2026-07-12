@@ -231,7 +231,7 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 .hifi .team{display:flex;gap:8px;justify-content:space-between;margin-bottom:14px;}
 .hifi .slot{flex:1;aspect-ratio:.8;border-radius:12px;border:2px dashed rgba(245,194,66,.5);background:rgba(0,0,0,.25);display:grid;place-items:center;position:relative;}
 .hifi .slot.f{border-style:solid;cursor:pointer;}
-.hifi .fdisc{position:relative;display:grid;place-items:center;flex:none;font-family:'Fredoka';font-weight:700;color:#fff;border-radius:16px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));}
+.hifi .fdisc{position:relative;display:grid;place-items:center;flex:none;font-family:'Fredoka';font-weight:700;color:#fff;border-radius:16px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));transform:translateX(-2px);}
 .hifi .slot .plus2{color:rgba(245,194,66,.6);width:26px;height:26px;}
 .hifi .slot .slot-rc{position:absolute;top:2px;left:2px;font-size:8px;font-weight:900;padding:1px 4px;border-radius:4px;color:#20140a;font-family:'Nunito';}
 .hifi .roster{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
@@ -395,33 +395,87 @@ body.shell-v65 #game{background:#14100b;border-radius:0;box-shadow:none;}
 .hifi .lvnode.boss b{color:#F3A3AC;}
 .hifi .lvnode.locked{filter:grayscale(.7);opacity:.5;cursor:default;}
 
-/* 结算 / 帮助:旧 .panel 金皮(#id 作用域压过 shell-v65/style;深遮罩 + 金卡 + 金按钮) */
-#resultPanel.hifi,#helpPanel.hifi{background:rgba(10,6,3,.66);}
-#resultPanel.hifi .result-card,#helpPanel.hifi .help-panel{background:linear-gradient(180deg,#3E2716,#241206);border:2px solid #F5C242;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.6);color:#F3E3C0;}
-#resultPanel.hifi .result-card h2,#helpPanel.hifi .help-panel h2{color:#FFE9A8;font-family:'ZCOOL KuaiLe';-webkit-text-stroke:1px #6B0F0F;paint-order:stroke fill;text-shadow:0 2px 0 #8B1A1A;}
-#resultPanel.hifi .result-card p,#resultPanel.hifi #resultDetail{color:#F3E3C0;}
+/* ===== 结算页 — 手游风格(入场动画+金辉卡+大按钮) ===== */
+#resultPanel.hifi,#helpPanel.hifi{background:rgba(10,6,3,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
+#resultPanel.hifi .result-card,#helpPanel.hifi .help-panel{
+  background:linear-gradient(180deg,#3A2010 0%,#1E0E04 40%,#140802 100%);
+  border:2px solid #F5C242;border-radius:22px;
+  box-shadow:0 0 0 1px rgba(245,194,66,.25),0 0 40px rgba(245,194,66,.12),0 18px 40px rgba(0,0,0,.7);
+  color:#F3E3C0;max-width:340px;width:88vw;margin:0 auto;
+  padding:24px 20px 20px;
+  animation:resPopIn .35s cubic-bezier(.34,1.56,.64,1);
+  position:relative;overflow:hidden;
+}
+#resultPanel.hifi .result-card::before{
+  content:'';position:absolute;top:0;left:10%;right:10%;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(245,194,66,.6),#FFE9A8,rgba(245,194,66,.6),transparent);
+}
+#resultPanel.hifi .result-card.win-card{box-shadow:0 0 0 1px rgba(245,194,66,.35),0 0 60px rgba(245,194,66,.18),0 18px 40px rgba(0,0,0,.7);}
+@keyframes resPopIn{from{opacity:0;transform:scale(.85) translateY(18px);}to{opacity:1;transform:scale(1) translateY(0);}}
+
+#resultPanel.hifi .result-card h2,#helpPanel.hifi .help-panel h2{
+  color:#FFE9A8;font-family:'ZCOOL KuaiLe';font-size:26px;text-align:center;
+  -webkit-text-stroke:1px #6B0F0F;paint-order:stroke fill;text-shadow:0 2px 0 #8B1A1A,0 0 20px rgba(245,194,66,.3);
+  margin:0 0 16px;
+}
+#resultPanel.hifi .result-card p,#resultPanel.hifi #resultDetail{color:#F3E3C0;margin:0;}
 #helpPanel.hifi .help-section{background:rgba(0,0,0,.28);border:1px solid rgba(245,194,66,.22);border-radius:12px;}
 #helpPanel.hifi .help-section h3{color:#F5C242;}
 #helpPanel.hifi .help-section p,#helpPanel.hifi .help-section b{color:#F3E3C0;}
-#resultPanel.hifi .btn-primary,#helpPanel.hifi .btn-primary{background:linear-gradient(180deg,#FFE9A8,#F5C242 45%,#E8A317 62%,#D18A0E);color:#5A0E0E;border:2px solid #7A4E08;box-shadow:inset 0 -3px 0 rgba(122,78,8,.4),0 5px 0 #7A4E08;font-weight:900;}
-#resultPanel.hifi .btn-secondary,#helpPanel.hifi .btn-secondary{background:linear-gradient(180deg,#8f897c,#6b665b);color:#e8e4d8;border:2px solid #4c483f;box-shadow:0 4px 0 #4c483f;font-weight:900;}
-/* 结算页:星级+数据卡片+奖励条 */
-#resultPanel.hifi .res-stars{display:block;text-align:center;font-size:28px;letter-spacing:4px;margin-bottom:4px;}
-#resultPanel.hifi .res-stars .res-gray{opacity:.25;filter:grayscale(1);}
-#resultPanel.hifi .res-hero{text-align:center;margin-bottom:10px;}
-#resultPanel.hifi .res-hero.fail{font-size:56px;}
-#resultPanel.hifi .res-stat-row{display:flex;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap;}
-#resultPanel.hifi .res-stat{min-width:56px;text-align:center;background:rgba(0,0,0,.28);border:1px solid rgba(245,194,66,.18);border-radius:12px;padding:8px 12px;}
-#resultPanel.hifi .res-stat .res-num{display:block;font-family:'ZCOOL KuaiLe';font-size:22px;color:#FFE9A8;}
-#resultPanel.hifi .res-stat .res-lbl{font-size:10px;color:#B99A6E;font-weight:800;text-transform:uppercase;}
-#resultPanel.hifi .res-reward{text-align:center;font-size:18px;margin-bottom:6px;color:#F5C242;font-weight:800;}
-#resultPanel.hifi .res-reward b{font-family:'ZCOOL KuaiLe';font-size:26px;color:#FFE9A8;}
-#resultPanel.hifi .res-reward small{font-size:11px;color:#B99A6E;font-weight:700;}
-#resultPanel.hifi .res-mvp{text-align:center;font-size:13px;color:#C9B48A;margin-bottom:4px;}
+
+/* 按钮:手游大按钮 */
+#resultPanel.hifi .btn-primary,#helpPanel.hifi .btn-primary{
+  display:block;width:100%;padding:14px 0;margin:8px 0;font-size:17px;font-family:'ZCOOL KuaiLe',sans-serif;
+  background:linear-gradient(180deg,#FFE9A8,#F5C242 45%,#E8A317 62%,#D18A0E);
+  color:#5A0E0E;border:2px solid #7A4E08;border-radius:14px;
+  box-shadow:inset 0 -3px 0 rgba(122,78,8,.4),0 5px 0 #7A4E08;
+  font-weight:900;cursor:pointer;letter-spacing:1px;
+  transition:transform .08s,box-shadow .08s;
+}
+#resultPanel.hifi .btn-primary:active{transform:translateY(3px);box-shadow:inset 0 -1px 0 rgba(122,78,8,.4),0 2px 0 #7A4E08;}
+#resultPanel.hifi .btn-secondary,#helpPanel.hifi .btn-secondary{
+  display:block;width:100%;padding:11px 0;margin:4px 0;font-size:14px;
+  background:linear-gradient(180deg,#5a5246,#3a3228);color:#C9B48A;
+  border:1px solid #5a4a30;border-radius:14px;
+  box-shadow:0 4px 0 #2a2218;font-weight:800;cursor:pointer;
+  transition:transform .08s,box-shadow .08s;
+}
+#resultPanel.hifi .btn-secondary:active{transform:translateY(2px);box-shadow:0 2px 0 #2a2218;}
+
+/* 星级 */
+#resultPanel.hifi .res-stars{display:block;text-align:center;font-size:36px;letter-spacing:6px;margin-bottom:6px;filter:drop-shadow(0 2px 4px rgba(245,194,66,.4));}
+#resultPanel.hifi .res-stars .res-gray{opacity:.2;filter:grayscale(1);}
+#resultPanel.hifi .res-hero{text-align:center;margin-bottom:12px;}
+#resultPanel.hifi .res-hero.fail{font-size:52px;margin-bottom:8px;}
+
+/* 数据卡片行 */
+#resultPanel.hifi .res-stat-row{display:flex;gap:8px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;}
+#resultPanel.hifi .res-stat{min-width:60px;text-align:center;background:rgba(0,0,0,.35);border:1px solid rgba(245,194,66,.22);border-radius:14px;padding:10px 14px;}
+#resultPanel.hifi .res-stat .res-num{display:block;font-family:'ZCOOL KuaiLe';font-size:26px;color:#FFE9A8;line-height:1.1;}
+#resultPanel.hifi .res-stat .res-lbl{font-size:10px;color:#B99A6E;font-weight:800;letter-spacing:.5px;}
+
+/* 奖励条 */
+#resultPanel.hifi .res-reward{
+  text-align:center;margin-bottom:8px;padding:12px 14px;
+  background:linear-gradient(90deg,rgba(245,194,66,.06),rgba(245,194,66,.14),rgba(245,194,66,.06));
+  border:1px solid rgba(245,194,66,.28);border-radius:14px;
+}
+#resultPanel.hifi .res-reward b{font-family:'ZCOOL KuaiLe';font-size:32px;color:#FFE9A8;}
+#resultPanel.hifi .res-reward small{display:block;font-size:11px;color:#B99A6E;font-weight:700;margin-top:2px;}
+
+/* MVP */
+#resultPanel.hifi .res-mvp{text-align:center;font-size:13px;color:#C9B48A;margin-bottom:6px;padding:4px 0;}
 #resultPanel.hifi .res-mvp b{color:#FFE9A8;}
-#resultPanel.hifi .res-fail-msg{text-align:center;color:#F3E3C0;font-weight:700;font-size:14px;margin-bottom:10px;}
-#resultPanel.hifi .res-tip{text-align:center;font-size:11px;color:#B99A6E;margin:8px 0;line-height:1.5;}
-#resultPanel.hifi .res-report{margin-top:8px;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:10px;font-size:11px;color:#C9B48A;line-height:1.6;}
+
+/* 失败 */
+#resultPanel.hifi .res-fail-msg{text-align:center;color:#E8C8B0;font-weight:700;font-size:14px;margin-bottom:12px;line-height:1.5;}
+#resultPanel.hifi .res-tip{text-align:center;font-size:11px;color:#B99A6E;margin:10px 0 4px;line-height:1.6;padding:8px 10px;background:rgba(0,0,0,.2);border-radius:10px;}
+
+/* 复盘:可折叠 */
+#resultPanel.hifi .res-report{margin-top:6px;margin-bottom:4px;}
+#resultPanel.hifi .res-report .res-report-toggle{display:block;width:100%;text-align:center;font-size:11px;color:#B99A6E;font-weight:800;background:none;border:1px solid rgba(245,194,66,.18);border-radius:10px;padding:6px 0;cursor:pointer;}
+#resultPanel.hifi .res-report .res-report-body{display:none;margin-top:6px;padding:10px 12px;background:rgba(0,0,0,.25);border-radius:10px;font-size:11px;color:#C9B48A;line-height:1.8;}
+#resultPanel.hifi .res-report.open .res-report-body{display:block;}
 /* 局内「待部署水果营」弹窗:统一烫金(审计 #6)*/
 #overflowPopup.hifi{background:rgba(10,6,3,.66);}
 #overflowPopup.hifi .panel-inner{background:linear-gradient(180deg,#3E2716,#241206);border:2px solid #F5C242;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.6);color:#F3E3C0;}

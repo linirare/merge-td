@@ -245,7 +245,11 @@ let last = 0;
 function reportHtml() {
   const report = state.lastBattleReport;
   if (!report || !report.tips || report.tips.length === 0) return '';
-  return `<br><span style="color:#ffc93c">战斗复盘</span><br>${report.tips.slice(0, 6).map(t => `· ${t}`).join('<br>')}`;
+  return '<div class="res-report">' +
+    '<div class="res-report-toggle" onclick="this.parentElement.classList.toggle(\'open\')">📋 战斗复盘</div>' +
+    '<div class="res-report-body"><span class="res-report-title">📋 战斗复盘</span>' +
+    report.tips.slice(0, 6).map(t => '· ' + t).join('<br>') +
+    '</div></div>';
 }
 
 function onGameOver(win) {
@@ -278,14 +282,16 @@ function onGameOver(win) {
       <div class="res-hero">${starsHtml}</div>
       <div class="res-stat-row">
         <div class="res-stat"><span class="res-num">${elapsed}</span><span class="res-lbl">秒</span></div>
-        <div class="res-stat"><span class="res-num">${Math.round(wallRatio * 100)}%</span><span class="res-lbl">果堡剩余</span></div>
+        <div class="res-stat"><span class="res-num">${Math.round(wallRatio * 100)}%</span><span class="res-lbl">果堡</span></div>
         <div class="res-stat"><span class="res-num">${state.kills}</span><span class="res-lbl">击破</span></div>
         <div class="res-stat"><span class="res-num">${state.merges}</span><span class="res-lbl">合成</span></div>
       </div>
-      <div class="res-reward">🪙 <b>+${totalReward}</b> 金币入库${bonus > 0 ? ' <small>(含星级+' + bonus + ')</small>' : ''}</div>
-      ${bestType ? '<div class="res-mvp">🏅 王牌 · <b>' + bestType + '</b> ' + state.maxSoldierAtk + '攻</div>' : ''}
-      ${reportHtml() ? '<div class="res-report">' + reportHtml() + '</div>' : ''}
+      <div class="res-reward">🪙 <b>+${totalReward}</b>${bonus > 0 ? ' <small>含星级奖励 +' + bonus + '</small>' : ''}</div>
+      ${bestType ? '<div class="res-mvp">🏅 王牌 <b>' + bestType + '</b> · ' + state.maxSoldierAtk + '攻</div>' : ''}
+      ${reportHtml()}
     `;
+    // 胜利加金辉
+    document.querySelector('#resultPanel .result-card')?.classList.add('win-card');
     playSfx('win');
     if (state.currentLevel >= meta.highestLevel) meta.highestLevel = state.currentLevel + 1;
     nextBtn.classList.remove('hide');
@@ -300,9 +306,11 @@ function onGameOver(win) {
         <div class="res-stat"><span class="res-num">${state.merges}</span><span class="res-lbl">合成</span></div>
         <div class="res-stat"><span class="res-num">${elapsed}</span><span class="res-lbl">秒</span></div>
       </div>
-      <div class="res-tip">💡 空格消耗果汁召唤水果营 · 双击高级水果营急派兵救线</div>
-      ${reportHtml() ? '<div class="res-report">' + reportHtml() + '</div>' : ''}
+      <div class="res-tip">💡 空格消耗果汁召唤水果营 · 双击急派兵救线</div>
+      ${reportHtml()}
     `;
+    // 失败去金辉
+    document.querySelector('#resultPanel .result-card')?.classList.remove('win-card');
     playSfx('lose');
     nextBtn.classList.add('hide');
   }
