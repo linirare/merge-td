@@ -10,6 +10,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
       - name: Deploy via Railway API
         run: |
           curl -s -X POST "https://backboard.railway.app/graphql/v2" \

@@ -1,19 +1,7 @@
 /* 水果突击 · 社交/玩法/商业化/体验/安全 综合路由 */
 const db = require('./db');
 const { authMiddleware } = require('./auth');
-
-function clampInt(value, min, max, fallback = min) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, Math.floor(n)));
-}
-
-function safeText(value, max = 32) {
-  const clean = String(value == null ? '' : value)
-    .replace(/[\u0000-\u001f\u007f<>]/g, '')
-    .trim();
-  return Array.from(clean).slice(0, max).join('');
-}
+const { clampInt, safeText, safeJsonText } = require('./util');
 
 function safeId(value, max = 64) {
   const text = safeText(value, max);
@@ -30,12 +18,6 @@ function safeRewardJson(value) {
   } catch (e) {
     return { gold: 0, gems: 0 };
   }
-}
-
-function safeJsonText(value, maxBytes = 64000) {
-  let text = typeof value === 'string' ? value : JSON.stringify(value == null ? [] : value);
-  if (Buffer.byteLength(text, 'utf8') > maxBytes) return null;
-  try { JSON.parse(text); return text; } catch (e) { return null; }
 }
 
 function mountSocial(app) {

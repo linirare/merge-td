@@ -4,6 +4,7 @@
    ============================================================ */
 const db = require('./db');
 const { authMiddleware } = require('./auth');
+const { safeText } = require('./util');
 
 function isAdmin(uid) {
   const ADMIN_UIDS = (process.env.ADMIN_UIDS || '').split(',').filter(Boolean);
@@ -13,13 +14,6 @@ function isAdmin(uid) {
 function adminMiddleware(req, res, next) {
   if (!isAdmin(req.uid)) return res.status(403).json({ error: 'Admin only' });
   next();
-}
-
-function safeText(value, max = 200) {
-  const clean = String(value == null ? '' : value)
-    .replace(/[\u0000-\u001f\u007f<>]/g, '')
-    .trim();
-  return Array.from(clean).slice(0, max).join('');
 }
 
 function mountAdmin(app) {
