@@ -9,30 +9,11 @@
 })();
 
 function patchOpeningV15() {
+  // 初始战场不再预置水果营:玩家开局获果汁能量,自行点空格召唤
   if (typeof initPlayerOpening !== 'function' || initPlayerOpening._v15Patched) return;
   initPlayerOpening = function initPlayerOpeningV15(k) {
     syncProgressUnlocks(meta);
-    const deck = activeDeck();
-    const starter = deck[0] || DEFAULT_DECK[0];
-    const second = deck[1] || starter;
-    const third = deck[2] || starter;
-    const fourth = deck[3] || second;
-    const fifth = deck[4] || third;
-
-    if (k === 1) {
-      placeBall(state.playerSlots, 1, 1, starter, 1);
-      placeBall(state.playerSlots, 2, 0, second, 1);
-      placeBall(state.playerSlots, 2, 4, third, 1);
-      return;
-    }
-
-    placeBall(state.playerSlots, 1, 1, starter, 1);
-    placeBall(state.playerSlots, 1, 2, starter, 1);
-    placeBall(state.playerSlots, 2, 0, second, 1);
-    placeBall(state.playerSlots, 2, 4, third, 1);
-    placeBall(state.playerSlots, 0, 0, fourth, 1);
-    placeBall(state.playerSlots, 0, 4, fifth, 1);
-    if (k >= 4) placeBall(state.playerSlots, 2, 2, randomType(deck), 2);
+    // 不再预置球——玩家用果汁自行召唤
   };
   initPlayerOpening._v15Patched = true;
 }

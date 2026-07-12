@@ -59,7 +59,7 @@ function applyTutorialLevelTuning(k) {
   if (k > 3) return;
 
   meta.deck = TUTORIAL_DECK.slice();
-  state.sp = Math.max(state.sp, k === 1 ? 12 : 10);
+  state.sp = Math.max(state.sp, k === 1 ? 16 : k === 2 ? 14 : 12);
   state.playerWallMax = k === 1 ? 180 : k === 2 ? 150 : 130;
   state.playerWallHp = state.playerWallMax;
   state.enemyWallMax = k === 1 ? 54 : k === 2 ? 70 : 90;
@@ -74,13 +74,13 @@ function applyTutorialLevelTuning(k) {
       ? { player: 10, enemy: 5 }
       : { player: 12, enemy: 7 };
 
-  tutorialResetPlayerOpening(k);
+  // 初始战场不再预置水果营:玩家开局获果汁自行召唤
   tutorialResetEnemyOpening(k);
 
   const msg = k === 1
-    ? '教学1：先合成葡萄，看西瓜顶线、蜜桃回血、橙子拆墙'
+    ? '教学1：点空格召唤葡萄，看西瓜顶线、蜜桃回血、橙子拆墙'
     : k === 2
-      ? '教学2：敌人开始补兵，用西瓜+葡萄稳住中线'
+      ? '教学2：敌人开始补兵，召西瓜+葡萄稳住中线'
       : '教学3：加入控制/克制，观察哪一路在接战';
   addFx(W / 2, LAYOUT.fieldY + LAYOUT.fieldH / 2, msg, THEME.gold, 13);
 }

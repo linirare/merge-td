@@ -2,7 +2,7 @@
    水果突击 · Fruit Assault —— 配置常量 / 13水果球卡组制
    ============================================================ */
 
-const W = 480, H = 854;
+const W = 480, H = 920;
 
 /* ——— 烫金暖深主题色(战斗屏着色统一:canvas→hifi_shell 烫金) ——— */
 const THEME = {
@@ -26,20 +26,20 @@ const BOARD_W = COLS * CELL + (COLS - 1) * GAP;
 const BOARD_H = ROWS * CELL + (ROWS - 1) * GAP;
 const BOARD_X = (W - BOARD_W) / 2;
 
-/* ——— Y 坐标布局：v51 五段式网格 ——— */
-const TOP_H = 42;
-const FIELD_H = 254;
+/* ——— Y 坐标布局：v51 五段式网格(战场纵向拉伸版) ——— */
+const TOP_H = 40;
+const FIELD_H = 310;
 const LAYOUT = {
   enemyInfoY:  6,
   enemyBoardY: TOP_H,
-  enemyWallY:  TOP_H + BOARD_H + 8,
+  enemyWallY:  TOP_H + BOARD_H + 6,
   wallH: 20,
-  fieldY:      TOP_H + BOARD_H + 8 + 20 + 10,
+  fieldY:      TOP_H + BOARD_H + 6 + 20 + 8,
   fieldH: FIELD_H,
-  playerWallY: TOP_H + BOARD_H + 8 + 20 + 10 + FIELD_H + 12,
-  operationY:  TOP_H + BOARD_H + 8 + 20 + 10 + FIELD_H + 12 + 28,
-  playerBoardY:TOP_H + BOARD_H + 8 + 20 + 10 + FIELD_H + 12 + 20 + 50,
-  bottomY:     TOP_H + BOARD_H + 8 + 20 + 10 + FIELD_H + 12 + 20 + 50 + BOARD_H + 8,
+  playerWallY: TOP_H + BOARD_H + 6 + 20 + 8 + FIELD_H + 8,
+  operationY:  TOP_H + BOARD_H + 6 + 20 + 8 + FIELD_H + 8 + 20,
+  playerBoardY:TOP_H + BOARD_H + 6 + 20 + 8 + FIELD_H + 8 + 20 + 40,
+  bottomY:     TOP_H + BOARD_H + 6 + 20 + 8 + FIELD_H + 8 + 20 + 40 + BOARD_H + 8,
 };
 
 /* ——— 13 个水果球：局内只从5个上阵水果中随机召唤 ——— */

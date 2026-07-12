@@ -52,21 +52,7 @@ function initBalls(slots, n, level = 1, enemy = false) {
 }
 
 function initPlayerOpening(k) {
-  const deck = activeDeck();
-  const starter = deck[0] || DEFAULT_DECK[0];
-  const second = deck[1] || starter;
-  const third = deck[2] || starter;
-  const fourth = deck[3] || second;
-  const fifth = deck[4] || third;
-
-  // 开局给一个对子，让玩家能立刻看到 build-up；其余格子体现当前卡组。
-  placeBall(state.playerSlots, 1, 1, starter, 1);
-  placeBall(state.playerSlots, 1, 2, starter, 1);
-  placeBall(state.playerSlots, 2, 0, second, 1);
-  placeBall(state.playerSlots, 2, 4, third, 1);
-  placeBall(state.playerSlots, 0, 0, fourth, 1);
-  placeBall(state.playerSlots, 0, 4, fifth, 1);
-  if (k >= 4) placeBall(state.playerSlots, 2, 2, randomType(deck), 2);
+  // 初始战场不再预置水果营:玩家开局获果汁能量,自行点空格召唤
 }
 function initEnemyOpening(k, level) {
   const plan = state.levelConfig && state.levelConfig.enemyPlan;
@@ -251,7 +237,7 @@ function initLevel(k) {
     size: 1.1 + Math.random() * 1.4,
     alpha: 0.018 + Math.random() * 0.028,
   }));
-  addFx(W / 2, LAYOUT.playerBoardY - 14, `上阵：${activeDeck().map(id => TYPES[id].icon).join(' ')} · 只刷这5种`, THEME.gold, 14);
+  addFx(W / 2, LAYOUT.playerBoardY - 14, `消耗果汁点空格召唤 · ${activeDeck().map(id => TYPES[id].icon).join(' ')} 刷这5种`, THEME.gold, 14);
   state.phase = 'playing';
   resetAI();
 }

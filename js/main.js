@@ -69,7 +69,9 @@ function resize() {
   const rect = host.getBoundingClientRect();
   const hostW = Math.max(1, rect.width || window.innerWidth);
   const hostH = Math.max(1, rect.height || window.innerHeight);
-  scale = Math.min(hostW / W, hostH / H);
+  // 高度优先:填满纵向空间,超宽部分由 #wrap overflow:hidden 居中裁切
+  scale = hostH / H;
+  if (W * scale > hostW * 1.12) scale = hostW * 1.12 / W; // 极端窄屏兜底,最多溢出12%
   canvas.style.width = W * scale + 'px';
   canvas.style.height = H * scale + 'px';
   canvas.width = W * dpr;
