@@ -4,8 +4,10 @@ html, body {
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   overflow: hidden;
   touch-action: none;
-  color: #315326;
 }
+/* 老绿皮默认文字色:仅当 hifi_shell 未生效(无 shell-v65)时用;
+   带壳时 hifi_shell 的 body{} 已设 color:#1a1c2a */
+body:not(.shell-v65) { color: #315326; }
 /* 老绿皮背景+光晕:仅当新皮 ui_redesign.css 未生效(未带 ui-redesign class)时渲染。
    带了则交给 ui_redesign.css 的 body.ui-redesign 奶油渐变接管——消除 FOUC。 */
 body:not(.shell-v65) {
@@ -129,39 +131,39 @@ body:not(.shell-v65) .btn-secondary.small { padding: 10px 0; font-size: 13px; ba
 }
 .btn-reset:hover { color: #ff5d6c; border-color: rgba(255,93,108,0.44); }
 
-#resultDetail { color: #486b35; font-size: 13.5px; text-align: center; line-height: 1.7; }
+body:not(.shell-v65) #resultDetail { color: #486b35; font-size: 13.5px; text-align: center; line-height: 1.7; }
 .result-card { border-color: #ffffff; }
 .panel-inner.wide { width: min(92vw, 420px); }
 .tech-panel { max-height: 84vh; }
 #upgradeList { width: 100%; max-height: 430px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 2px; }
 .upgrade-section { width: 100%; padding: 9px; border-radius: 16px; background: rgba(255,255,255,0.46); border: 1px solid rgba(72,174,70,0.12); }
-.upgrade-section h3 { color: #2c8d3f; font-size: 13px; margin-bottom: 7px; }
-.upgrade-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.58); border: 1px solid rgba(83,201,106,0.14); border-radius: 14px; padding: 10px 12px; cursor: pointer; transition: background 0.15s, transform 0.12s; margin-top: 6px; }
+body:not(.shell-v65) .upgrade-section h3 { color: #2c8d3f; font-size: 13px; margin-bottom: 7px; }
+body:not(.shell-v65) .upgrade-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.58); border: 1px solid rgba(83,201,106,0.14); border-radius: 14px; padding: 10px 12px; cursor: pointer; transition: background 0.15s, transform 0.12s; margin-top: 6px; }
 .upgrade-item:active { transform: scale(0.98); }
-.upgrade-item .uilabel { font-size: 14px; color: #315326; line-height: 1.35; }
-.upgrade-item .uilabel .uilevel { color: #ff9f37; }
-.upgrade-item .uilabel small { color:#6f9251;font-size:10px; }
-.upgrade-item .uicost { font-size: 13px; color: #7a995a; padding: 4px 9px; border-radius: 10px; background: rgba(255,255,255,0.68); white-space: nowrap; margin-left: 8px; }
-.upgrade-item .uicost.can-afford { color: #209b4b; background: rgba(83,201,106,0.16); }
-.upgrade-item .uicost.maxed { color: #a4b68e; }
+body:not(.shell-v65) .upgrade-item .uilabel { font-size: 14px; color: #315326; line-height: 1.35; }
+body:not(.shell-v65) .upgrade-item .uilabel .uilevel { color: #ff9f37; }
+body:not(.shell-v65) .upgrade-item .uilabel small { color:#6f9251;font-size:10px; }
+body:not(.shell-v65) .upgrade-item .uicost { font-size: 13px; color: #7a995a; padding: 4px 9px; border-radius: 10px; background: rgba(255,255,255,0.68); white-space: nowrap; margin-left: 8px; }
+body:not(.shell-v65) .upgrade-item .uicost.can-afford { color: #209b4b; background: rgba(83,201,106,0.16); }
+body:not(.shell-v65) .upgrade-item .uicost.maxed { color: #a4b68e; }
 .upgrade-item.disabled { opacity: 0.55; cursor: default; }
 .overflow-list { width:100%; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; min-height:42px; }
 
-.sim-panel { max-height: 84vh; }
-.sim-result { width: 100%; max-height: 460px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; color: #486b35; font-size: 12px; }
-.sim-head { padding: 8px 10px; border-radius: 12px; background: rgba(255,201,60,0.20); border: 1px solid rgba(255,201,60,0.26); color: #9d6c00; line-height: 1.45; }
-.sim-row { display: grid; grid-template-columns: 34px 1fr 48px 52px 70px; gap: 5px; align-items: center; padding: 7px 8px; border-radius: 12px; background: rgba(255,255,255,0.52); border: 1px solid rgba(83,201,106,0.10); }
-.sim-row.ok { border-color: rgba(83,201,106,0.30); }
-.sim-row.warn { border-color: rgba(255,201,60,0.38); }
-.sim-row.bad { border-color: rgba(255,93,108,0.32); }
-.sim-row b { color: #2c8d3f; }
-.sim-row small { color: #7fa05a; }
+body:not(.shell-v65) .sim-panel { max-height: 84vh; }
+body:not(.shell-v65) .sim-result { width: 100%; max-height: 460px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; color: #486b35; font-size: 12px; }
+body:not(.shell-v65) .sim-head { padding: 8px 10px; border-radius: 12px; background: rgba(255,201,60,0.20); border: 1px solid rgba(255,201,60,0.26); color: #9d6c00; line-height: 1.45; }
+body:not(.shell-v65) .sim-row { display: grid; grid-template-columns: 34px 1fr 48px 52px 70px; gap: 5px; align-items: center; padding: 7px 8px; border-radius: 12px; background: rgba(255,255,255,0.52); border: 1px solid rgba(83,201,106,0.10); }
+body:not(.shell-v65) .sim-row.ok { border-color: rgba(83,201,106,0.30); }
+body:not(.shell-v65) .sim-row.warn { border-color: rgba(255,201,60,0.38); }
+body:not(.shell-v65) .sim-row.bad { border-color: rgba(255,93,108,0.32); }
+body:not(.shell-v65) .sim-row b { color: #2c8d3f; }
+body:not(.shell-v65) .sim-row small { color: #7fa05a; }
 
-.help-panel { text-align: left; gap: 9px; max-height: 76vh; overflow-y: auto; align-items: stretch; }
-.help-panel h2 { text-align: center; }
-.help-section { padding: 9px 10px; border-radius: 14px; background: rgba(255,255,255,0.50); border: 1px solid rgba(83,201,106,0.12); }
-.help-section h3 { color: #2c8d3f; font-size: 13px; margin-bottom: 4px; }
-.help-section p { color: #486b35; font-size: 12px; line-height: 1.65; }
+body:not(.shell-v65) .help-panel { text-align: left; gap: 9px; max-height: 76vh; overflow-y: auto; align-items: stretch; }
+body:not(.shell-v65) .help-panel h2 { text-align: center; }
+body:not(.shell-v65) .help-section { padding: 9px 10px; border-radius: 14px; background: rgba(255,255,255,0.50); border: 1px solid rgba(83,201,106,0.12); }
+body:not(.shell-v65) .help-section h3 { color: #2c8d3f; font-size: 13px; margin-bottom: 4px; }
+body:not(.shell-v65) .help-section p { color: #486b35; font-size: 12px; line-height: 1.65; }
 .red { color:#ff5d6c; } .green { color:#2eb45a; } .blue { color:#4db6ff; } .gold { color:#ff9f37; }
 
 @media (orientation: landscape) and (max-height: 500px) { #rotate-hint { display: flex !important; } }
