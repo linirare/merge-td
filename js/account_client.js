@@ -19,24 +19,42 @@
 
     async register(email, password, nickname) {
       const r = await this.api('POST', '/api/auth/register', { email, password, nickname });
-      if (r.token) { this.token = r.token; this.user = r; }
+      if (r.token) { this.token = r.token; this.user = r; this._saveToken(); }
       return r;
     },
 
     async login(email, password) {
       const r = await this.api('POST', '/api/auth/login', { email, password });
       if (r.token) {
-        this.token = r.token; this.user = r;
+        this.token = r.token; this.user = r; this._saveToken();
         // 云存档恢复
         if (r.meta_json && r.meta_json !== '{}') {
           try { Object.assign(meta, JSON.parse(r.meta_json)); } catch (e) {}
         }
         if (r.shell_json && r.shell_json !== '{}') {
-          try { Object.assign(shell, JSON.parse(r.shell_json)); } catch (e) {}
+          try { Object.assign(window.shell || {}, JSON.parse(r.shell_json)); } catch (e) {}
         }
       }
       return r;
     },
+
+    // —— 会话保持:token 存 localStorage,刷新后 restoreSession 免重登 ——
+    _saveToken() { try { localStorage.setItem('fa_token', this.token || ''); } catch (e) {} },
+    logout() { this.token = null; this.user = null; try { localStorage.removeItem('fa_token'); } catch (e) {} },
+    async loadSave() { return this.api('GET', '/api/save'); },
+    async restoreSession() {
+      let t; try { t = localStorage.getItem('fa_token'); } catch (e) {}
+      if (!t) return { ok: false };
+      this.token = t;
+      try {
+        const prof = await this.api('GET', '/api/user/profile');
+        if (!prof || prof.error || prof.level === undefined) { this.logout(); return { ok: false }; }
+        this.user = prof;
+        const save = await this.loadSave();
+        return { ok: true, meta_json: save && save.meta_json, shell_json: save && save.shell_json };
+      } catch (e) { this.logout(); return { ok: false }; }
+    },
+    async sendChat(text) { return this.api('POST', '/api/chat', { text }); },
 
     async saveToCloud() {
       if (!this.token || !this.user) return;

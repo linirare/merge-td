@@ -922,7 +922,7 @@
       if (account.user) account.user.nickname = name;
       hifiToast('资料已保存'); renderHome();
     });
-    body.querySelector('#pfLogout')?.addEventListener('click', () => { account.token = null; account.user = null; hifiToast('已退出登录'); closeSheet(); renderHome(); });
+    body.querySelector('#pfLogout')?.addEventListener('click', () => { if (window.account && account.logout) account.logout(); else { account.token = null; account.user = null; } hifiToast('已退出登录'); closeSheet(); showLoginGate(); });
   }
 
   function openMail() {
@@ -941,17 +941,22 @@
     const body = openSheet('世界聊天', '<div class="chat-msgs" id="hifiChatMsgs"></div><div class="chat-in"><input id="hifiChatIn" placeholder="说点什么…" maxlength="60"><button class="gbtn" id="hifiChatSend" style="min-height:44px;padding:10px 16px">发送</button></div>');
     const msgs = body.querySelector('#hifiChatMsgs');
     const showEmpty = (m) => { msgs.innerHTML = `<div style="text-align:center;color:#8a7a5a;padding:24px;font-weight:800;line-height:1.8;margin:auto">${m || '暂无消息'}</div>`; };
-    if (!(window.account && account.chatMessages)) { showEmpty('登录联网后进入世界频道'); }
-    else account.chatMessages().then(l => {
+    const myUid = (account.user && account.user.uid) || '';
+    function renderMsgs(l) {
       if (!Array.isArray(l) || !l.length) { showEmpty('世界频道暂时安静…'); return; }
-      msgs.innerHTML = l.map(c => `<div class="cmsg ${c.me ? 'me' : ''}"><span class="ca"><svg class="icon"><use href="#i-user"/></svg></span><div class="cb"><div class="nm">${escapeHtml(c.nickname || c.nick || c.n || '玩家')}</div><div class="tx">${escapeHtml(c.text || c.m || '')}</div></div></div>`).join('');
+      msgs.innerHTML = l.map(c => `<div class="cmsg ${c.uid && c.uid === myUid ? 'me' : ''}"><span class="ca"><svg class="icon"><use href="#i-user"/></svg></span><div class="cb"><div class="nm">${escapeHtml(c.nickname || c.nick || c.n || '玩家')}</div><div class="tx">${escapeHtml(c.text || c.m || '')}</div></div></div>`).join('');
       msgs.scrollTop = msgs.scrollHeight;
-    }).catch(() => showEmpty('聊天加载失败'));
-    body.querySelector('#hifiChatSend')?.addEventListener('click', () => {
+    }
+    function reload() { if (account.chatMessages) account.chatMessages().then(renderMsgs).catch(() => showEmpty('聊天加载失败')); }
+    if (!(window.account && account.chatMessages)) { showEmpty('登录联网后进入世界频道'); }
+    else reload();
+    body.querySelector('#hifiChatSend')?.addEventListener('click', async () => {
       const inp = body.querySelector('#hifiChatIn');
-      if (!(inp.value || '').trim()) return;
-      hifiToast(loggedIn() ? '世界聊天发送需服务器接口(开发中)' : '登录联网后可发言');
+      const text = (inp.value || '').trim();
+      if (!text) return;
+      if (!(loggedIn() && account.sendChat)) { hifiToast('请先登录后发言'); return; }
       inp.value = '';
+      try { await account.sendChat(text); reload(); } catch (e) { hifiToast('发送失败,请重试'); }
     });
   }
 
@@ -1270,6 +1275,77 @@
     prevPhase = state.phase;
   }
 
+  // —— 强制登录门 + 本地进度重置(修:游客进度串进新账号) ——
+  function resetLocalProgress() {
+    if (typeof createMeta === 'function') {
+      const d = createMeta();
+      Object.keys(meta).forEach(k => { delete meta[k]; });
+      Object.assign(meta, d);
+    }
+    const fresh = { gems: 0, fragments: {}, fruitLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0 };
+    Object.keys(shell).forEach(k => { delete shell[k]; });
+    Object.assign(shell, fresh);
+  }
+  function applyCloudSave(r) {
+    if (r && r.meta_json && r.meta_json !== '{}') { try { Object.assign(meta, JSON.parse(r.meta_json)); } catch (e) {} }
+    if (r && r.shell_json && r.shell_json !== '{}') { try { Object.assign(shell, JSON.parse(r.shell_json)); } catch (e) {} }
+  }
+  function hideLoginGate() { document.getElementById('hifiLoginGate')?.remove(); }
+  function showLoginGate() {
+    if (loggedIn()) return;
+    let gate = document.getElementById('hifiLoginGate');
+    if (!gate) {
+      gate = document.createElement('div');
+      gate.id = 'hifiLoginGate';
+      gate.className = 'hifi';
+      gate.style.cssText = 'position:fixed;inset:0;z-index:3000;background:radial-gradient(120% 90% at 50% 0%,#3a2a16,#1c140b);display:flex;align-items:center;justify-content:center;padding:24px';
+      document.body.appendChild(gate);
+    }
+    renderLoginGate(gate);
+  }
+  function renderLoginGate(gate) {
+    const isReg = authMode === 'register';
+    gate.innerHTML = `
+      <div style="width:100%;max-width:330px">
+        <h1 style="font-family:'ZCOOL KuaiLe';font-size:32px;color:#FFE9A8;text-align:center;margin:0 0 2px;text-shadow:0 2px 0 #8a5a10">水果突击</h1>
+        <p style="text-align:center;color:#c9b78a;font-weight:700;margin:0 0 18px;font-size:12.5px">登录后开始 · 云端存档 / 对战 / 排行</p>
+        <div class="ltabs">
+          <button class="ltab ${!isReg ? 'on' : ''}" data-g="login">登录</button>
+          <button class="ltab ${isReg ? 'on' : ''}" data-g="register">注册</button>
+        </div>
+        <input class="linput" id="gEmail" type="text" placeholder="邮箱" autocomplete="off">
+        <input class="linput" id="gPass" type="password" placeholder="密码">
+        ${isReg ? '<input class="linput" id="gNick" type="text" placeholder="昵称(可留空)" maxlength="12">' : ''}
+        <button class="gbtn blk" id="gGo" style="margin-top:8px">${isReg ? '注册并开始' : '登录并开始'}</button>
+        <p id="gErr" style="text-align:center;color:#ff9a9a;font-weight:700;font-size:12px;min-height:16px;margin:8px 0 0"></p>
+      </div>`;
+    gate.querySelectorAll('[data-g]').forEach(b => b.addEventListener('click', () => { authMode = b.dataset.g; renderLoginGate(gate); }));
+    const setErr = (m) => { const e = gate.querySelector('#gErr'); if (e) e.textContent = m || ''; };
+    gate.querySelector('#gGo')?.addEventListener('click', async () => {
+      const email = (gate.querySelector('#gEmail').value || '').trim();
+      const pass = gate.querySelector('#gPass').value || '';
+      if (!email || !pass) { setErr('请填写邮箱和密码'); return; }
+      if (!(window.account && account.register)) { setErr('无法连接服务器'); return; }
+      const btn = gate.querySelector('#gGo'); btn.disabled = true; setErr('');
+      try {
+        resetLocalProgress(); // 登录/注册都从干净本地态开始,防游客进度串档(注册→保持fresh;登录→云存档覆盖)
+        const r = isReg
+          ? await account.register(email, pass, (gate.querySelector('#gNick')?.value || '').trim())
+          : await account.login(email, pass);
+        if (r && r.token) {
+          if (isReg) { ensureShellData(); saveAll(); } // 新账号:fresh 落地 localStorage + 推云
+          hideLoginGate(); ensureShellData(); refreshResourceNumbers(); renderHome();
+        } else { setErr((r && r.error) ? r.error : '失败,请重试'); btn.disabled = false; }
+      } catch (e) { setErr('连接失败,请检查服务器'); btn.disabled = false; }
+    });
+  }
+  async function bootAuth() {
+    try {
+      const s = (window.account && account.restoreSession) ? await account.restoreSession() : { ok: false };
+      if (s && s.ok) { resetLocalProgress(); applyCloudSave(s); hideLoginGate(); ensureShellData(); refreshResourceNumbers(); renderHome(); }
+    } catch (e) {}
+  }
+
   function init() {
     ensureShellData();
     document.body.classList.add('shell-v65');
@@ -1294,6 +1370,9 @@
     showTab('home');
     setInterval(syncNavVisibility, 180);
     syncNavVisibility();
+    // 强制登录:立即遮门(防闪现),再异步尝试恢复会话——能恢复就撤门进游戏
+    showLoginGate();
+    bootAuth();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

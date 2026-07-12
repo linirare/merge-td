@@ -135,6 +135,22 @@ app.get('/api/leaderboard/:type', (req, res) => {
 
 const chatMessages = [];
 app.get('/api/chat', (req, res) => res.json(chatMessages.slice(-50)));
+// 世界聊天发送:登录态,昵称一律取服务端 DB 真昵称(杜绝冒充),消息净化+限长,数组封顶
+app.post('/api/chat', authMiddleware, (req, res) => {
+  const text = safeText((req.body || {}).text, 120);
+  if (!text) return res.status(400).json({ error: 'empty message' });
+  const u = db.prepare('SELECT nickname FROM users WHERE uid = ?').get(req.uid) || {};
+  const msg = { uid: req.uid, nickname: safeText(u.nickname || '玩家', 24), text, ts: Date.now() };
+  chatMessages.push(msg);
+  if (chatMessages.length > 200) chatMessages.splice(0, chatMessages.length - 200);
+  return res.json({ ok: true, message: msg });
+});
+
+// 登录态恢复存档(刷新/换设备后 restoreSession 用)
+app.get('/api/save', authMiddleware, (req, res) => {
+  const save = db.prepare('SELECT meta_json, shell_json FROM user_saves WHERE uid = ?').get(req.uid) || {};
+  res.json({ meta_json: save.meta_json || '{}', shell_json: save.shell_json || '{}' });
+});
 
 // Admin
 const { mountAdmin } = require('./admin');
