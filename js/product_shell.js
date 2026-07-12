@@ -459,7 +459,7 @@
   function hifiDisc(id, size) {
     const t = fruit(id);
     const col = t.color || '#F5C242';
-    return `<span class="fdisc" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.88)}px">${t.icon || '🍏'}</span>`;
+    return `<span class="fdisc" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 1.0)}px">${t.icon || '🍏'}</span>`;
   }
   function roleZh(r) { return ROLE_ZH[r] || r || '单位'; }
   function skillZh(t) { return SKILL_ZH[t.skill] || '专属技能'; }
@@ -522,7 +522,7 @@
       }
       const lv = initLv(id);
       const stars = Array.from({ length: Math.min(5, lv) }, () => '<svg class="icon"><use href="#i-star"/></svg>').join('');
-      return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 38)}<span class="nm">${t.name}</span><span class="stars">${stars}</span></button>`;
+      return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 38)}<span class="stars">${stars}</span><span class="nm">${t.name}</span></button>`;
     }).join('') || '<div style="grid-column:1/-1;text-align:center;color:#8a7a5a;font-weight:800;padding:24px">该职责暂无英雄</div>';
 
     root.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => { squadFilter = btn.dataset.filter; renderSquad(); }));
