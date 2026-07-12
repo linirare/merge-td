@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>水果突击 · 运营管理后台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{--gold:#F5C242;--gold-d:#B5750A;--bg:#14100b;--panel:#211810;--panel2:#2a1f14;--line:#3a2c1c;--fg:#F3E3C0;--muted:#A8926C;--ruby:#E23B4E;--jade:#2FBF71;--gem:#38C6E8;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Nunito','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--fg);display:flex;min-height:100vh;}
+  .display{font-family:'ZCOOL KuaiLe',sans-serif;}
+  .icon{width:1em;height:1em;display:inline-block;vertical-align:-.15em;}
+  button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit;}
+  a{color:inherit;text-decoration:none;}
+
+  /* sidebar */
+  .side{width:230px;flex:none;background:linear-gradient(180deg,#2a1f14,#1a130c);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 12px;position:sticky;top:0;height:100vh;}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;border-bottom:1px solid var(--line);margin-bottom:12px;}
+  .brand .logo{width:38px;height:38px;border-radius:11px;background:radial-gradient(circle at 38% 30%,#FFE9A8,#E8A317 60%,#B5750A);display:grid;place-items:center;box-shadow:0 3px 8px rgba(0,0,0,.4);}
+  .brand .logo .icon{width:22px;height:22px;color:#5A0E0E;}
+  .brand b{font-family:'ZCOOL KuaiLe';font-size:17px;color:var(--gold);}
+  .brand small{display:block;font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;}
+  .nav{display:flex;flex-direction:column;gap:4px;flex:1;}
+  .nav a{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;font-weight:800;font-size:14px;color:var(--muted);transition:.15s;}
+  .nav a .icon{width:20px;height:20px;}
+  .nav a:hover{background:rgba(245,194,66,.08);color:var(--fg);}
+  .nav a.on{background:linear-gradient(90deg,rgba(245,194,66,.22),rgba(245,194,66,.06));color:var(--gold);box-shadow:inset 3px 0 0 var(--gold);}
+  .side .me{display:flex;align-items:center;gap:10px;padding:10px;border-top:1px solid var(--line);margin-top:8px;}
+  .side .me .av{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#8B6CC0,#4A2D7A);display:grid;place-items:center;}
+  .side .me .av .icon{width:18px;height:18px;color:#fff;}
+  .side .me b{font-size:13px;} .side .me small{display:block;font-size:11px;color:var(--muted);}
+
+  /* main */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .top{display:flex;align-items:center;gap:14px;padding:16px 26px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5;}
+  .top h1{font-family:'ZCOOL KuaiLe';font-size:22px;color:var(--fg);flex:none;}
+  .top .search{flex:1;max-width:340px;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;color:var(--muted);}
+  .top .search input{flex:1;background:none;border:0;color:var(--fg);font-weight:700;outline:none;font-family:inherit;}
+  .top .sp{flex:1;}
+  .top .badge-live{display:flex;align-items:center;gap:6px;font-weight:800;font-size:13px;color:var(--jade);}
+  .top .badge-live .dot{width:9px;height:9px;border-radius:50%;background:var(--jade);box-shadow:0 0 0 4px rgba(47,191,113,.2);}
+
+  .content{padding:24px 26px;overflow-y:auto;}
+  .page{display:none;} .page.on{display:block;animation:fade .2s;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px;}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;position:relative;overflow:hidden;}
+  .stat .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:12px;}
+  .stat .ic .icon{width:24px;height:24px;color:#fff;}
+  .stat b{font-family:'ZCOOL KuaiLe';font-size:30px;color:var(--fg);display:block;}
+  .stat span{font-size:13px;color:var(--muted);font-weight:800;}
+  .stat .up{position:absolute;top:16px;right:16px;font-size:12px;font-weight:800;color:var(--jade);}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:20px;}
+  .panel h3{font-family:'ZCOOL KuaiLe';font-size:18px;color:var(--gold);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .panel h3 .icon{width:20px;height:20px;}
+
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th{text-align:left;padding:10px 14px;color:var(--muted);font-weight:800;font-size:12px;border-bottom:2px solid var(--line);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
+  td{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700;white-space:nowrap;}
+  .pager{display:flex;justify-content:flex-end;gap:6px;margin-top:16px;}
+  .pager button{min-width:34px;height:34px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-weight:800;}
+  .pager button.on{background:linear-gradient(180deg,#F5C242,#E8A317);color:#3a1e08;border-color:var(--gold-d);}
+  tr:hover td{background:rgba(245,194,66,.04);}
+  .uid-cell{font-family:'Nunito';color:var(--muted);}
+  .tag{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;}
+  .tag.on{background:rgba(47,191,113,.18);color:var(--jade);}
+  .tag.ban{background:rgba(226,59,78,.18);color:var(--ruby);}
+  .tag.new{background:rgba(56,198,232,.18);color:var(--gem);}
+  .tag.gold{background:rgba(245,194,66,.18);color:var(--gold);}
+  .op{display:inline-flex;gap:6px;}
+  .op button{font-size:12px;font-weight:800;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);}
+  .op button:hover{border-color:var(--gold);color:var(--gold);}
+  .op button.danger:hover{border-color:var(--ruby);color:var(--ruby);}
+  .av-s{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#8B6CC0,#4A2D7A);display:inline-grid;place-items:center;vertical-align:middle;margin-right:8px;}
+  .av-s .icon{width:16px;height:16px;color:#fff;}
+
+  /* forms */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-weight:800;font-size:13px;color:var(--muted);margin-bottom:6px;}
+  .field input,.field select,.field textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font-weight:700;font-family:inherit;outline:none;}
+  .field input:focus,.field select,.field textarea:focus{border-color:var(--gold);}
+  .field textarea{min-height:110px;resize:vertical;}
+  .attach{display:flex;gap:10px;}
+  .attach .a{flex:1;display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px;font-weight:800;}
+  .attach .a .icon{width:18px;height:18px;} .attach .a input{width:56px;padding:5px;text-align:center;}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-family:'ZCOOL KuaiLe';font-size:16px;color:#3a1e08;padding:11px 22px;border-radius:11px;
+    background:linear-gradient(180deg,#FFE9A8,#F5C242 55%,#E8A317);border:1px solid var(--gold-d);box-shadow:0 4px 0 var(--gold-d);}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--gold-d);}
+  .btn .icon{width:18px;height:18px;}
+  .btn.ghost{background:var(--bg);color:var(--fg);border:1px solid var(--line);box-shadow:none;}
+  .radio{display:flex;gap:10px;}
+  .radio label{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:800;cursor:pointer;}
+  .radio input{display:none;} .radio input:checked + span{color:var(--gold);}
+  .radio label:has(input:checked){border-color:var(--gold);background:rgba(245,194,66,.1);}
+  .chatrow{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--line);}
+  .chatrow .tx{flex:1;font-weight:700;}
+  .chatrow .who{color:var(--gold);font-weight:800;margin-right:8px;}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#2a1f14;border:1px solid var(--gold);color:var(--gold);font-weight:800;padding:12px 22px;border-radius:12px;opacity:0;transition:.3s;box-shadow:0 10px 24px rgba(0,0,0,.5);z-index:99;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><circle cx="17" cy="9" r="2.6"/><path d="M2.5 20c0-3.2 2.6-5.5 5.5-5.5s5.5 2.3 5.5 5.5M15 20c0-2.4 1.2-4 3-4.4"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6zM10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M12 8S11 3 8 3a2.5 2.5 0 0 0 0 5zM12 8s1-5 4-5a2.5 2.5 0 0 1 0 5z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#FFCB3D" stroke="#B5750A" stroke-width="1.6"/><path d="M12 8v8M9.6 10c0-1 1-1.5 2.4-1.5s2.4.5 2.4 1.5-1 1.4-2.4 1.4-2.4.5-2.4 1.5 1 1.5 2.4 1.5 2.4-.5 2.4-1.5" fill="none" stroke="#B5750A" stroke-width="1.3" stroke-linecap="round"/></symbol>
+  <symbol id="i-gem" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z" fill="#38C6E8" stroke="#0E86A0" stroke-width="1.3" stroke-linejoin="round"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 1-3s-1 3 1 4c0-3 3-4 3-6 0-2-1-3-1-5z" fill="currentColor"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></symbol>
+</svg>
+
+<aside class="side">
+  <div class="brand"><span class="logo"><svg class="icon"><use href="#i-flame"/></svg></span><div><b>水果突击</b><small>运营管理后台</small></div></div>
+  <nav class="nav" id="nav">
+    <a class="on" data-p="dash" onclick="go('dash',this)"><svg class="icon"><use href="#i-grid"/></svg>数据概览</a>
+    <a data-p="users" onclick="go('users',this)"><svg class="icon"><use href="#i-users"/></svg>用户管理</a>
+    <a data-p="mail" onclick="go('mail',this)"><svg class="icon"><use href="#i-mail"/></svg>邮件下发</a>
+    <a data-p="notice" onclick="go('notice',this)"><svg class="icon"><use href="#i-bell"/></svg>公告管理</a>
+    <a data-p="chat" onclick="go('chat',this)"><svg class="icon"><use href="#i-chat"/></svg>聊天管理</a>
+    <a data-p="res" onclick="go('res',this)"><svg class="icon"><use href="#i-gift"/></svg>资源发放</a>
+  </nav>
+  <div class="me"><span class="av"><svg class="icon"><use href="#i-user"/></svg></span><div><b>admin</b><small>超级管理员</small></div></div>
+</aside>
+
+<div class="main">
+  <div class="top">
+    <h1 id="pageTitle">数据概览</h1>
+    <div class="search"><svg class="icon"><use href="#i-search"/></svg><input placeholder="搜索 UID / 昵称…" /></div>
+    <span class="sp"></span>
+    <span class="badge-live"><span class="dot"></span>服务在线 · 当前 1,284 人</span>
+  </div>
+
+  <div class="content">
+    <!-- 数据概览 -->
+    <div class="page on" id="p-dash">
+      <div class="stats">
+        <div class="stat"><span class="up">▲ 6.2%</span><div class="ic" style="background:linear-gradient(160deg,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-users"/></svg></div><b>48,203</b><span>累计注册</span></div>
+        <div class="stat"><span class="up">▲ 12%</span><div class="ic" style="background:linear-gradient(160deg,#8FE0A0,#2E9A56)"><svg class="icon"><use href="#i-user"/></svg></div><b>1,842</b><span>今日新增</span></div>
+        <div class="stat"><div class="ic" style="background:linear-gradient(160deg,#F0C24A,#B5750A)"><svg class="icon"><use href="#i-flame"/></svg></div><b>1,284</b><span>当前在线</span></div>
+        <div class="stat"><span class="up">▲ 3.4%</span><div class="ic" style="background:linear-gradient(160deg,#C79BE8,#6D2D9A)"><svg class="icon"><use href="#i-gem"/></svg></div><b>¥ 26,540</b><span>今日流水</span></div>
+      </div>
+      <div class="panel">
+        <h3><svg class="icon"><use href="#i-users"/></svg>最新注册</h3>
+        <table><thead><tr><th>UID</th><th>昵称</th><th>渠道</th><th>注册时间</th><th>状态</th></tr></thead><tbody id="recentReg"></tbody></table>
+      </div>
+    </div>
+
+    <!-- 用户管理 -->
+    <div class="page" id="p-users">
+      <div class="panel">
+        <h3><svg class="icon"><use href="#i-users"/></svg>用户列表</h3>
+        <table><thead><tr><th>UID</th><th>昵称</th><th>等级</th><th>战力</th><th>段位</th><th>注册时间</th><th>状态</th><th>操作</th></tr></thead><tbody id="userTable"></tbody></table>
+        <div class="pager"><button>‹</button><button class="on">1</button><button>2</button><button>3</button><button>…</button><button>1284</button><button>›</button></div>
+      </div>
+    </div>
+
+    <!-- 邮件下发 -->
+    <div class="page" id="p-mail">
+      <div class="grid2">
+        <div class="panel">
+          <h3><svg class="icon"><use href="#i-mail"/></svg>发送系统邮件</h3>
+          <div class="field"><label>收件人</label><div class="radio"><label><input type="radio" name="mailto" checked><span>全服玩家</span></label><label><input type="radio" name="mailto"><span>指定 UID</span></label></div></div>
+          <div class="field"><label>标题</label><input placeholder="例:v1.2 版本更新补偿" /></div>
+          <div class="field"><label>正文</label><textarea placeholder="亲爱的果园园长…"></textarea></div>
+          <div class="field"><label>附件奖励</label><div class="attach">
+            <span class="a"><svg class="icon"><use href="#i-coin"/></svg>金币<input value="500"/></span>
+            <span class="a"><svg class="icon"><use href="#i-gem"/></svg>钻石<input value="50"/></span>
+            <span class="a"><svg class="icon"><use href="#i-gift"/></svg>碎片<input value="0"/></span>
+          </div></div>
+          <button class="btn" onclick="toast('邮件已下发至全服 48,203 名玩家')"><svg class="icon"><use href="#i-send"/></svg>发送邮件</button>
+        </div>
+        <div class="panel">
+          <h3><svg class="icon"><use href="#i-mail"/></svg>已发送记录</h3>
+          <table><thead><tr><th>标题</th><th>范围</th><th>时间</th><th>领取率</th></tr></thead><tbody id="mailLog"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 公告管理 -->
+    <div class="page" id="p-notice">
+      <div class="grid2">
+        <div class="panel">
+          <h3><svg class="icon"><use href="#i-bell"/></svg>发布公告</h3>
+          <div class="field"><label>公告标题</label><input placeholder="例:五一无尽果园活动开启" /></div>
+          <div class="field"><label>公告内容</label><textarea placeholder="活动时间 / 规则 / 奖励…"></textarea></div>
+          <div class="field"><label>生效时间</label><input type="text" value="2026-07-12 12:00 ~ 2026-07-20 23:59" /></div>
+          <button class="btn" onclick="toast('公告已发布,客户端将实时推送')"><svg class="icon"><use href="#i-send"/></svg>发布公告</button>
+        </div>
+        <div class="panel">
+          <h3><svg class="icon"><use href="#i-bell"/></svg>已发布公告</h3>
+          <table><thead><tr><th>标题</th><th>状态</th><th>发布时间</th><th>操作</th></tr></thead><tbody id="noticeLog"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 聊天管理 -->
+    <div class="page" id="p-chat">
+      <div class="panel">
+        <h3><svg class="icon"><use href="#i-chat"/></svg>世界频道 · 实时消息</h3>
+        <div id="chatMod"></div>
+      </div>
+    </div>
+
+    <!-- 资源发放 -->
+    <div class="page" id="p-res">
+      <div class="panel" style="max-width:520px">
+        <h3><svg class="icon"><use href="#i-gift"/></svg>快捷资源发放</h3>
+        <div class="field"><label>目标 UID</label><input placeholder="输入玩家 UID,留空=全服" /></div>
+        <div class="field"><label>资源类型</label><select><option>金币</option><option>钻石</option><option>碎片(指定英雄)</option><option>改名卡</option></select></div>
+        <div class="field"><label>数量</label><input value="1000" /></div>
+        <div class="field"><label>发放理由(记录日志)</label><input placeholder="例:客服补偿 / 活动奖励" /></div>
+        <button class="btn" onclick="toast('资源已发放,操作已记入日志')"><svg class="icon"><use href="#i-send"/></svg>确认发放</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+  const API = window.location.origin;
+  let TOKEN = '';
+  try { TOKEN = localStorage.getItem('fa_token') || ''; } catch(e) {}
+  if (!TOKEN) { document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#F5C242;font-family:ZCOOL KuaiLe;font-size:24px">请在游戏中登录管理员账号后,<br>访问 /admin?token=你的token</div>'; }
+
+  function authHeaders() { const h = {}; if (TOKEN) h['Authorization'] = 'Bearer ' + TOKEN; h['Content-Type'] = 'application/json'; return h; }
+  async function api(method, path, body) {
+    const opts = { method, headers: authHeaders() };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(API + path, opts);
+    if (r.status === 403) throw new Error('无管理员权限');
+    if (!r.ok) throw new Error(r.status + ' ' + (await r.text().catch(()=>'')));
+    return r.json();
+  }
+  let tt; function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2200); }
+  const av = '<span class="av-s"><svg class="icon"><use href="#i-user"/></svg></span>';
+  function esc(v) { return String(v || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+  const TITLES = { dash:'数据概览', users:'用户管理', mail:'邮件下发', notice:'公告管理', chat:'聊天管理', res:'资源发放' };
+  function go(p, el) {
+    document.querySelectorAll('.page').forEach(x => x.classList.remove('on'));
+    document.getElementById('p-' + p).classList.add('on');
+    document.querySelectorAll('.nav a').forEach(a => a.classList.remove('on'));
+    el.classList.add('on');
+    document.getElementById('pageTitle').textContent = TITLES[p];
+    if (p === 'dash') loadDash();
+    else if (p === 'users') loadUsers();
+    else if (p === 'chat') loadChat();
+    else if (p === 'notice') loadNotices();
+  }
+
+  // —— 数据概览 ——
+  async function loadDash() {
+    try {
+      const users = await api('GET', '/api/admin/users');
+      if (!Array.isArray(users)) return;
+      const total = users.length;
+      const today = new Date().toISOString().slice(0, 10);
+      const todayCount = users.filter(u => (u.created_at || '').slice(0, 10) === today).length;
+      document.querySelectorAll('.stat b')[0].textContent = total.toLocaleString();
+      document.querySelectorAll('.stat b')[1].textContent = todayCount.toLocaleString();
+      const recent = users.slice(0, 5);
+      document.getElementById('recentReg').innerHTML = recent.map(u => {
+        const date = (u.created_at || '').slice(0, 16).replace('T', ' ');
+        return `<tr><td class="uid-cell">${esc(u.uid)}</td><td>${av}${esc(u.nickname || '玩家')}</td><td>${u.level || 1}</td><td>${date || '-'}</td><td><span class="tag on">正常</span></td></tr>`;
+      }).join('') || '<tr><td colspan="5" style="color:var(--muted)">暂无用户</td></tr>';
+    } catch(e) { toast('加载失败: ' + e.message); }
+  }
+  loadDash();
+
+  // —— 用户管理 ——
+  async function loadUsers() {
+    try {
+      const users = await api('GET', '/api/admin/users');
+      if (!Array.isArray(users)) return;
+      document.getElementById('userTable').innerHTML = users.map(u => {
+        const date = (u.created_at || '').slice(0, 10);
+        const rank = u.ladder_rank || '新手';
+        return `<tr><td class="uid-cell">${esc(u.uid)}</td><td>${av}${esc(u.nickname || '玩家')}</td>
+          <td><span class="tag gold">Lv.${u.level || 1}</span></td><td>${(u.power || 0).toLocaleString()}</td>
+          <td>${esc(rank)}</td><td>${date}</td>
+          <td><span class="tag on">正常</span></td>
+          <td><div class="op"><button onclick="toast('给 ${esc(u.nickname)} 发邮件')">发邮件</button>
+          <button onclick="toast('给 ${esc(u.nickname)} 发资源')">发资源</button></div></td></tr>`;
+      }).join('') || '<tr><td colspan="8" style="color:var(--muted)">暂无用户</td></tr>';
+    } catch(e) { toast('加载用户失败: ' + e.message); }
+  }
+
+  // —— 邮件下发 ——
+  document.querySelector('#p-mail .btn')?.addEventListener('click', async () => {
+    const panel = document.getElementById('p-mail');
+    const title = panel.querySelector('input[placeholder*="标题"]')?.value?.trim();
+    const body = panel.querySelector('textarea')?.value?.trim();
+    const toAll = panel.querySelector('input[name="mailto"]:checked')?.parentElement?.textContent?.includes('全服');
+    const uidInput = panel.querySelector('input[placeholder*="UID"]');
+    if (!title) { toast('请输入标题'); return; }
+    try {
+      const payload = { title, body: body || '', rewards_json: '{}' };
+      if (toAll) {
+        const r = await api('POST', '/api/admin/mail-all', payload);
+        toast('已发送至全服 ' + (r.count || '') + ' 名玩家');
+      } else {
+        if (!uidInput?.value?.trim()) { toast('请输入目标UID'); return; }
+        const r = await api('POST', '/api/admin/mail', { ...payload, uid: uidInput.value.trim() });
+        toast(r.ok ? '邮件已发送' : '发送失败');
+      }
+    } catch(e) { toast('发送失败: ' + e.message); }
+  });
+
+  // —— 公告管理 ——
+  async function loadNotices() {
+    try {
+      const list = await api('GET', '/api/announcements');
+      document.getElementById('noticeLog').innerHTML = Array.isArray(list) ? list.map(n =>
+        `<tr><td>${esc(n.title)}</td><td><span class="tag ${n.active ? 'on' : ''}">${n.active ? '进行中' : '已下架'}</span></td>
+        <td>${(n.created_at || '').slice(0, 16)}</td>
+        <td><div class="op">${n.active ? '<button class="danger" onclick="delNotice(\''+esc(n.id)+'\')">下架</button>' : ''}</div></td></tr>`
+      ).join('') : '<tr><td colspan="4" style="color:var(--muted)">暂无公告</td></tr>';
+    } catch(e) { toast('加载公告失败: ' + e.message); }
+  }
+  async function delNotice(id) { try { await api('DELETE', '/api/admin/announcement/' + id); toast('已下架'); loadNotices(); } catch(e) { toast('操作失败'); } }
+  document.querySelector('#p-notice .btn')?.addEventListener('click', async () => {
+    const p = document.getElementById('p-notice');
+    const title = p.querySelector('input[placeholder*="标题"]')?.value?.trim();
+    if (!title) { toast('请输入公告标题'); return; }
+    try { const r = await api('POST', '/api/admin/announcement', { title, body: p.querySelector('textarea')?.value || '' }); if (r.ok) { toast('公告已发布'); loadNotices(); p.querySelector('input')?.value && (p.querySelector('input').value = ''); } } catch(e) { toast('发布失败: ' + e.message); }
+  });
+
+  // —— 聊天管理 ——
+  async function loadChat() {
+    try {
+      const msgs = await api('GET', '/api/admin/chat');
+      document.getElementById('chatMod').innerHTML = Array.isArray(msgs) ? msgs.map(c =>
+        `<div class="chatrow"><span class="av-s"><svg class="icon"><use href="#i-user"/></svg></span>
+        <div class="tx"><span class="who">${esc(c.nickname || '玩家')}</span>${esc(c.text || '')}</div></div>`
+      ).join('') : '<div style="color:var(--muted);padding:16px">暂无消息</div>';
+    } catch(e) { toast('加载聊天失败: ' + e.message); }
+  }
+  // 清空聊天按钮:放 chat 面板里加一个
+  document.addEventListener('DOMContentLoaded', () => {
+    const cm = document.getElementById('chatMod');
+    if (cm) {
+      const btn = document.createElement('button');
+      btn.className = 'btn'; btn.style.cssText = 'margin-top:12px';
+      btn.textContent = '清空全部聊天'; btn.addEventListener('click', async () => { try { await api('DELETE', '/api/admin/chat'); toast('已清空世界频道'); loadChat(); } catch(e) { toast('操作失败'); } });
+      cm.insertAdjacentElement('afterend', btn);
+    }
+  });
+
+  // —— 资源发放 ——
+  document.querySelector('#p-res .btn')?.addEventListener('click', async () => {
+    const p = document.getElementById('p-res');
+    const uid = p.querySelector('input[placeholder*="UID"]')?.value?.trim();
+//    const type = p.querySelector('select')?.value || '';
+    const amount = parseInt(p.querySelectorAll('input')[2]?.value) || 0;
+    if (!uid) { toast('请输入目标UID'); return; }
+    if (!amount) { toast('请输入数量'); return; }
+    try { await api('POST', '/api/admin/resource', { uid, gold: amount, diamonds: 0 }); toast('资源已发放'); } catch(e) { toast('发放失败: ' + e.message); }
+  });
+</script>
+</body>
+</html>

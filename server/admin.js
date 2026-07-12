@@ -17,6 +17,14 @@ function adminMiddleware(req, res, next) {
 }
 
 function mountAdmin(app) {
+  // 数据概览统计
+  app.get('/api/admin/stats', authMiddleware, adminMiddleware, (req, res) => {
+    const total = db.prepare('SELECT COUNT(*) as n FROM users').get().n;
+    const today = new Date().toISOString().slice(0,10);
+    const todayNew = db.prepare("SELECT COUNT(*) as n FROM users WHERE created_at LIKE ?").get(today+'%').n;
+    res.json({ total, todayNew });
+  });
+
   app.get('/api/admin/users', authMiddleware, adminMiddleware, (req, res) => {
     res.json(db.prepare('SELECT uid, email, nickname, level, exp, power, diamonds, gold, highest_stage, ladder_rank, ladder_score, created_at, last_login FROM users ORDER BY created_at DESC LIMIT 500').all());
   });
@@ -56,6 +64,24 @@ function mountAdmin(app) {
   app.delete('/api/admin/chat', authMiddleware, adminMiddleware, (req, res) => {
     const { chatMessages } = require('./index');
     chatMessages.length = 0;
+    res.json({ ok: true });
+  });
+
+  // 公告管理:创建
+  app.post('/api/admin/announcement', authMiddleware, adminMiddleware, (req, res) => {
+    const { title, body, active } = req.body || {};
+    const safeTitle = safeText(title, 120);
+    if (!safeTitle) return res.status(400).json({ error: 'title required' });
+    const id = require('crypto').randomBytes(6).toString('hex');
+    db.prepare('INSERT INTO announcements (id,title,body,active) VALUES (?,?,?,?)').run(id, safeTitle, safeText(body, 500), (active === false ? 0 : 1));
+    res.json({ ok: true, id });
+  });
+
+  // 公告管理:下架(软删除)
+  app.delete('/api/admin/announcement/:id', authMiddleware, adminMiddleware, (req, res) => {
+    const id = safeText(req.params.id, 64);
+    if (!id) return res.status(400).json({ error: 'id required' });
+    db.prepare('UPDATE announcements SET active=0 WHERE id=?').run(id);
     res.json({ ok: true });
   });
 }
