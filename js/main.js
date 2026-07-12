@@ -63,12 +63,39 @@ try {
   _rmq.addEventListener('change', e => { window.REDUCE_MOTION = e.matches; });
 } catch (e) { /* 老浏览器无 matchMedia,保持 false */ }
 
+function recalcPhoneFrame() {
+  const root = document.documentElement;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  if (vw < 470) {
+    // 手机:手机框填满视口
+    root.style.setProperty('--phone-w', vw + 'px');
+    root.style.setProperty('--phone-h', vh + 'px');
+    root.style.setProperty('--phone-left', '0px');
+    root.style.setProperty('--phone-top', '0px');
+    root.style.setProperty('--phone-scale', (vw / W).toFixed(4));
+    return;
+  }
+  // 宽屏:手机框按 480:920 比例居中,上限 550px 宽
+  const maxW = 550;
+  const idealByHeight = vh * (W / H);
+  const phoneW = Math.min(maxW, idealByHeight, vw);
+  const phoneH = phoneW * (H / W);
+  root.style.setProperty('--phone-scale', (phoneW / W).toFixed(4));
+  root.style.setProperty('--phone-w', phoneW.toFixed(1) + 'px');
+  root.style.setProperty('--phone-h', phoneH.toFixed(1) + 'px');
+  root.style.setProperty('--phone-left', ((vw - phoneW) / 2).toFixed(1) + 'px');
+  root.style.setProperty('--phone-top', ((vh - phoneH) / 2).toFixed(1) + 'px');
+}
+window.recalcPhoneFrame = recalcPhoneFrame;
+
 function resize() {
+  recalcPhoneFrame();
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const host = document.getElementById('wrap') || document.body;
   const rect = host.getBoundingClientRect();
-  // 壳内框留 10px 边距,canvas 填满剩余空间
-  const margin = 10;
+  // 壳内框留 8px 边距对齐金框内沿
+  const margin = 8;
   const availW = Math.max(1, rect.width - margin * 2);
   const availH = Math.max(1, rect.height - margin * 2);
   scale = Math.min(availW / W, availH / H);

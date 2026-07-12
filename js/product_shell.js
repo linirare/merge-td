@@ -1017,6 +1017,7 @@
   }
 
   function showTab(tab) {
+    if (typeof window.recalcPhoneFrame === 'function') window.recalcPhoneFrame();
     activeTab = tab || 'home';
     hidePanels();
     if (activeTab === 'home') {

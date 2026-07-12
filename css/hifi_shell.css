@@ -152,10 +152,35 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 
 /* 桌面下给壳屏加个手机边框(与原型一致) */
 /* 桌面 app 收成居中 550px 列(手机<430不受影响;桌面放大占更多屏幕,减少空白) */
+/* ---- 金色手机框:常驻 body::after(壳+战斗统一视觉边界) ---- */
+body.shell-v65::after{
+  content:"";position:fixed;z-index:500;pointer-events:none;
+  top:var(--phone-top,0);left:var(--phone-left,0);
+  width:var(--phone-w,100vw);height:var(--phone-h,100vh);
+  border:3px solid rgba(245,194,66,.55);border-radius:26px;
+  box-shadow:inset 0 1px 0 rgba(255,233,168,.22),0 0 24px rgba(245,194,66,.15),0 12px 40px rgba(0,0,0,.55);
+}
+@media(max-width:469px){
+  body.shell-v65::after{top:4px;left:4px;width:calc(100vw - 8px);height:calc(100vh - 8px);}
+}
+
+/* ---- 宽屏:壳面板/wrap/底栏 统一用手机框坐标 ---- */
 @media(min-width:470px){
-  #menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi,#campaignPanel.hifi{left:50%;right:auto;transform:translateX(-50%);width:550px;box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);}
-  body.shell-v65 #bottomNav.hifi,#bottomNav.hifi{left:50%;right:auto;transform:translateX(-50%);width:550px;}
-  #wrap{left:50%;right:auto;transform:translateX(-50%);width:550px;}
+  #menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi,#campaignPanel.hifi{
+    left:var(--phone-left,0);right:auto;top:var(--phone-top,0);bottom:auto;
+    width:var(--phone-w,100vw);height:var(--phone-h,100vh);
+    transform:none;box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);
+    border-radius:22px;overflow:hidden;
+  }
+  body.shell-v65 #bottomNav.hifi,#bottomNav.hifi{
+    left:var(--phone-left,0);right:auto;transform:none;
+    width:var(--phone-w,100vw);
+  }
+  #wrap{
+    left:var(--phone-left,0);right:auto;top:var(--phone-top,0);
+    width:var(--phone-w,100vw);height:var(--phone-h,100vh);
+    transform:none;
+  }
 }
 
 /* ---- 轻量占位 toast(未接后端的入口用) ---- */
@@ -491,7 +516,8 @@ body.shell-v65.battle-shell-active{
 }
 body.shell-v65.battle-shell-active #wrap{
   position:fixed;
-  inset:0;
+  top:var(--phone-top,0);left:var(--phone-left,0);
+  width:var(--phone-w,100vw);height:var(--phone-h,100vh);
   z-index:1;
   overflow:hidden;
   background:
@@ -499,17 +525,7 @@ body.shell-v65.battle-shell-active #wrap{
     url('../art/bg-clean_002.jpg') center/cover,
     #14100b;
 }
-/* 金色手机框——覆盖层,浮在 canvas 上面 */
-body.shell-v65.battle-shell-active #wrap::before{
-  content:"";
-  position:absolute;
-  inset:8px;
-  border:3px solid rgba(245,194,66,.55);
-  border-radius:26px;
-  box-shadow:inset 0 1px 0 rgba(255,233,168,.22),0 0 24px rgba(245,194,66,.15),0 12px 40px rgba(0,0,0,.55);
-  pointer-events:none;
-  z-index:3;
-}
+/* 金色手机框已移至 body::after(常驻壳+战斗) */
 body.shell-v65.battle-shell-active #game{
   position:absolute;
   z-index:2;
@@ -519,9 +535,8 @@ body.shell-v65.battle-shell-active #game{
 .battle-shell-hud{
   position:fixed;
   top:calc(env(safe-area-inset-top) + 8px);
-  left:50%;
-  transform:translateX(-50%);
-  width:min(100vw,550px);
+  left:var(--phone-left,0);
+  width:var(--phone-w,100vw);
   padding:0 10px;
   display:none;
   align-items:center;
@@ -576,10 +591,7 @@ body.shell-v65.battle-shell-active #game{
 }
 @media(min-width:470px){
   body.shell-v65.battle-shell-active #wrap{
-    left:50%;
-    right:auto;
-    transform:translateX(-50%);
-    width:550px;
+    /* 位置已由 #wrap 基础规则 + phone-* 变量统一控制,仅补阴影 */
     box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);
   }
 }
