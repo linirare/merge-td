@@ -39,7 +39,7 @@ let lastTap = { time: 0, r: -1, c: -1 };
 
 // 命中判定加 hitSlop:小按钮视觉不变、命中区外扩便于手指点中(审计 B1)。
 // 竖向多扩(顶部有空间)、横向少扩(相邻键间隙仅 6~8,避免抢命中)。
-function hitRect(p, r, padX = 6, padY = 10) {
+function hitRect(p, r, padX = 7, padY = 12) {
   return p.x >= r.x - padX && p.x <= r.x + r.w + padX &&
          p.y >= r.y - padY && p.y <= r.y + r.h + padY;
 }

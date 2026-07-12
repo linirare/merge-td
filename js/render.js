@@ -432,7 +432,7 @@ function drawFx() {
 }
 
 /* ——— 暂停按钮 ——— */
-const PAUSE_RECT = { x: W - 150, y: 4, w: 28, h: 26 };
+const PAUSE_RECT = { x: W - 158, y: 2, w: 36, h: 36 };
 
 function drawPauseBtn() {
   if (state.phase !== 'playing' && state.phase !== 'paused') return;
@@ -447,7 +447,7 @@ function drawPauseBtn() {
 }
 
 /* ——— 帮助按钮 ——— */
-const HELP_RECT = { x: W - 116, y: 4, w: 28, h: 26 };
+const HELP_RECT = { x: W - 122, y: 2, w: 36, h: 36 };
 
 function drawHelpBtn() {
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
@@ -460,7 +460,7 @@ function drawHelpBtn() {
 }
 
 /* ——— 速度控制按钮 ——— */
-const SPEED_RECT = { x: W - 80, y: 4, w: 72, h: 26 };
+const SPEED_RECT = { x: W - 86, y: 2, w: 84, h: 36 };
 
 function drawSpeedBtn() {
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
@@ -473,7 +473,7 @@ function drawSpeedBtn() {
 }
 
 /* ——— 溢出队列指示（可点击区域） ——— */
-const OVERFLOW_RECT = { x: W / 2 - 56, y: LAYOUT.bottomY + 4, w: 112, h: 30 };
+const OVERFLOW_RECT = { x: W / 2 - 56, y: LAYOUT.bottomY + 2, w: 112, h: 36 };
 
 function drawOverflowIndicator() {
   if (state.overflowQueue.length === 0) return;

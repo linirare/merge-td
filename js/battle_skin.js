@@ -24,7 +24,7 @@
         }
         state._battleFxBucketV59.n++;
         if (state._battleFxBucketV59.n > 3 && !str.includes('克制') && !str.includes('破城')) return;
-        size = Math.min(Number(size) || 12, str.includes('克制') ? 12 : 10);
+        size = Math.min(Number(size) || 14, str.includes('克制') ? 16 : 12);
       }
 
       if (isPassiveJuice && typeof LAYOUT !== 'undefined') {
@@ -323,7 +323,7 @@ function drawBossBadgeV59(s, x, y, w) {
   ctx.fill();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = '700 10px sans-serif';
+  ctx.font = '700 12px sans-serif';
   ctx.fillStyle = '#FFE9A8';
   ctx.fillText(s.name || 'BOSS', x, y + 8.5);
   ctx.restore();

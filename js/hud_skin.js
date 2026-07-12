@@ -40,7 +40,7 @@ function drawInfo() {
   ctx.textBaseline = 'middle';
   ctx.fillText(mode, x + 11, y + 12);
   ctx.fillStyle = '#C9B48A';
-  ctx.font = '800 10px sans-serif';
+  ctx.font = '700 12px sans-serif';
   ctx.fillText(desc, x + 11, y + 25);
 
   const elapsed = Math.floor(state.time || 0);
@@ -108,7 +108,7 @@ function drawOperationResourceStripV61() {
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.font = '800 10px sans-serif';
+  ctx.font = '700 12px sans-serif';
   ctx.fillStyle = canAct ? '#F3E3C0' : '#ffd1d6';
   ctx.fillText('\u679c\u6c41', x + 15, y + 14);
   ctx.font = '950 20px sans-serif';

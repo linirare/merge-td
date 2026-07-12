@@ -247,7 +247,7 @@ function drawSlotLevelBadgeV48(x, y, level, isEnemy) {
   roundRect(x + 2, y + 2, 28, 17, 7);
   ctx.fill();
   ctx.stroke();
-  ctx.font = '900 10px sans-serif';
+  ctx.font = '700 13px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#F5C242';
