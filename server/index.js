@@ -101,16 +101,17 @@ app.post('/api/mail/read', authMiddleware, (req, res) => {
   if (!b.id) return res.status(400).json({ error: 'id required' });
   const mail = db.prepare('SELECT * FROM mail WHERE id=? AND uid=?').get(b.id, req.uid);
   if (!mail) return res.status(404).json({ error: 'mail not found' });
+  let granted = null;
   if (!mail.is_read && mail.rewards_json && mail.rewards_json !== '{}') {
     try {
       const rewards = JSON.parse(mail.rewards_json);
       const g = clampInt(rewards.gold || 0, 0, 50000, 0);     // 运营邮件上限(审计C10)
       const d = clampInt(rewards.diamonds || 0, 0, 10000, 0);
-      if (g || d) db.prepare('UPDATE users SET gold=gold+?, diamonds=diamonds+? WHERE uid=?').run(g, d, req.uid);
+      if (g || d) { db.prepare('UPDATE users SET gold=gold+?, diamonds=diamonds+? WHERE uid=?').run(g, d, req.uid); granted = { gold: g, diamonds: d }; }
     } catch(e) {}
   }
   db.prepare('UPDATE mail SET is_read=1 WHERE id=? AND uid=?').run(b.id, req.uid);
-  res.json({ ok: true });
+  res.json({ ok: true, granted });
 });
 
 app.post('/api/checkin', authMiddleware, (req, res) => {
@@ -126,7 +127,10 @@ app.post('/api/checkin', authMiddleware, (req, res) => {
   res.json({ ok: true, streak, goldReward: gr, gemReward: dr });
 });
 
-app.get('/api/announcements', (req, res) => res.json(db.prepare('SELECT * FROM announcements WHERE active=1 ORDER BY created_at DESC LIMIT 5').all()));
+app.get('/api/announcements', (req, res) => {
+  const now = new Date().toISOString();
+  res.json(db.prepare(`SELECT * FROM announcements WHERE active=1 AND (start_time='' OR start_time<=?) AND (end_time='' OR end_time>=?) ORDER BY created_at DESC LIMIT 5`).all(now, now));
+});
 
 app.get('/api/leaderboard/:type', (req, res) => {
   const col = { power: 'power', stage: 'highest_stage', ladder: 'ladder_score' }[req.params.type] || 'power';

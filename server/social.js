@@ -106,7 +106,8 @@ function mountSocial(app) {
       db.prepare('UPDATE users SET gold=gold+?, diamonds=diamonds+? WHERE uid=?').run(rew.gold || 0, rew.gems || 0, req.uid);
       return res.json({ ok: true, completed: true, reward: rew });
     }
-    res.json({ ok: true, progress: up ? up.progress : 0 });
+    const current = db.prepare('SELECT progress FROM user_tasks WHERE uid=? AND task_id=?').get(req.uid, task_id);
+    res.json({ ok: true, progress: current ? current.progress : 0 });
   });
 
   /* ========== 成就 ========== */

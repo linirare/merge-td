@@ -69,10 +69,22 @@ function mountAdmin(app) {
 
   app.get('/api/admin/users', authMiddleware, adminAuth, (req, res) => {
     // 审计S1:移除email字段(防止泄露所有玩家邮箱PII)
-    const users = db.prepare('SELECT uid, nickname, level, exp, power, diamonds, gold, highest_stage, ladder_rank, ladder_score, created_at, last_login FROM users ORDER BY created_at DESC LIMIT 500').all();
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(10, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+    const q = (req.query.q || '').trim();
+    const base = 'SELECT uid, nickname, level, exp, power, diamonds, gold, highest_stage, ladder_rank, ladder_score, created_at, last_login FROM users';
+    let users, total;
+    if (q) {
+      users = db.prepare(`${base} WHERE uid LIKE ? OR nickname LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(`%${q}%`, `%${q}%`, limit, offset);
+      total = db.prepare('SELECT COUNT(*) as n FROM users WHERE uid LIKE ? OR nickname LIKE ?').get(`%${q}%`, `%${q}%`).n;
+    } else {
+      users = db.prepare(`${base} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(limit, offset);
+      total = db.prepare('SELECT COUNT(*) as n FROM users').get().n;
+    }
     const { onlineUsers } = require('./pvp-server');
-    const result = users.map(u => ({ ...u, is_online: onlineUsers ? onlineUsers.has(u.uid) : false }));
-    res.json(result);
+    const rows = users.map(u => ({ ...u, is_online: onlineUsers ? onlineUsers.has(u.uid) : false }));
+    res.json({ rows, total, page, limit });
   });
 
   app.post('/api/admin/mail', authMiddleware, adminAuth, (req, res) => {

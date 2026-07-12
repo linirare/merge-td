@@ -163,7 +163,7 @@
       <div class="panel">
         <h3><svg class="icon"><use href="#i-users"/></svg>用户列表</h3>
         <table><thead><tr><th>UID</th><th>昵称</th><th>等级</th><th>战力</th><th>段位</th><th>注册时间</th><th>状态</th><th>操作</th></tr></thead><tbody id="userTable"></tbody></table>
-        <div class="pager"><button>‹</button><button class="on">1</button><button>2</button><button>3</button><button>…</button><button>1284</button><button>›</button></div>
+        <div class="pager" id="userPager"></div>
       </div>
     </div>
 
@@ -173,6 +173,7 @@
         <div class="panel">
           <h3><svg class="icon"><use href="#i-mail"/></svg>发送系统邮件</h3>
           <div class="field"><label>收件人</label><div class="radio"><label><input type="radio" name="mailto" checked><span>全服玩家</span></label><label><input type="radio" name="mailto"><span>指定 UID</span></label></div></div>
+          <div class="field" id="uidField" style="display:none"><label>目标 UID</label><input id="mailUid" placeholder="输入玩家 UID" /></div>
           <div class="field"><label>标题</label><input placeholder="例:v1.2 版本更新补偿" /></div>
           <div class="field"><label>正文</label><textarea placeholder="亲爱的果园园长…"></textarea></div>
           <div class="field"><label>附件奖励</label><div class="attach">
@@ -180,7 +181,7 @@
             <span class="a"><svg class="icon"><use href="#i-gem"/></svg>钻石<input value="50"/></span>
             <span class="a"><svg class="icon"><use href="#i-gift"/></svg>碎片<input value="0"/></span>
           </div></div>
-          <button class="btn" onclick="toast('邮件已下发至全服 48,203 名玩家')"><svg class="icon"><use href="#i-send"/></svg>发送邮件</button>
+          <button class="btn" id="btnSendMail"><svg class="icon"><use href="#i-send"/></svg>发送邮件</button>
         </div>
         <div class="panel">
           <h3><svg class="icon"><use href="#i-mail"/></svg>已发送记录</h3>
@@ -196,8 +197,9 @@
           <h3><svg class="icon"><use href="#i-bell"/></svg>发布公告</h3>
           <div class="field"><label>公告标题</label><input placeholder="例:五一无尽果园活动开启" /></div>
           <div class="field"><label>公告内容</label><textarea placeholder="活动时间 / 规则 / 奖励…"></textarea></div>
-          <div class="field"><label>生效时间</label><input type="text" value="2026-07-12 12:00 ~ 2026-07-20 23:59" /></div>
-          <button class="btn" onclick="toast('公告已发布,客户端将实时推送')"><svg class="icon"><use href="#i-send"/></svg>发布公告</button>
+          <div class="field"><label>生效时间</label><input type="text" id="noticeStartTime" placeholder="开始时间,如 2026-07-12 12:00" /></div>
+          <div class="field"><label>结束时间</label><input type="text" id="noticeEndTime" placeholder="结束时间,如 2026-07-20 23:59" /></div>
+          <button class="btn" id="btnSendNotice"><svg class="icon"><use href="#i-send"/></svg>发布公告</button>
         </div>
         <div class="panel">
           <h3><svg class="icon"><use href="#i-bell"/></svg>已发布公告</h3>
@@ -222,7 +224,7 @@
         <div class="field"><label>资源类型</label><select id="resType"><option value="gold">金币</option><option value="diamonds">钻石</option></select></div>
         <div class="field"><label>数量</label><input value="1000" /></div>
         <div class="field"><label>发放理由(记录日志)</label><input placeholder="例:客服补偿 / 活动奖励" /></div>
-        <button class="btn" onclick="toast('资源已发放,操作已记入日志')"><svg class="icon"><use href="#i-send"/></svg>确认发放</button>
+        <button class="btn" id="btnSendRes"><svg class="icon"><use href="#i-send"/></svg>确认发放</button>
       </div>
     </div>
   </div>
@@ -294,6 +296,18 @@
     } catch(e) {}
   }
 
+  // 快捷跳转:从用户列表点"发邮件"/"发资源"时自动切换面板并填入UID
+  function openMailFor(uid) {
+    document.querySelectorAll('input[name="mailto"]').forEach(r => { if (r.parentElement.textContent.includes('指定')) r.checked = true; else r.checked = false; });
+    document.getElementById('uidField').style.display = 'block';
+    document.getElementById('mailUid').value = uid;
+    go('mail', document.querySelector('[data-p="mail"]'));
+  }
+  function openResFor(uid) {
+    document.getElementById('p-res').querySelector('input[placeholder*="UID"]').value = uid;
+    go('res', document.querySelector('[data-p="res"]'));
+  }
+
   // —— 数据概览 ——
   async function loadDash() {
     try {
@@ -305,9 +319,8 @@
       document.querySelectorAll('.stat span')[3].textContent = '付费系统待接入';
       document.querySelectorAll('.stat .up').forEach(el => el.remove());
       const el = document.getElementById('liveCount'); if (el) el.textContent = (stats.onlineCount || 0).toLocaleString();
-      const users = await api('GET', '/api/admin/users');
-      if (!Array.isArray(users)) return;
-      const recent = users.slice(0, 5);
+      const userData = await api('GET', '/api/admin/users?limit=5');
+      const recent = (userData && userData.rows) ? userData.rows : (Array.isArray(userData) ? userData : []);
       document.getElementById('recentReg').innerHTML = recent.map(u => {
         const date = (u.created_at || '').slice(0, 16).replace('T', ' ');
         return `<tr><td class="uid-cell">${esc(u.uid)}</td><td>${av}${esc(u.nickname || '玩家')}</td><td>${u.level || 1}</td><td>${date || '-'}</td><td><span class="tag on">正常</span></td></tr>`;
@@ -317,10 +330,15 @@
   loadDash();
 
   // —— 用户管理 ——
-  async function loadUsers() {
+  let userPage = 1, userQuery = '';
+  async function loadUsers(page, q) {
+    if (page !== undefined) userPage = page;
+    if (q !== undefined) userQuery = q;
     try {
-      const users = await api('GET', '/api/admin/users');
-      if (!Array.isArray(users)) return;
+      const params = new URLSearchParams({ page: userPage, limit: 20 });
+      if (userQuery) params.set('q', userQuery);
+      const data = await api('GET', '/api/admin/users?' + params.toString());
+      const users = data.rows || [];
       document.getElementById('userTable').innerHTML = users.map(u => {
         const date = (u.created_at || '').slice(0, 10);
         const rank = u.ladder_rank || '新手';
@@ -328,21 +346,35 @@
           <td><span class="tag gold">Lv.${u.level || 1}</span></td><td>${(u.power || 0).toLocaleString()}</td>
           <td>${esc(rank)}</td><td>${date}</td>
           <td>${u.is_online ? '<span class="tag on">● 在线</span>' : '<span class="tag">离线</span>'}</td>
-          <td><div class="op"><button onclick="toast('给 ${esc(u.nickname)} 发邮件')">发邮件</button>
-          <button onclick="toast('给 ${esc(u.nickname)} 发资源')">发资源</button></div></td></tr>`;
+          <td><div class="op"><button onclick="openMailFor('${esc(u.uid)}')">发邮件</button>
+          <button onclick="openResFor('${esc(u.uid)}')">发资源</button></div></td></tr>`;
       }).join('') || '<tr><td colspan="8" style="color:var(--muted)">暂无用户</td></tr>';
+      // 动态分页
+      const totalPages = Math.ceil((data.total || 0) / (data.limit || 20));
+      const pager = document.getElementById('userPager');
+      if (totalPages <= 1) { pager.innerHTML = ''; return; }
+      let html = `<button ${userPage <= 1 ? 'disabled' : ''} onclick="loadUsers(${userPage - 1})">‹</button>`;
+      for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+        html += `<button class="${i === userPage ? 'on' : ''}" onclick="loadUsers(${i})">${i}</button>`;
+      }
+      if (totalPages > 10) html += `<button>…</button><button onclick="loadUsers(${totalPages})">${totalPages}</button>`;
+      html += `<button ${userPage >= totalPages ? 'disabled' : ''} onclick="loadUsers(${userPage + 1})">›</button>`;
+      pager.innerHTML = html;
     } catch(e) { toast('加载用户失败: ' + e.message); }
   }
 
   // —— 邮件下发 ——
-  document.querySelector('#p-mail .btn')?.addEventListener('click', async () => {
+  // 指定UID时显示输入框
+  document.querySelectorAll('input[name="mailto"]').forEach(r => r.addEventListener('change', () => {
+    document.getElementById('uidField').style.display = r.parentElement.textContent.includes('指定') ? 'block' : 'none';
+  }));
+  document.getElementById('btnSendMail')?.addEventListener('click', async () => {
     const panel = document.getElementById('p-mail');
     const title = panel.querySelector('input[placeholder*="标题"]')?.value?.trim();
     const body = panel.querySelector('textarea')?.value?.trim();
     const toAll = panel.querySelector('input[name="mailto"]:checked')?.parentElement?.textContent?.includes('全服');
-    const uidInput = panel.querySelector('input[placeholder*="UID"]');
+    const uidVal = document.getElementById('mailUid')?.value?.trim();
     if (!title) { toast('请输入标题'); return; }
-    // 读取附件奖励输入框(金币/钻石/碎片)
     const goldAmt = parseInt(panel.querySelectorAll('.attach input')[0]?.value) || 0;
     const gemAmt = parseInt(panel.querySelectorAll('.attach input')[1]?.value) || 0;
     const fragAmt = parseInt(panel.querySelectorAll('.attach input')[2]?.value) || 0;
@@ -353,8 +385,8 @@
         const r = await api('POST', '/api/admin/mail-all', payload);
         toast('已发送至全服 ' + (r.count || '') + ' 名玩家');
       } else {
-        if (!uidInput?.value?.trim()) { toast('请输入目标UID'); return; }
-        const r = await api('POST', '/api/admin/mail', { ...payload, uid: uidInput.value.trim() });
+        if (!uidVal) { toast('请输入目标UID'); return; }
+        const r = await api('POST', '/api/admin/mail', { ...payload, uid: uidVal });
         toast(r.ok ? '邮件已发送' : '发送失败');
       }
     } catch(e) { toast('发送失败: ' + e.message); }
@@ -372,12 +404,16 @@
     } catch(e) { toast('加载公告失败: ' + e.message); }
   }
   async function delNotice(id) { try { await api('DELETE', '/api/admin/announcement/' + id); toast('已下架'); loadNotices(); } catch(e) { toast('操作失败'); } }
-  document.querySelector('#p-notice .btn')?.addEventListener('click', async () => {
+  document.getElementById('btnSendNotice')?.addEventListener('click', async () => {
     const p = document.getElementById('p-notice');
     const title = p.querySelector('input[placeholder*="标题"]')?.value?.trim();
     if (!title) { toast('请输入公告标题'); return; }
-    const start_time = p.querySelector('input[placeholder*="时间"]')?.value || '';
-    try { const r = await api('POST', '/api/admin/announcement', { title, body: p.querySelector('textarea')?.value || '', start_time, end_time: '' }); if (r.ok) { toast('公告已发布'); loadNotices(); p.querySelectorAll('input')[0]?.value && (p.querySelectorAll('input')[0].value = ''); } } catch(e) { toast('发布失败: ' + e.message); }
+    const start_time = document.getElementById('noticeStartTime')?.value?.trim() || '';
+    const end_time = document.getElementById('noticeEndTime')?.value?.trim() || '';
+    try {
+      const r = await api('POST', '/api/admin/announcement', { title, body: p.querySelector('textarea')?.value || '', start_time, end_time });
+      if (r.ok) { toast('公告已发布'); loadNotices(); p.querySelector('input[placeholder*="标题"]').value = ''; p.querySelector('textarea').value = ''; }
+    } catch(e) { toast('发布失败: ' + e.message); }
   });
 
   // —— 聊天管理 ——
@@ -401,8 +437,19 @@
     }
   });
 
+  // 搜索框:回车触发用户搜索,切换到用户管理面板
+  document.querySelector('.search input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const q = e.target.value.trim();
+      if (q) {
+        go('users', document.querySelector('[data-p="users"]'));
+        loadUsers(1, q);
+      }
+    }
+  });
+
   // —— 资源发放 ——
-  document.querySelector('#p-res .btn')?.addEventListener('click', async () => {
+  document.getElementById('btnSendRes')?.addEventListener('click', async () => {
     const p = document.getElementById('p-res');
     const uid = p.querySelector('input[placeholder*="UID"]')?.value?.trim();
     const type = p.querySelector('select')?.value || 'gold';

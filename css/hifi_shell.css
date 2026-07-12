@@ -401,3 +401,107 @@ body.shell-v65 #game{background:#14100b;border-radius:0;box-shadow:none;}
 #overflowPopup.hifi h2{color:#FFE9A8;font-family:'ZCOOL KuaiLe';-webkit-text-stroke:1px #6B0F0F;paint-order:stroke fill;text-shadow:0 2px 0 #8B1A1A;}
 #overflowPopup.hifi .sub{color:#C9B48A;}
 #overflowPopup.hifi .btn-secondary{background:linear-gradient(180deg,#8f897c,#6b665b);color:#e8e4d8;border:2px solid #4c483f;box-shadow:0 4px 0 #4c483f;font-weight:900;}
+
+/* ---- Battle shell: keep canvas battle inside the same hifi phone frame ---- */
+body.shell-v65.battle-shell-active{
+  background:
+    radial-gradient(120% 80% at 50% 0%,rgba(245,194,66,.18),transparent 42%),
+    linear-gradient(180deg,#201510,#100a06);
+}
+body.shell-v65.battle-shell-active #wrap{
+  position:fixed;
+  inset:0;
+  z-index:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:calc(env(safe-area-inset-top) + 48px) 0 calc(env(safe-area-inset-bottom) + 10px);
+  overflow:hidden;
+  background:
+    linear-gradient(180deg,rgba(255,246,214,.06),transparent 18%,rgba(20,10,4,.28) 100%),
+    url('../art/bg-clean_002.jpg') center/cover,
+    #14100b;
+}
+body.shell-v65.battle-shell-active #wrap::before{
+  content:"";
+  position:absolute;
+  inset:8px 7px;
+  border:2px solid rgba(245,194,66,.42);
+  border-radius:22px;
+  box-shadow:inset 0 1px 0 rgba(255,233,168,.22),0 10px 28px rgba(0,0,0,.42);
+  pointer-events:none;
+}
+body.shell-v65.battle-shell-active #game{
+  position:relative;
+  z-index:2;
+  background:#14100b;
+  border-radius:18px;
+  box-shadow:0 12px 32px rgba(0,0,0,.50),0 0 0 2px rgba(245,194,66,.38);
+}
+.battle-shell-hud{
+  position:fixed;
+  top:calc(env(safe-area-inset-top) + 8px);
+  left:50%;
+  transform:translateX(-50%);
+  width:min(100vw,550px);
+  padding:0 10px;
+  display:none;
+  align-items:center;
+  gap:8px;
+  z-index:60;
+  pointer-events:none;
+  color:#FFE9A8;
+  font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;
+}
+.battle-shell-hud.show{display:flex;}
+.battle-shell-hud .battle-pill,
+.battle-shell-hud .battle-title{
+  pointer-events:auto;
+  min-height:34px;
+  border:2px solid #7A4E08;
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(62,39,22,.96),rgba(34,17,10,.96));
+  box-shadow:0 4px 10px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,233,168,.24);
+}
+.battle-shell-hud .battle-pill{
+  flex:none;
+  padding:0 12px;
+  color:#FFE9A8;
+  font-family:'ZCOOL KuaiLe','PingFang SC','Microsoft YaHei',sans-serif;
+  font-size:14px;
+}
+.battle-shell-hud .battle-speed{
+  min-width:44px;
+  padding:0 8px;
+  font-family:'Fredoka','Nunito',sans-serif;
+  font-weight:700;
+}
+.battle-shell-hud .battle-title{
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  line-height:1.05;
+  padding:3px 10px;
+}
+.battle-shell-hud .battle-title b{
+  font-family:'ZCOOL KuaiLe','PingFang SC','Microsoft YaHei',sans-serif;
+  font-size:15px;
+  color:#FFE9A8;
+}
+.battle-shell-hud .battle-title span{
+  font-size:10px;
+  font-weight:900;
+  color:#C9B48A;
+}
+@media(min-width:470px){
+  body.shell-v65.battle-shell-active #wrap{
+    left:50%;
+    right:auto;
+    transform:translateX(-50%);
+    width:550px;
+    box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);
+  }
+}

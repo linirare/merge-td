@@ -161,16 +161,16 @@
       }
     } else if (message.type === 'resource_grant') {
       if (typeof account !== 'undefined' && account.user && (message.uid === account.user.uid || message.all)) {
+        const g = (message.gold || 0), d = (message.diamonds || 0);
+        // 直接加到本地显示(不在登录态,只能用增量)
+        if (typeof meta !== 'undefined' && g) meta.gold = (meta.gold || 0) + g;
+        if (typeof shell !== 'undefined' && d) shell.gems = (shell.gems || 0) + d;
+        if (typeof saveAll === 'function') try { saveAll(); } catch(e) {}
+        if (typeof refreshResourceNumbers === 'function') refreshResourceNumbers();
+        if (g || d) { const t = [g?'金币+'+g:'', d?'钻石+'+d:''].filter(Boolean).join(', '); if (t && typeof hifiToast === 'function') hifiToast('管理员发放: ' + t); }
+        // 后台同步account.user
         account.api('GET', '/api/user/profile').then(prof => {
           if (prof && !prof.error && account.user) { account.user.diamonds = prof.diamonds; account.user.gold = prof.gold; }
-          // 同步到客户端显示层(meta.gold/shell.gems)
-          if (typeof meta !== 'undefined' && prof.gold !== undefined) meta.gold = prof.gold;
-          if (typeof shell !== 'undefined' && prof.diamonds !== undefined) shell.gems = prof.diamonds;
-          if (typeof saveAll === 'function') try { saveAll(); } catch(e) {}
-          // 触发UI刷新:顶栏金币数字+钻石+邮件红点
-          if (typeof refreshResourceNumbers === 'function') refreshResourceNumbers();
-          const g = (message.gold || 0), d = (message.diamonds || 0);
-          if (g || d) { const t = [g?'金币+'+g:'', d?'钻石+'+d:''].filter(Boolean).join(', '); if (t && typeof hifiToast === 'function') hifiToast('管理员发放: ' + t); }
         }).catch(() => {});
       }
     } else if (message.type === 'new_mail') {

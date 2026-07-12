@@ -6,6 +6,55 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 let scale = 1;
 
+function syncBattleShellVisibility() {
+  const active = !!(state && (state.phase === 'playing' || state.phase === 'paused'));
+  const wasActive = document.body.classList.contains('battle-shell-active');
+  document.body.classList.toggle('battle-shell-active', active);
+  if (active !== wasActive && typeof resize === 'function') requestAnimationFrame(resize);
+  const hud = document.getElementById('battleShellHud');
+  if (hud) {
+    hud.classList.toggle('show', active);
+    const pause = hud.querySelector('[data-battle-pause]');
+    const speed = hud.querySelector('[data-battle-speed]');
+    if (pause) pause.textContent = state.phase === 'paused' ? '继续' : '暂停';
+    if (speed) speed.textContent = `×${state.speed || 1}`;
+  }
+}
+window.syncBattleShellVisibility = syncBattleShellVisibility;
+
+function ensureBattleShellHud() {
+  if (document.getElementById('battleShellHud')) return;
+  const hud = document.createElement('div');
+  hud.id = 'battleShellHud';
+  hud.className = 'battle-shell-hud hifi';
+  hud.innerHTML = `
+    <button type="button" class="battle-pill battle-back" data-battle-back>返回</button>
+    <div class="battle-title"><b>水果突击</b><span>对战中</span></div>
+    <button type="button" class="battle-pill" data-battle-pause>暂停</button>
+    <button type="button" class="battle-pill battle-speed" data-battle-speed>×1</button>
+  `;
+  document.body.appendChild(hud);
+  hud.querySelector('[data-battle-back]')?.addEventListener('click', () => {
+    const wasPvp = state.mode === 'pvp';
+    if (wasPvp && window.pvpClient?.leaveRoom) window.pvpClient.leaveRoom();
+    state.mode = 'pve';
+    state.phase = 'menu';
+    document.getElementById('resultPanel')?.classList.add('hide');
+    if (window.productShellShowTab) window.productShellShowTab(wasPvp ? 'arena' : 'home');
+    else document.getElementById('menuPanel')?.classList.remove('hide');
+    syncBattleShellVisibility();
+  });
+  hud.querySelector('[data-battle-pause]')?.addEventListener('click', () => {
+    if (state.phase === 'playing') state.phase = 'paused';
+    else if (state.phase === 'paused') state.phase = 'playing';
+    syncBattleShellVisibility();
+  });
+  hud.querySelector('[data-battle-speed]')?.addEventListener('click', () => {
+    state.speed = state.speed >= 3 ? 1 : state.speed + 1;
+    syncBattleShellVisibility();
+  });
+}
+
 // 无障碍:尊重系统"减弱动态效果"(审计 C)。各动画源用 window.REDUCE_MOTION 置零。
 window.REDUCE_MOTION = false;
 try {
@@ -16,9 +65,11 @@ try {
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  // canvas 铺满屏:宽度用满(桌面不掐550),高度按比例;多余竖向空间分给战场(LAYOUT.recalc)
-  const maxW = Math.min(window.innerWidth, window.innerHeight < 500 ? window.innerWidth : 9999);
-  scale = Math.min(maxW / W, window.innerHeight / H) * 0.96;
+  const host = document.getElementById('wrap') || document.body;
+  const rect = host.getBoundingClientRect();
+  const hostW = Math.max(1, rect.width || window.innerWidth);
+  const hostH = Math.max(1, rect.height || window.innerHeight);
+  scale = Math.min(hostW / W, hostH / H);
   canvas.style.width = W * scale + 'px';
   canvas.style.height = H * scale + 'px';
   canvas.width = W * dpr;
@@ -27,6 +78,7 @@ function resize() {
   if (typeof LAYOUT !== 'undefined' && typeof LAYOUT.recalc === 'function') LAYOUT.recalc(W, H);
 }
 window.addEventListener('resize', resize);
+ensureBattleShellHud();
 resize();
 initInput(canvas);
 
@@ -251,6 +303,7 @@ function loop(t) {
   const dt = Math.min((t - last) / 1000, 0.05);
   last = t;
   update(dt * state.speed);
+  syncBattleShellVisibility();
   draw();
   requestAnimationFrame(loop);
 }

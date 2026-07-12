@@ -34,6 +34,18 @@
         if (r.shell_json && r.shell_json !== '{}') {
           try { Object.assign(window.shell || {}, JSON.parse(r.shell_json)); } catch (e) {}
         }
+        // 服务端增量同步:只加admin/邮件/签到等途径在服务端新增的金币钻石,不覆盖本地消耗
+        const prevSrvGold = parseInt((() => { try { return localStorage.getItem('fa_srv_gold') || '0'; } catch(e) { return '0'; } })());
+        const prevSrvGems = parseInt((() => { try { return localStorage.getItem('fa_srv_gems') || '0'; } catch(e) { return '0'; } })());
+        if (typeof meta !== 'undefined' && r.gold !== undefined && r.gold > prevSrvGold) {
+          meta.gold = (meta.gold || 0) + (r.gold - prevSrvGold);
+        }
+        if (typeof shell !== 'undefined' && r.diamonds !== undefined && r.diamonds > prevSrvGems) {
+          shell.gems = (shell.gems || 0) + (r.diamonds - prevSrvGems);
+        }
+        try { localStorage.setItem('fa_srv_gold', String(r.gold || 0)); } catch(e) {}
+        try { localStorage.setItem('fa_srv_gems', String(r.diamonds || 0)); } catch(e) {}
+        if (typeof saveAll === 'function') try { saveAll(); } catch(e) {}
       }
       return r;
     },
@@ -72,7 +84,7 @@
     },
 
     async getMail() { return this.api('GET', '/api/mail'); },
-    async readMail(id) { const r = await this.api('POST', '/api/mail/read', { id }); if (r.ok && this.user) { try { const prof = await this.api('GET', '/api/user/profile'); if (prof && !prof.error) { this.user.diamonds = prof.diamonds; this.user.gold = prof.gold; } } catch(e) {} } return r; },
+    async readMail(id) { const r = await this.api('POST', '/api/mail/read', { id }); if (r.ok && this.user) { try { const prof = await this.api('GET', '/api/user/profile'); if (prof && !prof.error) { this.user.diamonds = prof.diamonds; this.user.gold = prof.gold; if (r.granted) { if (typeof meta !== 'undefined' && r.granted.gold) meta.gold = (meta.gold||0) + r.granted.gold; if (typeof shell !== 'undefined' && r.granted.diamonds) shell.gems = (shell.gems||0) + r.granted.diamonds; if (typeof saveAll === 'function') saveAll(); } } } catch(e) {} } return r; },
     async announcements() { return this.api('GET', '/api/announcements'); },
     async leaderboard(type) { return this.api('GET', '/api/leaderboard/' + (type || 'power')); },
     async chatMessages() { return this.api('GET', '/api/chat'); },
