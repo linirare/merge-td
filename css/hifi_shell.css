@@ -11,11 +11,11 @@ html,body{background:#201510;}
 body{background:#201510;color:#1a1c2a;font-family:"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif;overflow-x:hidden}
 body::before{display:none}
 #game{background:#14100b;border-radius:0;box-shadow:none;}
-.panel{position:fixed;top:var(--game-t,0);left:var(--game-l,0);width:var(--game-w,100vw);bottom:66px;z-index:10;overflow-y:auto;background:transparent;padding:16px}
+.panel{position:fixed;top:0;left:0;right:0;bottom:66px;z-index:10;overflow-y:auto;background:transparent;padding:16px}
 .panel.hide{display:none}
 .panel-inner{max-width:420px;margin:0 auto}
 .panel-inner.shell-page{display:flex;flex-direction:column;gap:14px;padding:16px;border-radius:22px;background:rgba(255,255,255,0.72);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(0,0,0,0.07);box-shadow:0 4px 18px rgba(0,0,0,0.08)}
-#bottomNav{position:fixed;bottom:0;left:var(--game-l,0);width:var(--game-w,100vw);z-index:100;height:66px;display:flex;justify-content:center;background:rgba(255,255,255,0.93);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,0.07);padding:4px 8px max(4px,env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,0.05)}
+#bottomNav{position:fixed;bottom:0;left:0;right:0;z-index:100;height:66px;display:flex;justify-content:center;background:rgba(255,255,255,0.93);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,0.07);padding:4px 8px max(4px,env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,0.05)}
 #bottomNav.shell-hidden{display:none}
 .bnav-tab{flex:1;max-width:76px;min-width:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;color:rgba(26,28,42,0.42);font-size:10px;font-weight:600;cursor:pointer;border-radius:14px;transition:0.15s}
 .bnav-tab .bnav-icon{font-size:22px}
@@ -153,17 +153,9 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 /* 桌面下给壳屏加个手机边框(与原型一致) */
 /* 桌面 app 收成居中 550px 列(手机<430不受影响;桌面放大占更多屏幕,减少空白) */
 @media(min-width:470px){
-  /* 壳面板/底栏/wrap 约束到 Canvas 实际尺寸(由 resize() 注入的 --game-* CSS变量) */
-  #menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi,#campaignPanel.hifi{
-    left:var(--game-l,0);right:auto;top:var(--game-t,0);bottom:auto;
-    width:var(--game-w,100vw);height:var(--game-h,100vh);
-    box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);transform:none;
-  }
-  body.shell-v65 #bottomNav.hifi,#bottomNav.hifi{
-    left:var(--game-l,0);right:auto;top:auto;bottom:auto;
-    width:var(--game-w,100vw);
-  }
-  #wrap{left:var(--game-l,0);top:var(--game-t,0);width:var(--game-w,100vw);height:var(--game-h,100vh);transform:none;}
+  #menuPanel.hifi,#shopPanel.hifi,#shellLabPanel.hifi,#arenaPanel.hifi,#rankPanel.hifi,#campaignPanel.hifi{left:50%;right:auto;transform:translateX(-50%);width:550px;box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);}
+  body.shell-v65 #bottomNav.hifi,#bottomNav.hifi{left:50%;right:auto;transform:translateX(-50%);width:550px;}
+  #wrap{left:50%;right:auto;transform:translateX(-50%);width:550px;}
 }
 
 /* ---- 轻量占位 toast(未接后端的入口用) ---- */
@@ -390,7 +382,7 @@ body.hifi-menu #wrap{display:none;}
 body.shell-v65{background:#201510;}
 body.shell-v65::before{display:none;}
 /* canvas:暗底无绿框,消除刷新时绿色闪现(原 style.css #game 无条件亮绿) */
-body.shell-v65 #game{background:#14100b;border-radius:0;box-shadow:none;position:absolute;}
+body.shell-v65 #game{background:#14100b;border-radius:0;box-shadow:none;}
 
 /* ---- 统一收尾:关卡选择节点 + 结算/帮助金皮 ---- */
 .hifi .lvmap{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
@@ -499,8 +491,7 @@ body.shell-v65.battle-shell-active{
 }
 body.shell-v65.battle-shell-active #wrap{
   position:fixed;
-  top:var(--game-t,0);left:var(--game-l,0);
-  width:var(--game-w,100vw);height:var(--game-h,100vh);
+  inset:0;
   z-index:1;
   overflow:hidden;
   background:
@@ -585,9 +576,10 @@ body.shell-v65.battle-shell-active #game{
 }
 @media(min-width:470px){
   body.shell-v65.battle-shell-active #wrap{
-    left:var(--game-l,0);top:var(--game-t,0);
-    width:var(--game-w,100vw);height:var(--game-h,100vh);
-    transform:none;
+    left:50%;
+    right:auto;
+    transform:translateX(-50%);
+    width:550px;
     box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);
   }
 }

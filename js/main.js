@@ -72,20 +72,13 @@ function resize() {
   const availW = Math.max(1, rect.width - margin * 2);
   const availH = Math.max(1, rect.height - margin * 2);
   scale = Math.min(availW / W, availH / H);
-  const cw = W * scale, ch = H * scale;
-  const cl = (rect.width - cw) / 2, ct = (rect.height - ch) / 2;
-  canvas.style.width = cw + 'px';
-  canvas.style.height = ch + 'px';
-  canvas.style.left = cl + 'px';
-  canvas.style.top = ct + 'px';
+  canvas.style.width = W * scale + 'px';
+  canvas.style.height = H * scale + 'px';
+  canvas.style.left = (rect.width - W * scale) / 2 + 'px';
+  canvas.style.top = (rect.height - H * scale) / 2 + 'px';
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  // 壳面板约束到 Canvas 区域,不超出游戏可视范围
-  document.body.style.setProperty('--game-w', cw + 'px');
-  document.body.style.setProperty('--game-h', ch + 'px');
-  document.body.style.setProperty('--game-l', cl + 'px');
-  document.body.style.setProperty('--game-t', ct + 'px');
   if (typeof LAYOUT !== 'undefined' && typeof LAYOUT.recalc === 'function') LAYOUT.recalc(W, H);
 }
 window.addEventListener('resize', resize);
