@@ -44,7 +44,7 @@ app.post('/api/auth/register', (req, res) => {
   const nicknameText = safeText(nickname, 24);
   if (!emailText || !password) return res.status(400).json({ error: 'email and password required' });
   if (db.prepare('SELECT uid FROM users WHERE email = ?').get(emailText)) return res.status(409).json({ error: 'email exists' });
-  const uid = uuidv4().slice(0, 8);
+  const uid = uuidv4().replace(/-/g, '').slice(0, 12); // 12 hex(48bit)熵,降低碰撞;uid 无长度假设,新旧长度共存无碍
   const hash = bcrypt.hashSync(String(password), 10);
   db.prepare('INSERT INTO users (uid, email, password_hash, nickname) VALUES (?,?,?,?)').run(uid, emailText, hash, nicknameText);
   db.prepare('INSERT INTO user_saves (uid) VALUES (?)').run(uid);

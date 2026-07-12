@@ -1,4 +1,5 @@
 /* 水果突击 · 社交/玩法/商业化/体验/安全 综合路由 */
+const crypto = require('crypto');
 const db = require('./db');
 const { authMiddleware } = require('./auth');
 const { clampInt, safeText, safeJsonText } = require('./util');
@@ -61,8 +62,8 @@ function mountSocial(app) {
     const name = safeText((req.body || {}).name, 18); if (!name) return res.status(400).json({ error: 'name required' });
     const exists = db.prepare('SELECT id FROM guilds WHERE name=?').get(name);
     if (exists) return res.json({ ok: false, msg: 'name taken' });
-    const id = Math.random().toString(36).slice(2,8);
-    const code = Math.random().toString(36).slice(2,8);
+    const id = crypto.randomBytes(6).toString('hex');
+    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
     db.prepare('INSERT INTO guilds (id,name,leader_uid,invite_code) VALUES (?,?,?,?)').run(id, name, req.uid, code);
     db.prepare('INSERT INTO guild_members (uid,guild_id,role) VALUES (?,?,\'leader\')').run(req.uid, id);
     res.json({ ok: true, id, name, invite_code: code });
@@ -182,7 +183,7 @@ function mountSocial(app) {
     const actions_json = safeJsonText((req.body || {}).actions_json);
     const result = safeText((req.body || {}).result, 32);
     if (actions_json === null) return res.status(413).json({ error: 'replay too large or invalid' });
-    const id = Math.random().toString(36).slice(2, 14);
+    const id = crypto.randomBytes(8).toString('hex');
     db.prepare('INSERT INTO replays (id,uid1,uid2,actions_json,result) VALUES (?,?,?,?,?)').run(id, req.uid, uid2 || '', actions_json || '[]', result || '');
     res.json({ id });
   });

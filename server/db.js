@@ -4,7 +4,9 @@
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'fruits.db');
+const DB_PATH = process.env.DB_PATH
+  ? path.resolve(process.env.DB_PATH)
+  : path.join(__dirname, '..', 'data', 'fruits.db');
 const fs = require('fs');
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
@@ -140,6 +142,19 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS replays (
     id TEXT PRIMARY KEY, uid1 TEXT, uid2 TEXT, actions_json TEXT DEFAULT '[]', result TEXT, created_at TEXT DEFAULT (datetime('now'))
   );
+`);
+
+// 索引(消除全表扫描:邮件按 uid、排行按各分数列排序、好友反向查、回放按对手)
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_mail_uid ON mail(uid);
+  CREATE INDEX IF NOT EXISTS idx_mail_uid_read ON mail(uid, is_read);
+  CREATE INDEX IF NOT EXISTS idx_leaderboard_power ON leaderboard(power DESC);
+  CREATE INDEX IF NOT EXISTS idx_leaderboard_stage ON leaderboard(highest_stage DESC);
+  CREATE INDEX IF NOT EXISTS idx_leaderboard_ladder ON leaderboard(ladder_score DESC);
+  CREATE INDEX IF NOT EXISTS idx_friends_uid2 ON friends(uid2);
+  CREATE INDEX IF NOT EXISTS idx_friends_uid1_status ON friends(uid1, status);
+  CREATE INDEX IF NOT EXISTS idx_replays_uid1 ON replays(uid1);
+  CREATE INDEX IF NOT EXISTS idx_replays_uid2 ON replays(uid2);
 `);
 
 module.exports = db;
