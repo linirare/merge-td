@@ -230,6 +230,7 @@ class RawWs {
   }
   assert.ok(completed, 'pvp flow should complete all assertions');
   if (completed) process.stdout.write('OK: pvp room handshake, action sync, seq/rate guard, result, and disconnect work\n');
+  process.exit(0);
 })().catch(err => {
   console.error(err);
   process.exit(1);

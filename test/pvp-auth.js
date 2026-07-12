@@ -115,4 +115,5 @@ function cleanupUser(email) {
     cleanupUser(email);
     await new Promise(r => server.close(r));
   }
+  process.exit(0);
 })().catch(err => { console.error(err); server.close(() => process.exit(1)); });
