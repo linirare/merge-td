@@ -229,8 +229,7 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 .hifi .team{display:flex;gap:8px;justify-content:space-between;margin-bottom:14px;}
 .hifi .slot{flex:1;aspect-ratio:.8;border-radius:12px;border:2px dashed rgba(245,194,66,.5);background:rgba(0,0,0,.25);display:grid;place-items:center;position:relative;}
 .hifi .slot.f{border-style:solid;cursor:pointer;}
-.hifi .fdisc{position:relative;border-radius:50%;display:grid;place-items:center;flex:none;font-family:'Fredoka';font-weight:700;color:#fff;
-  box-shadow:0 4px 7px rgba(0,0,0,.3),inset 3px 3px 5px rgba(255,255,255,.4),inset -4px -5px 7px rgba(0,0,0,.2);border:1.5px solid rgba(0,0,0,.3);}
+.hifi .fdisc{position:relative;display:grid;place-items:center;flex:none;font-family:'Fredoka';font-weight:700;color:#fff;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));}
 .hifi .slot .plus2{color:rgba(245,194,66,.6);width:26px;height:26px;}
 .hifi .roster{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
 .hifi .card{position:relative;aspect-ratio:.78;border-radius:12px;padding:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
