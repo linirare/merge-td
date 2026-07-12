@@ -125,6 +125,7 @@ function markBattleReadyIfNeeded(s) {
   if (!hasLeftOwnCastle(s)) return false;
   s.battleReady = true;
   s.protected = false;
+  s._spawnTimer = 0;
   s.mode = 'march';
   s.target = null;
   if (!s._gateFx) {
@@ -256,7 +257,7 @@ function moveTowardEnemy(s, target) {
   const dx = desiredX - s.x;
   const dy = target.y - s.y;
   const cspeed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : CHASE_SPEED;
-  const xStep = cspeed * 0.42 * dt_global;
+  const xStep = cspeed * 0.65 * dt_global;
   const yStep = cspeed * dt_global;
 
   if (Math.abs(dx) > 3) s.x += Math.sign(dx) * Math.min(Math.abs(dx), xStep);
@@ -521,6 +522,13 @@ function updateSoldier(s, enemies) {
     return;
   }
 
+  // 出生缓冲:刚出城门稳步推进 0.35s,避免立即索敌导致 X 方向慢速"原地踏步"
+  if ((s._spawnTimer || 0) < 0.35) {
+    s._spawnTimer = (s._spawnTimer || 0) + dt_global;
+    advanceTowardWall(s);
+    return;
+  }
+
   // 未到城墙:正常索敌推进
   const target = findTarget(s, enemies) || sameLaneBlocker(s, enemies);
   if (target) {
@@ -530,6 +538,12 @@ function updateSoldier(s, enemies) {
       const tLaneX = laneXByIndex(clamp(target.laneIndex, 0, COLS - 1));
       const step = 140 * dt_global;
       s.laneX += Math.sign(tLaneX - s.laneX) * Math.min(Math.abs(tLaneX - s.laneX), step);
+    }
+    // 平滑切路后同步 laneIndex,确保 applySeparation 能正确识别同路
+    if (typeof isMeleeRoleLB === 'function' && isMeleeRoleLB(s.type) && target.laneIndex !== s.laneIndex) {
+      if (Math.abs(s.laneX - laneXByIndex(clamp(target.laneIndex, 0, COLS - 1))) < 20) {
+        s.laneIndex = clamp(target.laneIndex, 0, COLS - 1);
+      }
     }
     s.target = target.id;
     attackTarget(s, target);
@@ -549,7 +563,8 @@ function applySeparation(soldiers) {
       if (i === j) continue;
       const b = soldiers[j];
       if (!isCombatant(b)) continue;
-      if (a.laneIndex !== b.laneIndex) continue;
+      // 用 X 距离代替 laneIndex:平滑切路后 laneIndex 可能未同步,物理接近就该分离
+      if (Math.abs(a.x - b.x) > (CELL + GAP) * 1.2) continue;
       const dx = a.x - b.x;
       const dy = a.y - b.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -565,7 +580,7 @@ function applySeparation(soldiers) {
     if (fx || fy) {
       const speed = 42 * dt_global;
       const nextX = a.x + fx * speed;
-      a.x = clamp(nextX, a.laneX - FIGHT_X_LEASH, a.laneX + FIGHT_X_LEASH);
+      a.x = clamp(nextX, a.laneX - FIGHT_X_LEASH * 1.8, a.laneX + FIGHT_X_LEASH * 1.8);
       // 修#4:攻城单位只做水平分散,Y 完全不碰。否则 y(城墙≈278) 被 clamp 到 fieldTop(296),
       //       每帧被弹离城墙 ~18px,attackWall 又把它拉回 → 墙边上下抖动。
       const sieging = a.mode === 'siege' || a.mode === 'siege_queue' || a.mode === 'siege_support';
