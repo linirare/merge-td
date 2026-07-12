@@ -93,7 +93,7 @@
         <span class="cchip"><svg class="icon"><use href="#i-gem"/></svg><b data-shell-gems>${shell.gems || 0}</b><span class="plus"><svg class="icon"><use href="#i-plus"/></svg></span></span>
         <span class="sp"></span>
         <button class="ring" data-tut><span class="inner"><svg class="icon"><use href="#i-help"/></svg></span></button>
-        <button class="ring" data-go="shop"><span class="inner"><svg class="icon"><use href="#i-gear"/></svg></span></button>
+        <button class="ring" data-go="shop"><span class="inner"><svg class="icon"><use href="#i-bag"/></svg></span></button>
       </header>`;
   }
 
@@ -107,7 +107,7 @@
       if (!shell.fruitLv[id]) shell.fruitLv[id] = 1;
       meta.shardsTotal[id] = Math.max(meta.shardsTotal[id] || 0, shell.fragments[id] || 0);
     }
-    meta.unlocked = Array.isArray(meta.unlocked) ? meta.unlocked : UNIT_POOL.slice(0, 5);
+    meta.unlocked = Array.isArray(meta.unlocked) && meta.unlocked.length ? meta.unlocked : UNIT_POOL.slice();
     saveShell();
   }
 
@@ -377,7 +377,7 @@
         </div>
         <div class="side">
           <button class="ring" data-go="shop"><span class="inner" style="background:radial-gradient(circle at 40% 34%,#FFB05A,#D9600E)"><svg class="icon"><use href="#i-flame"/></svg></span><span class="lbl">活动</span></button>
-          <button class="ring" data-help><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-bell"/></svg></span><span class="lbl">公告</span></button>
+          <button class="ring" data-help><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-help"/></svg></span><span class="lbl">帮助</span></button>
         </div>
 
         <button class="hifi-levelsel" id="hifiLevelSel">☰ 选关 · 第${lv}关</button>
@@ -503,20 +503,14 @@
     const list = UNIT_POOL
       .filter(id => squadFilter === 'all' || (TYPES[id] && TYPES[id].role === squadFilter))
       .sort((a, b) => {
-        const ua = isUnlocked(a) ? 0 : 1, ub = isUnlocked(b) ? 0 : 1;
-        if (ua !== ub) return ua - ub;                                   // 已拥有排前,未解锁沉底
         const ra = RAR_RANK[TYPES[a] && TYPES[a].rarity] ?? 3, rb = RAR_RANK[TYPES[b] && TYPES[b].rarity] ?? 3;
-        if (ra !== rb) return ra - rb;                                   // 稀有度高排前(epic>rare>normal)
+        if (ra !== rb) return ra - rb;                                   // 稀有度高排前(T0> T1> T2)
         return String(TYPES[a] && TYPES[a].name || a).localeCompare(String(TYPES[b] && TYPES[b].name || b));
       });
     roster.innerHTML = list.map(id => {
       const t = fruit(id);
       const rc = RAR_COLOR[t.rarity] || '#9AA6B2';
       const rk = RAR_KEY[t.rarity] || 'N';
-      if (!isUnlocked(id)) {
-        const at = typeof unlockLevelFor === 'function' ? unlockLevelFor(id) : '?';
-        return `<button class="card lock" style="--rc:${rc}"><span class="rc">${rk}</span>${hifiDisc(id, 38)}<span class="nm">${t.name}</span><span class="lk"><svg class="icon"><use href="#i-lock"/></svg><small>第${at}关解锁</small></span></button>`;
-      }
       const lv = initLv(id);
       const stars = Array.from({ length: Math.min(5, lv) }, () => '<svg class="icon"><use href="#i-star"/></svg>').join('');
       return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 38)}<span class="nm">${t.name}</span><span class="stars">${stars}</span></button>`;
@@ -531,7 +525,6 @@
 
   function openCardDetail(id) {
     id = normalizeTypeId(id);
-    if (!isUnlocked(id)) return;
     detailId = id;
     let ov = document.getElementById('hifiCardOv');
     if (!ov) {
@@ -1357,7 +1350,8 @@
     try {
       const s = (window.account && account.restoreSession) ? await account.restoreSession() : { ok: false };
       if (s && s.ok) { resetLocalProgress(); applyCloudSave(s); hideLoginGate(); ensureShellData(); refreshResourceNumbers(); renderHome(); }
-    } catch (e) {}
+      else { showLoginGate(); }
+    } catch (e) { showLoginGate(); }
   }
 
   function init() {
