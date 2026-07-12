@@ -9,6 +9,19 @@ const BASE = process.env.VISUAL_URL || 'http://localhost:3000';
 const NO_VISION = process.argv.includes('--no-vision');
 const STRICT = process.argv.includes('--strict');
 
+async function ensureLoggedIn(page) {
+  // 如果登录门还在,注册一个视觉测试专用账号然后等门消失
+  const gate = await page.locator('#hifiLoginGate');
+  if (await gate.count() === 0) return;
+  await page.click('#hifiLoginGate [data-g="register"]');
+  await page.waitForTimeout(200);
+  const stamp = Date.now();
+  await page.fill('#gEmail', `visual_${stamp}@test.com`);
+  await page.fill('#gPass', 'test123456');
+  await page.click('#gGo');
+  await page.waitForFunction(() => !document.getElementById('hifiLoginGate'), { timeout: 10000 });
+}
+
 function mmxDescribe(imgPath, prompt) {
   return new Promise(resolve => {
     const safePrompt = String(prompt).replace(/"/g, "'");
@@ -164,6 +177,7 @@ const SHOTS = [
   for (const shot of SHOTS) {
     await page.goto(BASE + '/', { waitUntil: 'networkidle' });
     await page.waitForTimeout(700);
+    await ensureLoggedIn(page);
     await shot.setup(page);
     await assertVisiblePage(page, shot.name);
     const abs = path.join(ROOT, shot.file);
