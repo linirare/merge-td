@@ -498,7 +498,16 @@
       </div>
     `;
     const roster = root.querySelector('#hifiRoster');
-    const list = UNIT_POOL.filter(id => squadFilter === 'all' || (TYPES[id] && TYPES[id].role === squadFilter));
+    const RAR_RANK = { epic: 0, rare: 1, normal: 2 };
+    const list = UNIT_POOL
+      .filter(id => squadFilter === 'all' || (TYPES[id] && TYPES[id].role === squadFilter))
+      .sort((a, b) => {
+        const ua = isUnlocked(a) ? 0 : 1, ub = isUnlocked(b) ? 0 : 1;
+        if (ua !== ub) return ua - ub;                                   // 已拥有排前,未解锁沉底
+        const ra = RAR_RANK[TYPES[a] && TYPES[a].rarity] ?? 3, rb = RAR_RANK[TYPES[b] && TYPES[b].rarity] ?? 3;
+        if (ra !== rb) return ra - rb;                                   // 稀有度高排前(epic>rare>normal)
+        return String(TYPES[a] && TYPES[a].name || a).localeCompare(String(TYPES[b] && TYPES[b].name || b));
+      });
     roster.innerHTML = list.map(id => {
       const t = fruit(id);
       const rc = RAR_COLOR[t.rarity] || '#9AA6B2';
@@ -874,7 +883,7 @@
         <button class="ltab ${!isReg ? 'on' : ''}" data-auth="login">登录</button>
         <button class="ltab ${isReg ? 'on' : ''}" data-auth="register">注册</button>
       </div>
-      <input class="linput" id="authEmail" type="email" inputmode="email" autocomplete="username" aria-label="邮箱" placeholder="邮箱">
+      <input class="linput" id="authEmail" type="text" autocomplete="username" aria-label="账号" placeholder="账号">
       <input class="linput" id="authPass" type="password" autocomplete="${isReg ? 'new-password' : 'current-password'}" aria-label="密码" placeholder="密码">
       ${isReg ? '<input class="linput" id="authNick" type="text" autocomplete="nickname" aria-label="昵称" placeholder="昵称(可留空)" maxlength="12">' : ''}
       <button class="gbtn blk" id="authGo" style="margin-top:4px">${isReg ? '注册并登录' : '登录'}</button>
@@ -887,7 +896,7 @@
       const btn = body.querySelector('#authGo');
       const email = (body.querySelector('#authEmail').value || '').trim();
       const pass = body.querySelector('#authPass').value || '';
-      if (!email || !pass) { hifiToast('请填写邮箱和密码'); return; }
+      if (!email || !pass) { hifiToast('请填写账号和密码'); return; }
       if (!window.account || !account.register) { hifiToast('需要连接后端服务器'); return; }
       const label = btn ? btn.textContent : '';
       if (btn) { btn.disabled = true; btn.textContent = isReg ? '注册中…' : '登录中…'; }  // 防重复提交(审计 D)
@@ -1317,7 +1326,7 @@
           <button class="ltab ${!isReg ? 'on' : ''}" data-g="login">登录</button>
           <button class="ltab ${isReg ? 'on' : ''}" data-g="register">注册</button>
         </div>
-        <input class="linput" id="gEmail" type="text" placeholder="邮箱" autocomplete="off">
+        <input class="linput" id="gEmail" type="text" placeholder="账号" autocomplete="off">
         <input class="linput" id="gPass" type="password" placeholder="密码">
         ${isReg ? '<input class="linput" id="gNick" type="text" placeholder="昵称(可留空)" maxlength="12">' : ''}
         <button class="gbtn blk" id="gGo" style="margin-top:8px">${isReg ? '注册并开始' : '登录并开始'}</button>
@@ -1328,7 +1337,7 @@
     gate.querySelector('#gGo')?.addEventListener('click', async () => {
       const email = (gate.querySelector('#gEmail').value || '').trim();
       const pass = gate.querySelector('#gPass').value || '';
-      if (!email || !pass) { setErr('请填写邮箱和密码'); return; }
+      if (!email || !pass) { setErr('请填写账号和密码'); return; }
       if (!(window.account && account.register)) { setErr('无法连接服务器'); return; }
       const btn = gate.querySelector('#gGo'); btn.disabled = true; setErr('');
       try {
@@ -1371,6 +1380,11 @@
       document._hifiAccountBound = true;
     }
     ['resultPanel', 'helpPanel'].forEach(id => document.getElementById(id)?.classList.add('hifi'));
+    // 公告/帮助的"知道了":关掉后回到当前 tab(原来只 hide,导致 hidePanels 后全空白)
+    document.getElementById('btnHelpClose')?.addEventListener('click', () => {
+      document.getElementById('helpPanel')?.classList.add('hide');
+      showTab(activeTab || 'home');
+    });
     showTab('home');
     setInterval(syncNavVisibility, 180);
     syncNavVisibility();
