@@ -105,7 +105,7 @@ function drawCleanSoldierBody(s) {
   drawCleanHpBar(s, s.x, s.y - r - 11, r * 2.0);
 
   // 只显示一个上方定位标签。
-  ctx.font = '900 9px sans-serif';
+  ctx.font = '900 11px sans-serif';
   ctx.strokeStyle = 'rgba(0,0,0,0.52)';
   ctx.lineWidth = 3;
   ctx.strokeText(`${tierText} · ${roleText}`, s.x, s.y - r - 21);
@@ -126,7 +126,7 @@ function drawCleanSoldierBody(s) {
     ctx.beginPath();
     ctx.arc(s.x + r * 0.78, s.y - r * 0.66, 7.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.font = '900 8px sans-serif';
+    ctx.font = '900 10px sans-serif';
     ctx.fillStyle = '#2c8d3f';
     ctx.fillText(`+${s.reinforceStacks}`, s.x + r * 0.78, s.y - r * 0.63);
   }

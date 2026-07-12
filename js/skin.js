@@ -417,7 +417,7 @@ function drawHUD() {
 
 function draw() {
   ctx.save();
-  if (state.shake > 0.05) ctx.translate((Math.random() - 0.5) * state.shake * 10, (Math.random() - 0.5) * state.shake * 10);
+  if (!window.REDUCE_MOTION && state.shake > 0.05) ctx.translate((Math.random() - 0.5) * state.shake * 10, (Math.random() - 0.5) * state.shake * 10);
 
   drawBackground();
   drawInfo();

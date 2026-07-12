@@ -330,7 +330,7 @@ function drawStatusFX(ctx, g, se, s, time) {
   const prevDraw = drawSoldier;
 
   function walkPhase(s, moved) {
-    if (moved > 0.10) s._walkPhase = (s._walkPhase || 0) + Math.min(0.12, moved * 0.055); // 步频加快,匹配加速后的移速
+    if (!window.REDUCE_MOTION && moved > 0.10) s._walkPhase = (s._walkPhase || 0) + Math.min(0.12, moved * 0.055); // 步频加快,匹配加速后的移速
     return s._walkPhase || 0;
   }
 

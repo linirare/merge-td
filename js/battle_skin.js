@@ -149,11 +149,19 @@ function drawWall(hp, maxHp, isEnemy) {
   roundRect(bx + 1.5, by + 1.5, Math.max(4, (bw - 3) * ratio), bh - 3, 3);
   ctx.fill();
 
-  // HP 数字(审计#5:城墙血量应可见)
-  ctx.fillStyle = isEnemy ? '#F4D7DC' : '#E7F8D9';
-  ctx.font = 'bold 10px "Segoe UI","Microsoft YaHei",sans-serif';
+  // HP 数字 + 半透明深色底 pill(审计 B3/B4:字提到 12px,深底避免浅字压浅背景)
+  const hpText = `${Math.round(hp)}/${Math.round(maxHp)}`;
+  const cx = x + w / 2, pillTop = y + h + 6;
+  ctx.font = 'bold 12px "Segoe UI","Microsoft YaHei",sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`${Math.round(hp)}/${Math.round(maxHp)}`, x + w / 2, y + h + 14);
+  ctx.textBaseline = 'middle';
+  const pillW = Math.max(42, ctx.measureText(hpText).width + 14);
+  ctx.fillStyle = 'rgba(20,10,6,0.52)';
+  roundRect(cx - pillW / 2, pillTop, pillW, 17, 8);
+  ctx.fill();
+  ctx.fillStyle = isEnemy ? '#FDEAEE' : '#EDFBE1';
+  ctx.fillText(hpText, cx, pillTop + 9);
+  ctx.textBaseline = 'alphabetic';
 
   if (ratio <= 0.60) drawWallDamageV51(x, y, w, h, ratio, isEnemy);
   ctx.restore();

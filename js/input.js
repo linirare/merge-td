@@ -37,30 +37,37 @@ function summonFruitAt(r, c) {
 /* ——— 双击急派兵 ——— */
 let lastTap = { time: 0, r: -1, c: -1 };
 
+// 命中判定加 hitSlop:小按钮视觉不变、命中区外扩便于手指点中(审计 B1)。
+// 竖向多扩(顶部有空间)、横向少扩(相邻键间隙仅 6~8,避免抢命中)。
+function hitRect(p, r, padX = 6, padY = 10) {
+  return p.x >= r.x - padX && p.x <= r.x + r.w + padX &&
+         p.y >= r.y - padY && p.y <= r.y + r.h + padY;
+}
+
 function onDown(ev) {
   if (state.phase !== 'playing' && state.phase !== 'paused') return;
   ev.preventDefault();
   const p = eventPoint(ev);
 
-  if (p.x >= PAUSE_RECT.x && p.x <= PAUSE_RECT.x + PAUSE_RECT.w && p.y >= PAUSE_RECT.y && p.y <= PAUSE_RECT.y + PAUSE_RECT.h) {
+  if (hitRect(p, PAUSE_RECT)) {
     state.phase = state.phase === 'paused' ? 'playing' : 'paused';
     return;
   }
 
   if (state.phase === 'paused') return;
 
-  if (p.x >= HELP_RECT.x && p.x <= HELP_RECT.x + HELP_RECT.w && p.y >= HELP_RECT.y && p.y <= HELP_RECT.y + HELP_RECT.h) {
+  if (hitRect(p, HELP_RECT)) {
     document.getElementById('helpPanel').classList.remove('hide');
     return;
   }
 
-  if (p.x >= SPEED_RECT.x && p.x <= SPEED_RECT.x + SPEED_RECT.w && p.y >= SPEED_RECT.y && p.y <= SPEED_RECT.y + SPEED_RECT.h) {
+  if (hitRect(p, SPEED_RECT)) {
     state.speed = state.speed >= 3 ? 1 : state.speed + 1;
     addFx(SPEED_RECT.x + SPEED_RECT.w / 2, SPEED_RECT.y + 42, `速度 ×${state.speed}`, THEME.gold, 12);
     return;
   }
 
-  if (state.overflowQueue.length > 0 && p.x >= OVERFLOW_RECT.x && p.x <= OVERFLOW_RECT.x + OVERFLOW_RECT.w && p.y >= OVERFLOW_RECT.y && p.y <= OVERFLOW_RECT.y + OVERFLOW_RECT.h) {
+  if (state.overflowQueue.length > 0 && hitRect(p, OVERFLOW_RECT)) {
     showOverflowPopup();
     return;
   }
