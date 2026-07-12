@@ -459,7 +459,7 @@
   function hifiDisc(id, size) {
     const t = fruit(id);
     const col = t.color || '#F5C242';
-    return `<span class="fdisc" style="width:${size}px;height:${size}px;background:none;font-size:${Math.round(size * 0.88)}px">${t.icon || '🍏'}</span>`;
+    return `<span class="fdisc" style="width:${size}px;height:${size}px;background:${col}33;font-size:${Math.round(size * 0.78)}px">${t.icon || '🍏'}</span>`;
   }
   function roleZh(r) { return ROLE_ZH[r] || r || '单位'; }
   function skillZh(t) { return SKILL_ZH[t.skill] || '专属技能'; }
