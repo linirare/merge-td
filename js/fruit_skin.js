@@ -67,7 +67,7 @@ function drawBackground() {
 function boardContainerStyleV48(isEnemy) {
   return isEnemy
     ? { fill:'rgba(255,246,243,0.88)', stroke:'rgba(224,150,160,0.55)', title:'#c86e78', slot:'rgba(255,250,247,0.64)', slotLine:'rgba(220,165,175,0.42)' }
-    : { fill:'rgba(250,255,247,0.90)', stroke:'rgba(160,205,150,0.52)', title:'#5ca45f', slot:'rgba(253,255,250,0.70)', slotLine:'rgba(140,195,130,0.42)' };
+    : { fill:'rgba(255,250,235,0.88)', stroke:'rgba(181,117,10,0.32)', title:'#c7ab5e', slot:'rgba(252,248,238,0.64)', slotLine:'rgba(181,117,10,0.24)' };
 }
 
 function drawBoard(slots, isEnemy, dragHint = null) {
@@ -90,7 +90,7 @@ function drawBoard(slots, isEnemy, dragHint = null) {
       let fill = st.slot;
       let stroke = st.slotLine;
       if (canMerge || action === 'merge') { fill = 'rgba(255,247,214,0.88)'; stroke = 'rgba(255,200,60,0.82)'; }
-      else if (isSnap || isEmptyTarget) { fill = 'rgba(245,255,248,0.80)'; stroke = 'rgba(110,205,145,0.66)'; }
+      else if (isSnap || isEmptyTarget) { fill = 'rgba(252,248,238,0.80)'; stroke = 'rgba(181,117,10,0.44)'; }
 
       ctx.save();
       ctx.fillStyle = fill;
@@ -239,7 +239,7 @@ function drawBall(ball, cx, cy, radius, extraY = 0, isEnemy = false) {
 function drawSlotLevelBadgeV48(x, y, level, isEnemy) {
   const lv = Math.max(1, Math.min(7, level || 1));
   const fill = lv >= 5 ? '#ffe37a' : '#fffdf7';
-  const stroke = lv >= 5 ? '#d9aa26' : (isEnemy ? '#ef9ca7' : '#8bd38b');
+  const stroke = lv >= 5 ? '#d9aa26' : (isEnemy ? '#ef9ca7' : '#B58A2E');
   ctx.save();
   ctx.fillStyle = fill;
   ctx.strokeStyle = stroke;
@@ -250,7 +250,7 @@ function drawSlotLevelBadgeV48(x, y, level, isEnemy) {
   ctx.font = '900 10px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#2d6b36';
+  ctx.fillStyle = '#F5C242';
   ctx.fillText(`Lv${lv}`, x + 16, y + 10.5);
   ctx.restore();
 }

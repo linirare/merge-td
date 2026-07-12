@@ -63,14 +63,14 @@ function drawField() {
   for (let c = 0; c < COLS; c++) {
     const lx = BOARD_X + c * (CELL + GAP) + CELL / 2;
     const st = state.laneStats?.[c];
-    let laneColor = 'rgba(92,160,98,0.15)';
+    let laneColor = 'rgba(181,117,10,0.12)';
     let laneW = c === 2 ? 1.35 : 1.0;
 
     if (st?.status === 'enemy_adv' || st?.status === 'wall_danger') {
       laneColor = 'rgba(230,110,120,0.14)';
       laneW = 1.2;
     } else if (st?.status === 'player_adv' || st?.status === 'siege_ready') {
-      laneColor = 'rgba(90,190,100,0.17)';
+      laneColor = 'rgba(181,117,10,0.17)';
       laneW = 1.25;
     } else if (st?.status === 'clash') {
       laneColor = 'rgba(220,170,70,0.16)';
@@ -107,7 +107,7 @@ function drawWall(hp, maxHp, isEnemy) {
   const h = LAYOUT.wallH;
   const cfg = isEnemy
     ? { body:'#C97984', dark:'#A95663', trim:'#F4D7DC', hp:'#F06B79', hpBg:'rgba(116,37,48,0.46)' }
-    : { body:'#78C783', dark:'#4E9A59', trim:'#E7F8D9', hp:'#8AE78F', hpBg:'rgba(34,89,45,0.40)' };
+    : { body:'#E8C76A', dark:'#B58A2E', trim:'#FFF6DE', hp:'#FDE79A', hpBg:'rgba(90,55,15,0.46)' };
 
   ctx.save();
   ctx.globalAlpha = 0.13;
@@ -213,7 +213,7 @@ function battleUnitRoleScaleV59(type) {
 function battleUnitStyleV59(side) {
   return side === 'enemy'
     ? { main:'#ff4f64', dark:'#8d1c2e', hp:'#ff506a', glow:'rgba(255,70,92,0.38)', outline:'rgba(255,235,238,0.92)' }
-    : { main:'#35e66f', dark:'#116b35', hp:'#42f58a', glow:'rgba(83,255,130,0.34)', outline:'rgba(236,255,241,0.94)' };
+    : { main:'#D4A843', dark:'#5E3A12', hp:'#F5C242', glow:'rgba(245,194,66,0.30)', outline:'rgba(255,250,235,0.94)' };
 }
 function battleVisualYV59(s) {
   const topSafe = LAYOUT.fieldY + 10;

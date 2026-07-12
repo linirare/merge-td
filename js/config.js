@@ -4,18 +4,18 @@
 
 const W = 480, H = 854;
 
-/* ——— 清新水果主题色 ——— */
+/* ——— 烫金暖深主题色(战斗屏着色统一:canvas→hifi_shell 烫金) ——— */
 const THEME = {
-  bg:        '#f4ffd9',
-  panelBg:   '#fff7d6',
-  gold:      '#ffc93c',
-  goldGlow:  'rgba(255,201,60,0.32)',
-  accent:    '#ff5d6c',
-  safe:      '#53c96a',
-  info:      '#4db6ff',
-  text:      '#4f6a31',
-  textDim:   '#7fa05a',
-  textBright:'#23471f',
+  bg:        '#201510',
+  panelBg:   'rgba(255,250,235,0.88)',
+  gold:      '#F5C242',
+  goldGlow:  'rgba(245,194,66,0.32)',
+  accent:    '#E23B4E',
+  safe:      '#B58A2E',
+  info:      '#38C6E8',
+  text:      '#C9B48A',
+  textDim:   '#8a7a5a',
+  textBright:'#FFE9A8',
 };
 
 /* ——— 棋盘 ——— */

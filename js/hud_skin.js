@@ -13,7 +13,7 @@ function hudRoundRect(x, y, w, h, r) {
   ctx.closePath();
 }
 
-function hudPanel(x, y, w, h, r, fill, stroke = 'rgba(38,82,57,.14)') {
+function hudPanel(x, y, w, h, r, fill, stroke = 'rgba(122,78,8,.14)') {
   ctx.fillStyle = fill;
   hudRoundRect(x, y, w, h, r);
   ctx.fill();
@@ -34,17 +34,17 @@ function drawInfo() {
 
   ctx.save();
   hudPanel(x, y, 148, 34, 10, 'rgba(255,255,255,.84)');
-  ctx.fillStyle = '#1f3328';
+  ctx.fillStyle = '#FFE9A8';
   ctx.font = '900 13px sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(mode, x + 11, y + 12);
-  ctx.fillStyle = '#6b7d68';
+  ctx.fillStyle = '#C9B48A';
   ctx.font = '800 10px sans-serif';
   ctx.fillText(desc, x + 11, y + 25);
 
   const elapsed = Math.floor(state.time || 0);
-  hudPanel(W / 2 - 34, y, 68, 34, 10, 'rgba(32,54,41,.88)', 'rgba(255,255,255,.18)');
+  hudPanel(W / 2 - 34, y, 68, 34, 10, 'rgba(34,22,12,.88)', 'rgba(255,255,255,.18)');
   ctx.fillStyle = '#fff8cf';
   ctx.font = '900 13px sans-serif';
   ctx.textAlign = 'center';
@@ -90,11 +90,11 @@ function drawOperationResourceStripV61() {
     h,
     12,
     'rgba(255,255,255,.88)',
-    pulseKind === 'lack' && pulse > 0 ? 'rgba(223,89,100,.48)' : 'rgba(38,82,57,.14)'
+    pulseKind === 'lack' && pulse > 0 ? 'rgba(223,89,100,.48)' : 'rgba(122,78,8,.14)'
   );
 
   const juiceW = 112;
-  const juiceFill = canAct ? '#203629' : '#6f3a3d';
+  const juiceFill = canAct ? '#3E2716' : '#6f3a3d';
   ctx.fillStyle = juiceFill;
   hudRoundRect(x + 5, y + 5, juiceW, h - 10, 9);
   ctx.fill();
@@ -109,10 +109,10 @@ function drawOperationResourceStripV61() {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.font = '800 10px sans-serif';
-  ctx.fillStyle = canAct ? '#d9f0dc' : '#ffd1d6';
+  ctx.fillStyle = canAct ? '#F3E3C0' : '#ffd1d6';
   ctx.fillText('\u679c\u6c41', x + 15, y + 14);
   ctx.font = '950 20px sans-serif';
-  ctx.fillStyle = '#fff8cf';
+  ctx.fillStyle = '#FFE9A8';
   ctx.fillText(String(juice), x + 56, y + 21);
 
   const btn = getJuiceSpawnButtonRectV60();
@@ -177,10 +177,10 @@ function drawTopActionBarV60() {
     const by = y + 5;
     const bw = rect.w;
     const bh = h - 10;
-    ctx.fillStyle = strong ? '#203629' : 'rgba(47,184,104,.10)';
+    ctx.fillStyle = strong ? '#2C1B0E' : 'rgba(181,117,10,.12)';
     hudRoundRect(bx, by, bw, bh, 8);
     ctx.fill();
-    ctx.fillStyle = strong ? '#fff8cf' : '#167a48';
+    ctx.fillStyle = strong ? '#FFE9A8' : '#B58A2E';
     ctx.font = '900 13px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
