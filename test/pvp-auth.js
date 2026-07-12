@@ -113,7 +113,10 @@ function cleanupUser(email) {
     console.log('OK: pvp chat nickname is server-authenticated (no spoofing)');
   } finally {
     cleanupUser(email);
-    await new Promise(r => server.close(r));
+    await new Promise(resolve => {
+      const timer = setTimeout(resolve, 250);
+      server.close(() => { clearTimeout(timer); resolve(); });
+    });
   }
   process.exit(0);
 })().catch(err => { console.error(err); server.close(() => process.exit(1)); });

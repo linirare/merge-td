@@ -96,8 +96,12 @@ function cleanup(email) {
     try { db.prepare('DELETE FROM tasks WHERE id=?').run(taskId); } catch (e) {}
     try { db.prepare('DELETE FROM achievements WHERE id=?').run(achvId); } catch (e) {}
     try { db.prepare('DELETE FROM events WHERE id=?').run(eventId); } catch (e) {}
-    await new Promise(resolve => server.close(resolve));
+    await new Promise(resolve => {
+      const timer = setTimeout(resolve, 250);
+      server.close(() => { clearTimeout(timer); resolve(); });
+    });
   }
+  process.exit(0);
 })().catch(err => {
   console.error(err);
   server.close(() => process.exit(1));

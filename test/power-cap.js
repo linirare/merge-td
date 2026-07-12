@@ -73,6 +73,10 @@ function cleanupUser(email) {
     console.log(`OK: leaderboard power capped at ${POWER_MAX} (theoretical max ${maxP}), cheat 999999 rejected`);
   } finally {
     cleanupUser(email);
-    await new Promise(r => server.close(r));
+    await new Promise(resolve => {
+      const timer = setTimeout(resolve, 250);
+      server.close(() => { clearTimeout(timer); resolve(); });
+    });
   }
+  process.exit(0);
 })().catch(err => { console.error(err); server.close(() => process.exit(1)); });

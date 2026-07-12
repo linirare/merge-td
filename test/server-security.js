@@ -34,8 +34,12 @@ function request(port, pathname) {
 
     console.log('OK: static server only exposes frontend assets');
   } finally {
-    await new Promise(resolve => server.close(resolve));
+    await new Promise(resolve => {
+      const timer = setTimeout(resolve, 250);
+      server.close(() => { clearTimeout(timer); resolve(); });
+    });
   }
+  process.exit(0);
 })().catch(err => {
   console.error(err);
   server.close(() => process.exit(1));
