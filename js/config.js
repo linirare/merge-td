@@ -199,6 +199,11 @@ function roleCounterText(sourceType, targetType) {
   if (mul <= 0.9) return '受制';
   return '';
 }
+// 克制飘字按"攻击方职责"配色(战斗屏 UI 规范 §3):突击黄/后排紫/坦克绿/攻城橙/前排琥珀/控制青/辅助浅绿
+function roleFxColor(sourceType) {
+  const r = (TYPES[sourceType] || {}).role;
+  return ({ rush: '#FFD24A', back: '#B076FF', tank: '#53E77B', siege: '#FF9A35', front: '#FFB547', control: '#38C6E8', support: '#8FE0A0' })[r] || '#F5C242';
+}
 function bestCounterForEnemy(enemyType, pool = null) {
   const list = pool || UNIT_POOL;
   let best = null, bestScore = 1;

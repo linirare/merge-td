@@ -476,7 +476,7 @@ function attackTarget(s, target) {
     playSfx('arrow');
     let cherryAoe = false;
     if (s.type === 'cherry_bomber' && (s.level || 1) >= 4) { s._cherryShot = (s._cherryShot || 0) + 1; if (s._cherryShot % 5 === 0) cherryAoe = true; }
-    state.projectiles.push({ x: s.x, y: s.y, targetX: target.x, targetY: target.y, targetId: target.id, dmg, speed: s.type === 'blueberry_sniper' ? 315 : 245, color: TYPES[s.type]?.color || '#ff6b4a', life: 1.15, side: s.side, counterHit: !!counterText && counterMul > 1, ownerType: s.type, ownerLevel: s.level, slow: s.type === 'pear_frost', aoe: cherryAoe, firstHit: s.firstHit });
+    state.projectiles.push({ x: s.x, y: s.y, targetX: target.x, targetY: target.y, targetId: target.id, dmg, speed: s.type === 'blueberry_sniper' ? 315 : 245, color: TYPES[s.type]?.color || '#ff6b4a', life: 1.15, side: s.side, counterHit: !!counterText && counterMul > 1, counterMul: counterMul, ownerType: s.type, ownerLevel: s.level, slow: s.type === 'pear_frost', aoe: cherryAoe, firstHit: s.firstHit });
     s.firstHit = false;
     return;
   }
@@ -487,8 +487,18 @@ function attackTarget(s, target) {
   trackDamage(s, dealt, false);
   if (s.type === 'pear_frost') { target.slowTimer = 2.2 + s.level * 0.18; target.slowMul = 0.52; }
   state.attackFx.push({ x1: s.x, y1: s.y, x2: target.x, y2: target.y, life: 0.22, maxLife: 0.22 });
-  const label = counterText && counterMul > 1 ? `${counterText} -${dealt}` : counterText === '受制' ? `受制 -${dealt}` : `-${dealt}`;
-  addFx((s.x + target.x) / 2, (s.y + target.y) / 2 - 8, label, counterMul > 1 ? THEME.gold : THEME.accent, counterMul > 1 ? 13 : 11);
+  // 克制可视化(战斗屏规范 §3):按攻击方职责配色 + 分级字号;强克制加光环 pop,受制标红
+  const fxCol = typeof roleFxColor === 'function' ? roleFxColor(s.type) : THEME.gold;
+  if (counterMul >= 1.25) {
+    addFx(target.x, target.y - 14, `克制 -${dealt}`, fxCol, 16);
+    state.rings.push({ x: target.x, y: target.y, r: 6, life: 0.3, maxLife: 0.3, color: fxCol });
+  } else if (counterMul > 1) {
+    addFx(target.x, target.y - 12, `优势 -${dealt}`, fxCol, 13);
+  } else if (counterText === '受制') {
+    addFx((s.x + target.x) / 2, (s.y + target.y) / 2 - 8, `受制 -${dealt}`, '#E23B4E', 12);
+  } else {
+    addFx((s.x + target.x) / 2, (s.y + target.y) / 2 - 8, `-${dealt}`, THEME.accent, 11);
+  }
   s.firstHit = false;
   if (target.hp <= 0) killSoldier(target, s.side, s.atk, s.type);
 }
@@ -595,7 +605,16 @@ function updateProjectiles() {
       tgt.hp -= p.dmg;
       tgt.hitFlash = 0.28;
       if (p.side === 'player') state.damageByType[p.ownerType || 'bow'] = (state.damageByType[p.ownerType || 'bow'] || 0) + p.dmg;
-      addFx((p.x + tgt.x) / 2, (p.y + tgt.y) / 2 - 8, p.counterHit ? `克制 -${p.dmg}` : `-${p.dmg}`, p.counterHit ? THEME.gold : THEME.accent, p.counterHit ? 14 : 12);
+      const pcm = p.counterMul || (p.counterHit ? 1.3 : 1);
+      const pcol = typeof roleFxColor === 'function' ? roleFxColor(p.ownerType) : THEME.gold;
+      if (pcm >= 1.25) {
+        addFx(tgt.x, tgt.y - 14, `克制 -${p.dmg}`, pcol, 16);
+        state.rings.push({ x: tgt.x, y: tgt.y, r: 6, life: 0.3, maxLife: 0.3, color: pcol });
+      } else if (pcm > 1) {
+        addFx(tgt.x, tgt.y - 12, `优势 -${p.dmg}`, pcol, 13);
+      } else {
+        addFx((p.x + tgt.x) / 2, (p.y + tgt.y) / 2 - 8, `-${p.dmg}`, THEME.accent, 12);
+      }
       for (let j = 0; j < 3; j++) {
         state.fx.push({
           x: tgt.x,
