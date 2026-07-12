@@ -60,29 +60,33 @@ function hexToRgbaV60(hex, a) {
 function stickPaletteV60(o) {
   const enemy = o.sideColor === '#ff4a5f';
   const player = o.sideColor === '#22c55e';
-  // 躯干填充染上该水果的果色 → 头(emoji)与身体成为一体,消除"精致水果插在暗线条上"的断层
-  const fruitTint = hexToRgbaV60(o.headColor || '#8a6b46', 0.34);
+  // body 三段渐变(hi→mid→lo)给躯干体积感(治"扁平无光影");头顶 emoji 负责"是什么果子",身体负责"敌我"
+  // outline = 深色描边:在金色战场背景上把小兵轮廓拎出来,叠人时把相邻单位隔开(奶油描边在金底上=隐形,吃过亏)
+  const outline = 'rgba(48,32,26,0.9)';
   if (enemy) {
     return {
-      ink: '#a13143',          // 队色中间调:比原暗色亮,但不抢水果头的戏
-      soft: fruitTint,
+      ink: '#8f2436',          // 深红队色:四肢
+      bodyHi: 'rgba(255,150,164,0.95)', body: 'rgba(232,74,94,0.95)', bodyLo: 'rgba(146,32,48,0.96)',
       rim: 'rgba(255,224,229,0.9)',
-      headBase: 'rgba(255,246,232,0.74)',
+      outline,
+      headBase: 'rgba(255,244,230,0.97)',
     };
   }
   if (player) {
     return {
-      ink: '#2b7d47',          // 队色中间调:比原暗色亮,但不抢水果头的戏
-      soft: fruitTint,
+      ink: '#1f6d3c',          // 深绿队色:四肢
+      bodyHi: 'rgba(126,230,158,0.95)', body: 'rgba(52,176,100,0.95)', bodyLo: 'rgba(22,104,58,0.96)',
       rim: 'rgba(230,255,236,0.9)',
-      headBase: 'rgba(255,250,226,0.76)',
+      outline,
+      headBase: 'rgba(255,250,226,0.97)',
     };
   }
   return {
-    ink: '#5a7a4e',
-    soft: fruitTint,
+    ink: '#4a6a3e',
+    bodyHi: 'rgba(170,200,150,0.95)', body: 'rgba(110,150,90,0.95)', bodyLo: 'rgba(70,100,58,0.96)',
     rim: 'rgba(255,250,226,0.82)',
-    headBase: 'rgba(255,250,226,0.72)',
+    outline,
+    headBase: 'rgba(255,250,226,0.97)',
   };
 }
 
@@ -115,62 +119,77 @@ function drawStickmanShape(ctx, o) {
     const fy = GROUND + reach - lift;
     const kx = hipX + sideSign * s * 2.4;         // 膝盖外扩,大腿张开
     const ky = hipY + (GROUND - hipY) * 0.45 + reach * 0.35 - lift * 0.6;
-    ctx.strokeStyle = ink; ctx.lineWidth = s * 1.9 * 1.65; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(hipX, hipY);
-    ctx.quadraticCurveTo(kx, ky, fx, fy); ctx.stroke();
-    // 脚掌:朝朝向 dir 的实心圆头鞋,明显可见(消灭"牙签腿无脚")
-    ctx.fillStyle = ink;
+    const legW = s * 3.4;                          // 大腿加粗,读成"腿"而非火柴棍
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(hipX, hipY); ctx.quadraticCurveTo(kx, ky, fx, fy);
+    ctx.strokeStyle = pal.outline; ctx.lineWidth = legW + s * 1.7; ctx.stroke(); // 奶油光晕垫底,隔开叠加的兵
+    ctx.strokeStyle = ink; ctx.lineWidth = legW; ctx.stroke();
+    // 脚掌:朝朝向 dir 的实心圆头鞋 + 奶油描边(消灭"牙签腿无脚",叠人也分得开)
     ctx.save(); ctx.translate(fx, fy); ctx.scale(dir, 1);
-    ctx.beginPath(); ctx.ellipse(s * 1.0, -s * 0.2, s * 2.5, s * 1.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s * 1.0, -s * 0.2, s * 2.8, s * 1.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = ink; ctx.fill();
+    ctx.lineWidth = s * 0.9; ctx.strokeStyle = pal.outline; ctx.stroke();
     ctx.restore();
   }
   leg(k.lf, -1, 0.6); leg(k.rf, 1, 1);
   ctx.globalAlpha = 1;
 
-  // 躯干
+  // 躯干:加宽的蛋形块,三段渐变填充(上亮下暗=体积)+ 深色描边(金底上拎出轮廓)+ 顶部高光
   ctx.save();
   ctx.translate((hipX + shX) / 2, (hipY + shY) / 2);
   ctx.rotate(lean * 0.72);
-  ctx.fillStyle = pal.soft;
-  ctx.strokeStyle = pal.rim;
-  ctx.lineWidth = Math.max(0.8, s * 0.34);
   ctx.beginPath();
-  ctx.ellipse(0, 0, s * 3.2, s * 5.4, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, s * 4.1, s * 5.7, 0, 0, Math.PI * 2);
+  const bodyGrad = ctx.createLinearGradient(0, -s * 5.7, 0, s * 5.7);
+  bodyGrad.addColorStop(0, pal.bodyHi); bodyGrad.addColorStop(0.5, pal.body); bodyGrad.addColorStop(1, pal.bodyLo);
+  ctx.fillStyle = bodyGrad;
   ctx.fill();
+  ctx.strokeStyle = pal.outline; ctx.lineWidth = s * 1.25;
   ctx.stroke();
+  // 顶部高光:一小片白,给躯干光泽,呼应水果球的立体高光
+  ctx.globalAlpha = 0.55; ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.beginPath(); ctx.ellipse(-s * 1.3, -s * 2.6, s * 1.6, s * 2.1, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
   ctx.restore();
 
   ctx.strokeStyle = ink; ctx.lineWidth = s * 2.05; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(hipX, hipY); ctx.lineTo(shX, shY); ctx.stroke();
 
-  // 手臂(交替摆)
+  // 手臂(交替摆);每条先描奶油光晕再描 ink,叠人时分得开
   const arm = s * 9;
   const rAng = 0.4 + k.ra * 0.8 + lean, rx = shX + Math.cos(rAng) * arm, ry = shY + Math.sin(rAng) * arm;
   const lAng = -2.8 + k.la * 0.8 + lean, lx = shX + Math.cos(lAng) * arm, ly = shY + Math.sin(lAng) * arm;
-  ctx.lineWidth = s * 1.5 * 1.65; ctx.strokeStyle = ink;
-  ctx.beginPath(); ctx.moveTo(shX, shY); ctx.lineTo(rx, ry); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(shX, shY); ctx.lineTo(lx, ly); ctx.stroke();
+  const armW = s * 2.7;
+  ctx.lineCap = 'round';
+  for (const [ex, ey] of [[lx, ly], [rx, ry]]) {
+    ctx.beginPath(); ctx.moveTo(shX, shY); ctx.lineTo(ex, ey);
+    ctx.strokeStyle = pal.outline; ctx.lineWidth = armW + s * 1.5; ctx.stroke();
+    ctx.strokeStyle = ink; ctx.lineWidth = armW; ctx.stroke();
+  }
 
   // 武器比例独立:约头直径的 0.6 倍,不喧宾夺主;floor 用 s*0.5 避免身体放大后顶大武器
   const ws = (o.headScale || s) * 0.12;
   drawStickWeapon(ctx, o.weapon, Math.max(s * 0.5, ws), dir, { rx, ry, lx, ly, shX, shY }, o.atkT || 0, o.fighting, o.sideColor || '#888', o.headColor || '#8a6b46', ink);
 
-  // 水果头 = emoji 本体,长在脖子上,无外圈(Q 版超级大头)
-  const headR = o.headScale || s * 10; // headScale 已按 0.20 比例放大
+  // 水果头 = emoji 本体,长在脖子上(Q 版大头)
+  const headR = o.headScale || s * 10; // headScale 已按比例放大
+  // 头托盘:奶油实心盘 + 队色描边环 —— 叠人时前面的头挡住后面的(分层清晰),并呼应烫金卡片描边质感
+  ctx.beginPath(); ctx.arc(hx, hy, headR * 1.05, 0, Math.PI * 2);
+  ctx.fillStyle = pal.headBase; ctx.fill();
+  ctx.lineWidth = Math.max(1.4, s * 1.5); ctx.strokeStyle = ink; ctx.stroke();
   if (o.hitFlash > 0) {
-    ctx.save(); ctx.globalAlpha = 0.45; ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(hx, hy, headR * 0.96, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(hx, hy, headR * 1.0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
   if (o.emoji) {
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `bold ${Math.round(headR * 2.5)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
-    ctx.fillText(o.emoji, hx, hy);
-    // 敌我区分:脚下光环(不抢眼)
+    ctx.font = `bold ${Math.round(headR * 2.05)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
+    ctx.fillText(o.emoji, hx, hy); // emoji 收进盘内,四周露出奶油边 = 果子代币
     ctx.restore();
   } else {
     ctx.fillStyle = o.headColor || '#34c96b';
-    ctx.beginPath(); ctx.arc(hx, hy, headR, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx, hy, headR * 0.92, 0, Math.PI * 2); ctx.fill();
   }
   ctx.textBaseline = 'alphabetic';
   return { hx, hy, headR, shX, shY };
@@ -352,7 +371,7 @@ function drawStatusFX(ctx, g, se, s, time) {
     // 身体缩小 + 头超大 = 极致 Q 版
     const rBase = (13 + 1 * 1.18) * depth * tierScale * roleScale;
     const scaleBody = rBase * 0.135; // 身体放大,躯干四肢可见(不再"水果插棍子");跨等级固定
-    const scaleHead = r * 0.80;      // 头随等级放大(Q 版大头)
+    const scaleHead = r * 0.74;      // 头随等级放大(Q 版大头),略收以改善头身比,给加实的身体让位
     const groundY = vis.y + rBase * 0.72;
     const fighting = s.mode === 'fight' || s.mode === 'siege' || s.mode === 'siege_support';
     // 攻击动作:检测 atkTimer 复位(即刚打出一下),触发 1→0 衰减的出手进度
@@ -365,9 +384,9 @@ function drawStatusFX(ctx, g, se, s, time) {
     ctx.save();
     const invis = typeof isInvisible === 'function' && isInvisible(s);
     if (invis) ctx.globalAlpha = 0.4;
-    // 脚下光环:敌我识别(不抢头)
-    ctx.fillStyle = st.main; ctx.globalAlpha = invis ? 0.12 : 0.30;
-    ctx.beginPath(); ctx.ellipse(vis.x, groundY + 1, rBase * 0.9, rBase * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+    // 脚下光环:敌我识别(队色地面圈,加强以强化阵营池)
+    ctx.fillStyle = st.main; ctx.globalAlpha = invis ? 0.14 : 0.42;
+    ctx.beginPath(); ctx.ellipse(vis.x, groundY + 1, rBase * 0.98, rBase * 0.18, 0, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = invis ? 0.4 : 1;
 
     const geom = drawStickmanShape(ctx, {
