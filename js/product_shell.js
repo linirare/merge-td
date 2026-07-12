@@ -107,7 +107,7 @@
       if (!shell.fruitLv[id]) shell.fruitLv[id] = 1;
       meta.shardsTotal[id] = Math.max(meta.shardsTotal[id] || 0, shell.fragments[id] || 0);
     }
-    meta.unlocked = Array.isArray(meta.unlocked) && meta.unlocked.length ? meta.unlocked : UNIT_POOL.slice();
+    meta.unlocked = Array.isArray(meta.unlocked) && meta.unlocked.length ? meta.unlocked : DEFAULT_DECK.slice();
     saveShell();
   }
 
@@ -373,10 +373,10 @@
         <div class="side-l">
           <button class="ring" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">签到</span>${dailyReady ? '<span class="badge">1</span>' : ''}</button>
           <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg></span><span class="lbl">邮件</span></button>
-          <button class="ring" data-chat><span class="inner" style="background:radial-gradient(circle at 40% 34%,#8FE0A0,#2E9A56)"><svg class="icon"><use href="#i-cards"/></svg></span><span class="lbl">聊天</span></button>
+          <button class="ring" data-chat><span class="inner" style="background:radial-gradient(circle at 40% 34%,#8FE0A0,#2E9A56)"><svg class="icon"><use href="#i-chat"/></svg></span><span class="lbl">聊天</span></button>
         </div>
         <div class="side">
-          <button class="ring" data-go="shop"><span class="inner" style="background:radial-gradient(circle at 40% 34%,#FFB05A,#D9600E)"><svg class="icon"><use href="#i-flame"/></svg></span><span class="lbl">活动</span></button>
+          <button class="ring" data-go="shop"><span class="inner" style="background:radial-gradient(circle at 40% 34%,#FFB05A,#D9600E)"><svg class="icon"><use href="#i-flame"/></svg></span><span class="lbl">商城</span></button>
           <button class="ring" data-help><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-help"/></svg></span><span class="lbl">帮助</span></button>
         </div>
 
@@ -503,6 +503,8 @@
     const list = UNIT_POOL
       .filter(id => squadFilter === 'all' || (TYPES[id] && TYPES[id].role === squadFilter))
       .sort((a, b) => {
+        const ua = isUnlocked(a) ? 0 : 1, ub = isUnlocked(b) ? 0 : 1;
+        if (ua !== ub) return ua - ub;                                   // 已解锁排前,未解锁沉底
         const ra = RAR_RANK[TYPES[a] && TYPES[a].rarity] ?? 3, rb = RAR_RANK[TYPES[b] && TYPES[b].rarity] ?? 3;
         if (ra !== rb) return ra - rb;                                   // 稀有度高排前(T0> T1> T2)
         return String(TYPES[a] && TYPES[a].name || a).localeCompare(String(TYPES[b] && TYPES[b].name || b));
@@ -510,14 +512,18 @@
     roster.innerHTML = list.map(id => {
       const t = fruit(id);
       const rc = RAR_COLOR[t.rarity] || '#9AA6B2';
-      const rk = RAR_KEY[t.rarity] || 'N';
+      const rk = RAR_KEY[t.rarity] || 'T2';
+      const unlocked = isUnlocked(id);
+      if (!unlocked) {
+        return `<button class="card lock" style="--rc:#444"><span class="rc" style="background:#555">?</span>${hifiDisc(id, 38)}<span class="nm" style="color:#666">???</span><span class="lk"><svg class="icon"><use href="#i-lock"/></svg><small>抽卡解锁</small></span></button>`;
+      }
       const lv = initLv(id);
       const stars = Array.from({ length: Math.min(5, lv) }, () => '<svg class="icon"><use href="#i-star"/></svg>').join('');
       return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 38)}<span class="nm">${t.name}</span><span class="stars">${stars}</span></button>`;
     }).join('') || '<div style="grid-column:1/-1;text-align:center;color:#8a7a5a;font-weight:800;padding:24px">该职责暂无英雄</div>';
 
     root.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => { squadFilter = btn.dataset.filter; renderSquad(); }));
-    root.querySelectorAll('[data-detail]').forEach(el => el.addEventListener('click', () => openCardDetail(el.dataset.detail)));
+    root.querySelectorAll('.card:not(.lock)[data-detail]').forEach(el => el.addEventListener('click', () => openCardDetail(el.dataset.detail)));
     root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => { hidePanels(); document.getElementById('helpPanel')?.classList.remove('hide'); }));
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
     refreshResourceNumbers();
@@ -658,6 +664,8 @@
     const pityE = Math.min(shell.pityE || 0, 29);
     const canG1 = (shell.gems || 0) >= GACHA_COST_1;
     const canG10 = (shell.gems || 0) >= GACHA_COST_10;
+    const canT1 = (shell.gems || 0) >= T0T2_COST_1;
+    const canT10 = (shell.gems || 0) >= T0T2_COST_10;
     const canAtk = (meta.gold || 0) >= 180;
     const canFort = (meta.gold || 0) >= 150;
     root.innerHTML = `
@@ -668,17 +676,30 @@
           <div class="shead"><h2 class="display">山货集市</h2><span class="line"></span></div>
           <div class="banner">
             <img src="art/banner-gacha_001.jpg" alt="卡池">
-            <div class="cap"><h3>缤纷水果祭</h3><div class="rar">
+            <div class="cap"><h3>缤纷水果祭 · 基础卡池</h3><div class="rar">
               ${GACHA_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
             </div></div>
           </div>
           <div class="gpanel">
-            <div class="pity-row"><span>史诗 E 保底</span><span><b>${pityE}</b> / 29 抽</span></div>
-            <div class="bar"><span style="width:${Math.round(pityE / 29 * 100)}%;background:linear-gradient(90deg,#4db6ff,#ffc93c)"></span></div>
+            <div class="pity-row"><span>史诗 保底</span><span><b>${pityE}</b> / 29 抽</span></div>
+            <div class="bar"><span style="width:${Math.round(pityE / 29 * 100)}%;background:linear-gradient(90deg,#5B9FE0,#FF6B35)"></span></div>
           </div>
           <div class="draw2">
             <button class="gbtn ${canG1 ? '' : 'gray'}" id="hifiGacha1"><span class="display">单抽</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${GACHA_COST_1}</small></button>
-            <button class="gbtn ${canG10 ? '' : 'gray'}" id="hifiGacha10"><span class="display">十连 ×10</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${GACHA_COST_10} · R保底</small></button>
+            <button class="gbtn ${canG10 ? '' : 'gray'}" id="hifiGacha10"><span class="display">十连 ×10</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${GACHA_COST_10} · 稀保底</small></button>
+          </div>
+          <div class="shead" style="margin-top:20px"><h2 class="display" style="font-size:20px">🎯 精英卡池 T0-T2</h2><span class="line"></span></div>
+          <div class="banner" style="background:linear-gradient(160deg,#2a1a2e,#1a1020)">
+            <div class="cap"><h3 style="color:#FF6B35">传说英雄集结</h3><div class="rar">
+              ${T0T2_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
+            </div></div>
+          </div>
+          <div class="gpanel">
+            <div class="pity-row"><span>🎯 高碎片保底 · 碎片×2-5倍</span><span>十连必出T1+</span></div>
+          </div>
+          <div class="draw2">
+            <button class="gbtn ${canT1 ? '' : 'gray'}" id="hifiT0Gacha1"><span class="display">单抽</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${T0T2_COST_1}</small></button>
+            <button class="gbtn ${canT10 ? '' : 'gray'}" id="hifiT0Gacha10"><span class="display">十连 ×10</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${T0T2_COST_10} · T1保底</small></button>
           </div>
           <div class="shead" style="margin-top:20px"><h2 class="display" style="font-size:20px">每日补给</h2><span class="line"></span></div>
           <div class="gpanel pack">
@@ -699,8 +720,10 @@
         </div>
       </div>
     `;
-    if (canG1) root.querySelector('#hifiGacha1')?.addEventListener('click', () => doGacha(1));
-    if (canG10) root.querySelector('#hifiGacha10')?.addEventListener('click', () => doGacha(10));
+    if (canG1) root.querySelector('#hifiGacha1')?.addEventListener('click', () => doGacha(1, GACHA_TIERS, GACHA_COST_1, GACHA_COST_10));
+    if (canG10) root.querySelector('#hifiGacha10')?.addEventListener('click', () => doGacha(10, GACHA_TIERS, GACHA_COST_1, GACHA_COST_10));
+    if (canT1) root.querySelector('#hifiT0Gacha1')?.addEventListener('click', () => doGacha(1, T0T2_TIERS, T0T2_COST_1, T0T2_COST_10));
+    if (canT10) root.querySelector('#hifiT0Gacha10')?.addEventListener('click', () => doGacha(10, T0T2_TIERS, T0T2_COST_1, T0T2_COST_10));
     if (!claimed) root.querySelector('#hifiDaily')?.addEventListener('click', () => claimDaily());
     if (canAtk) root.querySelector('#hifiPackAtk')?.addEventListener('click', () => buyUpgradePack('atk_all', 180));
     if (canFort) root.querySelector('#hifiPackFort')?.addEventListener('click', () => buyUpgradePack('fort_sp', 150));
@@ -1062,12 +1085,21 @@
   }
 
   const GACHA_TIERS = [
-    { key: 'N', label: '普通', weight: 65, frag: 5, color: '#8aad6a', rarities: ['normal'] },
-    { key: 'R', label: '稀有', weight: 25, frag: 10, color: '#4db6ff', rarities: ['rare'] },
-    { key: 'E', label: '史诗', weight: 10, frag: 20, color: '#ffc93c', rarities: ['epic'] },
+    { key: '普', label: '普通', weight: 65, frag: 5, color: '#8FE0A0', rarities: ['normal'] },
+    { key: '稀', label: '稀有', weight: 25, frag: 10, color: '#5B9FE0', rarities: ['rare'] },
+    { key: '史', label: '史诗', weight: 10, frag: 20, color: '#FF6B35', rarities: ['epic'] },
+  ];
+  // T0-T2卡池:单抽100钻/十连1000钻
+  const T0T2_COST_1 = 100;
+  const T0T2_COST_10 = 1000;
+  const T0T2_TIERS = [
+    { key: 'T2', label: 'T2·普通', weight: 55, frag: 25, color: '#8FE0A0', rarities: ['normal'] },
+    { key: 'T1', label: 'T1·稀有', weight: 30, frag: 50, color: '#5B9FE0', rarities: ['rare'] },
+    { key: 'T0', label: 'T0·史诗', weight: 15, frag: 100, color: '#FF6B35', rarities: ['epic'] },
   ];
 
-  function gachaPool(tier) {
+  function gachaPool(tier, tiers) {
+    tiers = tiers || GACHA_TIERS;
     const ids = UNIT_POOL.filter(id => TYPES[id] && tier.rarities.includes(TYPES[id].rarity));
     return ids.length ? ids : UNIT_POOL;
   }
@@ -1076,23 +1108,25 @@
     return GACHA_TIERS.find(t => t.key === k);
   }
 
-  function rollTier() {
-    if ((shell.pityE || 0) >= 29) return tierByKey('E');
-    if ((shell.pityR || 0) >= 9) return Math.random() < 0.15 ? tierByKey('E') : tierByKey('R');
-    const total = GACHA_TIERS.reduce((s, t) => s + t.weight, 0);
+  function rollTier(tiers) {
+    tiers = tiers || GACHA_TIERS;
+    const hasE = tiers.some(t => t.key === '史');
+    if (hasE && (shell.pityE || 0) >= 29) return tiers.find(t => t.key === '史');
+    if (hasE && (shell.pityR || 0) >= 9) return Math.random() < 0.15 ? tiers.find(t => t.key === '史') : tiers.find(t => t.key === '稀');
+    const total = tiers.reduce((s, t) => s + t.weight, 0);
     let r = Math.random() * total;
-    for (const t of GACHA_TIERS) {
+    for (const t of tiers) {
       r -= t.weight;
       if (r <= 0) return t;
     }
-    return GACHA_TIERS[0];
+    return tiers[0];
   }
 
   function bumpPity(key) {
-    if (key === 'E') {
+    if (key === '史' || key === 'T0') {
       shell.pityE = 0;
       shell.pityR = 0;
-    } else if (key === 'R') {
+    } else if (key === '稀' || key === 'T1') {
       shell.pityR = 0;
       shell.pityE = (shell.pityE || 0) + 1;
     } else {
@@ -1101,19 +1135,24 @@
     }
   }
 
-  function doGacha(count) {
-    const cost = count === 10 ? GACHA_COST_10 : GACHA_COST_1;
+  function doGacha(count, tiers, cost1, cost10) {
+    tiers = tiers || GACHA_TIERS;
+    cost1 = cost1 || GACHA_COST_1;
+    cost10 = cost10 || GACHA_COST_10;
+    const cost = count === 10 ? cost10 : cost1;
     if ((shell.gems || 0) < cost) return;
     shell.gems -= cost;
     const results = [];
     meta.unlocked = Array.isArray(meta.unlocked) ? meta.unlocked : [];
     let gotRplus = false;
+    const lowestKey = tiers[tiers.length - 1] ? tiers[tiers.length - 1].key : '普';
+    const midKey = tiers.length >= 2 ? tiers[1].key : '稀';
     for (let i = 0; i < count; i++) {
-      let tier = rollTier();
-      if (count === 10 && i === 9 && !gotRplus && tier.key === 'N') tier = tierByKey('R');
-      if (tier.key !== 'N') gotRplus = true;
+      let tier = rollTier(tiers);
+      if (count === 10 && i === 9 && !gotRplus && tier.key === lowestKey) tier = tiers.find(t => t.key === midKey) || tier;
+      if (tier.key !== lowestKey) gotRplus = true;
       bumpPity(tier.key);
-      const pool = gachaPool(tier);
+      const pool = gachaPool(tier, tiers);
       const id = pool[Math.floor(Math.random() * pool.length)] || UNIT_POOL[0];
       const t = fruit(id);
       const isNew = !meta.unlocked.includes(id);
