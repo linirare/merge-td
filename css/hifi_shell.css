@@ -102,15 +102,20 @@ button:disabled{opacity:0.40;cursor:default}
 .hifi .cta:active{transform:translateY(4px);}
 .hifi .cta .micon{width:28px;height:28px;flex:none;color:#FFF6DE;filter:drop-shadow(0 1px 0 rgba(0,0,0,.45));}
 .hifi .cta .txtcol{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;}
-.hifi .cta .t{font-family:'ZCOOL KuaiLe';font-size:20px;color:#FFF6DE;-webkit-text-stroke:1px;paint-order:stroke fill;}
+.hifi .cta .t{font-family:'ZCOOL KuaiLe';font-size:20px;color:#3A1E08;-webkit-text-stroke:1.5px #7A2010;paint-order:stroke fill;text-shadow:0 2px 0 rgba(0,0,0,.15);}
 .hifi .cta .s{font-family:'Nunito';font-weight:800;font-size:10px;}
 .hifi .cta .shine{position:absolute;top:0;left:-60%;width:45%;height:100%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:hifiShine 3.6s ease-in-out infinite;}
 .hifi .cta.pve{background:linear-gradient(180deg,#FFE9A8,#F5C242 45%,#E8A317 62%,#D18A0E);border-color:#7A4E08;box-shadow:0 6px 0 #7A4E08,0 10px 16px rgba(0,0,0,.45),inset 0 2px 3px rgba(255,255,255,.85),0 0 22px rgba(245,194,66,.4);}
 .hifi .cta.pve .t{-webkit-text-stroke-color:#7A2010;text-shadow:0 2px 0 #B5480A;} .hifi .cta.pve .s{color:#5A0E0E;}
 .hifi .cta.pve:active{box-shadow:0 2px 0 #7A4E08;}
 .hifi .cta.pvp{background:linear-gradient(180deg,#A6E4F5,#38C6E8 45%,#1E9AC0 62%,#137A9A);border-color:#0E5A72;box-shadow:0 6px 0 #0E5A72,0 10px 16px rgba(0,0,0,.45),inset 0 2px 3px rgba(255,255,255,.7),0 0 22px rgba(56,198,232,.4);}
-.hifi .cta.pvp .t{-webkit-text-stroke-color:#0A4A5E;text-shadow:0 2px 0 #0E6A86;} .hifi .cta.pvp .s{color:#06323F;}
+.hifi .cta.pvp .t{color:#042028;-webkit-text-stroke-color:#0A4A5E;text-shadow:0 1px 0 rgba(255,255,255,.2);} .hifi .cta.pvp .s{color:#042028;}
 .hifi .cta.pvp:active{box-shadow:0 2px 0 #0E5A72;}
+
+/* 首页主视觉装饰:logo与CTA之间不显空荡(审计P2-UI) */
+.hifi-home .hero-spot{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:200px;height:200px;border-radius:50%;background:radial-gradient(circle at 48% 44%,rgba(255,233,168,.18) 0%,rgba(245,194,66,.06) 40%,transparent 70%);pointer-events:none;z-index:1;}
+.hifi-home .hero-spot::after{content:"🍉";position:absolute;inset:0;display:grid;place-items:center;font-size:72px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.35));animation:heroFloat 4s ease-in-out infinite;}
+@keyframes heroFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
 
 /* ============================================================
    共享底部导航(覆盖 shell-v65 的 #bottomNav 容器规则)
@@ -341,7 +346,8 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 .hifi .linput{width:100%;padding:13px;border-radius:12px;border:2px solid rgba(245,194,66,.4);background:rgba(0,0,0,.35);color:#FFE9A8;font-size:16px;font-weight:700;margin-bottom:10px;font-family:'Nunito';}
 .hifi .linput::placeholder{color:#b6a179;} .hifi .linput:focus{outline:2px solid #F5C242;outline-offset:1px;border-color:#F5C242;}
 .hifi .ltabs{display:flex;gap:8px;margin-bottom:14px;}
-.hifi .ltab{flex:1;padding:10px;border-radius:12px;font-family:'ZCOOL KuaiLe';font-size:16px;color:#B99A6E;text-align:center;background:rgba(0,0,0,.3);border:1.5px solid rgba(245,194,66,.25);}
+.hifi .ltab{flex:1;padding:10px;border-radius:12px;font-family:'ZCOOL KuaiLe';font-size:16px;color:#8B7355;text-align:center;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);transition:.15s;}
+.hifi .ltab:hover{background:rgba(255,255,255,.1);color:#B99A6E;}
 .hifi .ltab.on{background:linear-gradient(180deg,#F5C242,#D18A0E);color:#3a1e08;}
 .hifi .pf-top{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
 .hifi .pf-av{width:70px;height:70px;border-radius:22px;background:radial-gradient(circle at 40% 34%,#A78BD8,#4A2D7A);display:grid;place-items:center;border:3px solid #F5C242;box-shadow:0 4px 10px rgba(0,0,0,.4);flex:none;}

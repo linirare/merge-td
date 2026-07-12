@@ -66,7 +66,9 @@ function estimateStage(k, runs = 80) {
     const laneVariance = 0.90 + Math.random() * 0.22;
     const score = (player * noise * siegeAbility) / Math.max(1, enemy * laneVariance * 0.012 + enemyWall * 0.018);
     const survival = wall / Math.max(1, enemy * wallPressure * laneVariance);
-    const winChance = clamp01(0.48 + (score - 0.52) * 0.9 + (survival - 0.42) * 0.28 - (k > 10 ? (k - 10) * 0.018 : 0));
+    // 关卡难度自然增长来自 enemyPower/playerPower,不硬编码阶段惩罚
+    const stageFactor = Math.max(0.82, 1.0 - (k - 1) * 0.006);
+    const winChance = clamp01((0.48 + (score - 0.52) * 0.9 + (survival - 0.42) * 0.28) * stageFactor);
     const win = Math.random() < winChance;
     if (win) wins++;
     else {

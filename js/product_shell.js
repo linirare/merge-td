@@ -368,6 +368,7 @@
         ${hifiTopBarHtml()}
 
         <div class="logo"><h1 class="display">水果突击</h1><div class="rib">灵果召唤 · 合成塔防</div></div>
+        <div class="hero-spot"></div>
 
         <div class="side-l">
           <button class="ring" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">签到</span>${dailyReady ? '<span class="badge">1</span>' : ''}</button>
