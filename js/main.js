@@ -16,14 +16,15 @@ try {
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  // 桌面 canvas 最大宽度放大(手机<430不受影响,桌面>470放大到550,减少空白)
-  const maxW = Math.min(window.innerWidth, 550);
+  // canvas 铺满屏:宽度用满(桌面不掐550),高度按比例;多余竖向空间分给战场(LAYOUT.recalc)
+  const maxW = Math.min(window.innerWidth, window.innerHeight < 500 ? window.innerWidth : 9999);
   scale = Math.min(maxW / W, window.innerHeight / H) * 0.96;
   canvas.style.width = W * scale + 'px';
   canvas.style.height = H * scale + 'px';
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (typeof LAYOUT !== 'undefined' && typeof LAYOUT.recalc === 'function') LAYOUT.recalc(W, H);
 }
 window.addEventListener('resize', resize);
 resize();

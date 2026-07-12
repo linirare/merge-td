@@ -25,7 +25,7 @@ function runPassive(seed) {
   assert.ok(!dup.ok && dup.err === 'cell_occupied', '占位召唤应拒: ' + JSON.stringify(dup));
 
   let sawSoldiers = false, sawWallDmg = false, maxSoldiers = 0;
-  for (let f = 0; f < 60 * 30; f++) {
+  for (let f = 0; f < 120 * 30; f++) { // 拉长至120s(MAX_SOLDIERS 14后需更久破墙)
     b.tick(1 / 30);
     if (f % 30 === 0) {
       const snap = b.snapshot();
