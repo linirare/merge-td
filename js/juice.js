@@ -286,6 +286,7 @@ function updateJuiceOnly(dt) {
   for (let i = j.beams.length - 1; i >= 0; i--) {
     j.beams[i].life -= dt;
     if (j.beams[i].life <= 0) j.beams.splice(i, 1);
+  }
   for (let i = j.smokePuffs.length - 1; i >= 0; i--) {
     const sm = j.smokePuffs[i];
     sm.life -= dt;
@@ -294,7 +295,6 @@ function updateJuiceOnly(dt) {
     sm.r += 5 * dt;
     sm.vy *= Math.pow(0.08, dt);
     if (sm.life <= 0) j.smokePuffs.splice(i, 1);
-  }
   }
   for (let i = j.texts.length - 1; i >= 0; i--) {
     const t = j.texts[i];

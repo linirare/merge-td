@@ -402,17 +402,4 @@ function generateLevel(k) {
     unlockRules: Array.isArray(def.unlockRules) ? def.unlockRules.slice() : [],
     desc: def.desc || (isBossStage ? `Stage ${stageId} Boss · ${def.bossMechanic || 'special'} · +${TUNING.rewards.bossGoldBonus}` : `Stage ${stageId} · Enemy Lv${tunedEnemyLv.toFixed(1)} · ${def.type || 'normal'}`),
   };
-  const boss = k > 0 && k % 5 === 0;
-  const enemyLv = 1 + (k - 1) * 0.19 + (boss ? 0.18 : 0);
-  const wallBase = boss ? 82 : 56;
-  const wallGrow = boss ? 1.15 : 1.10;
-  return {
-    id: k,
-    isBoss: boss,
-    enemyInitLevel: enemyLv,
-    enemyWallHp: Math.round(wallBase * Math.pow(wallGrow, k - 1)),
-    enemySpawnInterval: Math.max(4.25, 6.2 - k * 0.13),
-    reward: stageReward(k) + (boss ? 24 : 0),
-    desc: boss ? `第 ${k} 关 · 腐坏果堡Boss · 破堡奖励+24` : `第 ${k} 关 · 腐坏水果 Lv${enemyLv.toFixed(1)} · 推倒果堡`,
-  };
 }
