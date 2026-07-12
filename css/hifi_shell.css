@@ -92,6 +92,8 @@ button:disabled{opacity:0.40;cursor:default}
 .hifi .side .ring .icon,.hifi .side-l .ring .icon{width:22px;height:22px;}
 .hifi .ring .lbl{position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-family:'ZCOOL KuaiLe';font-size:10px;color:#fff;text-shadow:0 1px 0 #6B0F0F,0 0 4px rgba(0,0,0,.7);white-space:nowrap;}
 .hifi .ring .badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--ruby);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;border:2px solid #fff;font-family:'Nunito';}
+.hifi .ring .badge.pulse{top:-18px;right:auto;left:50%;transform:translateX(-50%);min-width:auto;white-space:nowrap;font-size:10px;padding:3px 8px;animation:badgePulse 2s ease-in-out infinite;}
+@keyframes badgePulse{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-4px);}}
 
 /* ---- 首页两大主按钮:开始对战 / 开始竞技 ---- */
 .hifi .homecta{position:absolute;left:20px;right:20px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:10;display:flex;gap:12px;}

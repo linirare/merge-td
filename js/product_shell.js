@@ -371,7 +371,7 @@
         <div class="hero-spot"></div>
 
         <div class="side-l">
-          <button class="ring" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">签到</span>${dailyReady ? '<span class="badge">1</span>' : ''}</button>
+          <button class="ring daily-float" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">${dailyReady ? '🎁 补给' : '✅ 已领'}</span>${dailyReady ? '<span class="badge pulse">+${DAILY_GOLD}🪙</span>' : ''}</button>
           <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg></span><span class="lbl">邮件</span></button>
           <button class="ring" data-chat><span class="inner" style="background:radial-gradient(circle at 40% 34%,#8FE0A0,#2E9A56)"><svg class="icon"><use href="#i-chat"/></svg></span><span class="lbl">聊天</span></button>
         </div>
@@ -660,7 +660,6 @@
     selectedShopTab = tab || 'gacha';
     document.getElementById('shopPanel')?.classList.add('hifi');
     const root = shellPage('shopPanel', 'shell-shop-page');
-    const claimed = shell.lastDaily === todayKey();
     const pityE = Math.min(shell.pityE || 0, 29);
     const canG1 = (shell.gems || 0) >= GACHA_COST_1;
     const canG10 = (shell.gems || 0) >= GACHA_COST_10;
@@ -701,12 +700,6 @@
             <button class="gbtn ${canT1 ? '' : 'gray'}" id="hifiT0Gacha1"><span class="display">单抽</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${T0T2_COST_1}</small></button>
             <button class="gbtn ${canT10 ? '' : 'gray'}" id="hifiT0Gacha10"><span class="display">十连 ×10</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${T0T2_COST_10} · T1保底</small></button>
           </div>
-          <div class="shead" style="margin-top:20px"><h2 class="display" style="font-size:20px">每日补给</h2><span class="line"></span></div>
-          <div class="gpanel pack">
-            <div class="pic"><svg class="icon"><use href="#i-gift"/></svg></div>
-            <div class="info"><h4>每日果汁补给</h4><p>领取 ${DAILY_GOLD}🪙 + ${DAILY_GEMS}💎 · 每日刷新</p></div>
-            <button class="gbtn ${claimed ? 'gray' : ''}" id="hifiDaily" style="min-height:44px;padding:10px 14px">${claimed ? '已领' : '领取'}</button>
-          </div>
           <div class="gpanel pack">
             <div class="pic"><svg class="icon"><use href="#i-flame"/></svg></div>
             <div class="info"><h4>全体攻击强化</h4><p>全部水果攻击科技 +1 级</p></div>
@@ -724,7 +717,6 @@
     if (canG10) root.querySelector('#hifiGacha10')?.addEventListener('click', () => doGacha(10, GACHA_TIERS, GACHA_COST_1, GACHA_COST_10));
     if (canT1) root.querySelector('#hifiT0Gacha1')?.addEventListener('click', () => doGacha(1, T0T2_TIERS, T0T2_COST_1, T0T2_COST_10));
     if (canT10) root.querySelector('#hifiT0Gacha10')?.addEventListener('click', () => doGacha(10, T0T2_TIERS, T0T2_COST_1, T0T2_COST_10));
-    if (!claimed) root.querySelector('#hifiDaily')?.addEventListener('click', () => claimDaily());
     if (canAtk) root.querySelector('#hifiPackAtk')?.addEventListener('click', () => buyUpgradePack('atk_all', 180));
     if (canFort) root.querySelector('#hifiPackFort')?.addEventListener('click', () => buyUpgradePack('fort_sp', 150));
     root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => {
