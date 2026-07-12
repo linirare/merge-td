@@ -368,6 +368,8 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 body.hifi-menu #wrap{display:none;}
 body.shell-v65{background:#201510;}
 body.shell-v65::before{display:none;}
+/* canvas:暗底无绿框,消除刷新时绿色闪现(原 style.css #game 无条件亮绿) */
+body.shell-v65 #game{background:#14100b;border-radius:0;box-shadow:none;}
 
 /* ---- 统一收尾:关卡选择节点 + 结算/帮助金皮 ---- */
 .hifi .lvmap{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
