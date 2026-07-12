@@ -421,9 +421,7 @@ function draw() {
 
   drawBackground();
   drawInfo();
-  drawSpeedBtn();
-  drawPauseBtn();
-  drawHelpBtn();
+  // 暂停/速度/帮助已迁移至壳HUD(#battleShellHud)
 
   drawBoard(state.enemySlots, true);
   drawWall(state.enemyWallHp, state.enemyWallMax, true);
