@@ -173,7 +173,7 @@ body.shell-v65::after{
     border-radius:22px;overflow:hidden;
   }
   body.shell-v65 #bottomNav.hifi,#bottomNav.hifi{
-    left:var(--phone-left,0);right:auto;transform:none;
+    left:var(--phone-left,0);right:auto;bottom:var(--phone-top,0);transform:none;
     width:var(--phone-w,100vw);
   }
   #wrap{
