@@ -1,3 +1,4 @@
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-only';
 import { chromium } from 'playwright';
 import { createRequire } from 'module';
 

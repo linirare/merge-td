@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node server/index.js",
+    "test": "npm run test:pvp-sim && npm run test:combat",
     "pvp-server": "node server/pvp-server.js",
     "test:combat": "node test/combat-baseline.js --check",
     "test:security": "node test/server-security.js",
@@ -25,6 +26,8 @@
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "express": "^4.21.0",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "playwright": "^1.61.1",
     "uuid": "^14.0.1"

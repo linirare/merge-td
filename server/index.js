@@ -3,8 +3,11 @@ const http = require('http');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 const db = require('./db');
 const { signToken, authMiddleware } = require('./auth');
+const { clampInt, safeText, safeJsonText } = require('./util');
 const { handlePvpUpgrade } = require('./pvp-server');
 
 const app = express();
@@ -19,40 +22,19 @@ const FRONTEND_STATIC = { dotfiles: 'deny', index: false, etag: true, maxAge: 0,
 const POWER_MAX = 300;
 
 app.use(express.json({ limit: '128kb' }));
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, message: { error: 'rate_limit' } });
+app.use('/api/', apiLimiter);
 app.use('/css', express.static(path.join(PUBLIC_ROOT, 'css'), FRONTEND_STATIC));
 app.use('/js', express.static(path.join(PUBLIC_ROOT, 'js'), FRONTEND_STATIC));
 app.use('/art', express.static(path.join(PUBLIC_ROOT, 'art'), FRONTEND_STATIC));
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'index.html')));
 
-function clampInt(value, min, max, fallback = min) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, Math.floor(n)));
-}
-
-function safeText(value, max = 32) {
-  const clean = String(value == null ? '' : value).replace(/[\u0000-\u001f\u007f<>]/g, '').trim();
-  return Array.from(clean).slice(0, max).join('');
-}
-
-// 校验存档 JSON:合法且未超限返回字符串,否则返回 null(由调用方拒绝——绝不静默抹成空存档)
-function safeJsonText(value, maxBytes = 120000) {
-  let text;
-  if (typeof value === 'string') text = value;
-  else {
-    try { text = JSON.stringify(value == null ? {} : value); }
-    catch (err) { return null; }
-  }
-  if (Buffer.byteLength(text, 'utf8') > maxBytes) return null;
-  try { JSON.parse(text); return text; }
-  catch (err) { return null; }
-}
-
 function publicUser(row = {}) {
   return {
     ...row,
     nickname: safeText(row.nickname || '', 24),
-    avatar: safeText(row.avatar || '\uD83C\uDF49', 4),
+    avatar: safeText(row.avatar || '🍉', 4),
   };
 }
 
@@ -67,7 +49,7 @@ app.post('/api/auth/register', (req, res) => {
   db.prepare('INSERT INTO users (uid, email, password_hash, nickname) VALUES (?,?,?,?)').run(uid, emailText, hash, nicknameText);
   db.prepare('INSERT INTO user_saves (uid) VALUES (?)').run(uid);
   db.prepare('INSERT INTO leaderboard (uid) VALUES (?)').run(uid);
-  return res.json(publicUser({ uid, token: signToken(uid), nickname: nicknameText, avatar: '\uD83C\uDF49', level: 1, exp: 0, diamonds: 0, gold: 0 }));
+  return res.json(publicUser({ uid, token: signToken(uid), nickname: nicknameText, avatar: '🍉', level: 1, exp: 0, diamonds: 0, gold: 0 }));
 });
 
 app.post('/api/auth/login', (req, res) => {
@@ -203,5 +185,11 @@ const PORT = process.env.PORT || 3000;
 if (require.main === module) {
   server.listen(PORT, () => console.log(`Server :${PORT}`));
 }
+
+// 全局错误 handler (防未捕获异常泄露堆栈)
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 module.exports = { app, server, chatMessages, clampInt, safeText, safeJsonText, POWER_MAX };

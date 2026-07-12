@@ -31,6 +31,8 @@ const FILES = [
   'js/status_engine_v61.js',
   'js/boss_v63.js',
   'js/dynamic_difficulty_v64.js',
+  'js/opening_and_projectile_fix.js',
+  'js/skill_system_v70.js',
 ];
 
 const ENGINE_CODE = FILES.map(f => `\n/* ==== ${f} ==== */\n` + fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
