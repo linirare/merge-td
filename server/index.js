@@ -63,7 +63,7 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 app.get('/api/user/profile', authMiddleware, (req, res) => {
-  const u = db.prepare('SELECT nickname, avatar, level, exp, power, diamonds, gold, highest_stage, ladder_rank, ladder_score FROM users WHERE uid = ?').get(req.uid) || {};
+  const u = db.prepare('SELECT uid, nickname, avatar, level, exp, power, diamonds, gold, highest_stage, ladder_rank, ladder_score FROM users WHERE uid = ?').get(req.uid) || {};
   res.json(publicUser(u));
 });
 
