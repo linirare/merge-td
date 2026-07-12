@@ -203,8 +203,10 @@ if (mode === '--save') {
   console.log(json);
 } else if (mode === '--check') {
   if (!fs.existsSync(BASELINE)) { console.error('no baseline; run with --save first'); process.exit(2); }
-  const prev = fs.readFileSync(BASELINE, 'utf8').trim();
-  if (prev === json.trim()) { console.log('OK: combat outcomes match baseline'); }
+  // 忽略行尾差异(Windows CRLF vs LF / git autocrlf),只比内容
+  const norm = s => String(s).replace(/\r\n/g, '\n').trim();
+  const prev = norm(fs.readFileSync(BASELINE, 'utf8'));
+  if (prev === norm(json)) { console.log('OK: combat outcomes match baseline'); }
   else {
     console.error('DRIFT: combat outcomes differ from baseline\n--- current ---\n' + json);
     process.exit(1);
