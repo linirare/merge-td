@@ -38,7 +38,7 @@ for (const level of result.levels) {
   assert.ok(level.reward > 0, `stage ${level.stageId} needs reward`);
   assert.ok(typeof level.tutorialHint === 'string', `stage ${level.stageId} needs tutorialHint`);
   assert.ok(Array.isArray(level.unlockRules), `stage ${level.stageId} needs unlockRules`);
-  if (level.stageId % 5 === 0) assert.ok(level.isBoss && level.bossMechanic, `stage ${level.stageId} needs a boss mechanic`);
+  // 去Boss:5/10/15/20关不再是boss,不强制有bossMechanic(combat-fixes-plan §1)
 }
 
 console.log('OK: TUNING stage definitions cover stages 1-20');

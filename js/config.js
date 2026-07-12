@@ -283,7 +283,7 @@ const BALL_SPAWN_INTERVAL = 4.4;
 const SOLDIER_SPAWN_INTERVAL = 5;
 const SPAWN_COOLDOWNS = [0, 5.6, 4.9, 4.25, 3.65, 3.15, 2.7, 2.35];
 const OVERFLOW_MAX = 10;
-const MAX_SOLDIERS = 24;
+const MAX_SOLDIERS = 14; // 24→14:降低中路兵淤积→兵能推进到墙(combat-fixes-plan §2B)
 const SP_MAX = 18;
 const SP_PASSIVE = 3.0;
 
@@ -315,33 +315,28 @@ const TUNING = {
     resource: 'resource',
     challenge: 'challenge',
   },
-  bossMechanics: {
-    5: 'shield',
-    10: 'artillery',
-    15: 'twin_pressure',
-    20: 'summon_aura',
-  },
+  bossMechanics: {}, // 去Boss:清空所有Boss机制(不再刷Boss大怪/护盾/炮击/双生/召唤)
   stages: [
     { stageId: 1, chapter: 1, type: 'normal', enemyLevel: 1.00, enemyWallHp: 48, enemySpawnInterval: 6.1, enemyPlan: { opening: ['watermelon_guard', 'banana_raider'], count: 2 }, reward: { gold: 26 }, tutorialHint: 'merge_pair', unlockRules: ['starter_deck'] },
     { stageId: 2, chapter: 1, type: 'normal', enemyLevel: 1.08, enemyWallHp: 56, enemySpawnInterval: 6.0, enemyPlan: { opening: ['watermelon_guard', 'grape_archer', 'banana_raider'], count: 3 }, reward: { gold: 34 }, tutorialHint: 'hold_frontline', unlockRules: [] },
     { stageId: 3, chapter: 1, type: 'normal', enemyLevel: 1.16, enemyWallHp: 64, enemySpawnInterval: 5.9, enemyPlan: { opening: ['pineapple_lancer', 'grape_archer', 'banana_raider'], count: 3 }, reward: { gold: 42 }, tutorialHint: 'urgent_dispatch', unlockRules: [] },
     { stageId: 4, chapter: 1, type: 'mechanic', enemyLevel: 1.26, enemyWallHp: 76, enemySpawnInterval: 5.75, enemyPlan: { opening: ['watermelon_guard', 'pineapple_lancer', 'orange_cannon', 'grape_archer'], count: 4 }, reward: { gold: 50 }, tutorialHint: 'lane_pressure', unlockRules: [] },
-    { stageId: 5, chapter: 1, type: 'boss', enemyLevel: 1.38, enemyWallHp: 140, enemySpawnInterval: 5.8, enemyPlan: { opening: ['watermelon_guard', 'watermelon_guard', 'grape_archer'], count: 3 }, bossMechanic: 'shield', reward: { gold: 82 }, tutorialHint: 'break_shield_with_siege', unlockRules: ['boss_1'] },
+    { stageId: 5, chapter: 1, type: 'normal', enemyLevel: 1.36, enemyWallHp: 82, enemySpawnInterval: 5.8, enemyPlan: { opening: ['watermelon_guard', 'watermelon_guard', 'grape_archer'], count: 3 }, reward: { gold: 82 }, tutorialHint: '', unlockRules: ['boss_1'] },
     { stageId: 6, chapter: 2, type: 'normal', enemyLevel: 1.45, enemyWallHp: 88, enemySpawnInterval: 5.55, enemyPlan: { opening: ['banana_raider', 'grape_archer', 'pineapple_lancer', 'watermelon_guard'], count: 4 }, reward: { gold: 66 }, tutorialHint: 'counter_rush', unlockRules: ['coconut_guard'] },
     { stageId: 7, chapter: 2, type: 'mechanic', enemyLevel: 1.55, enemyWallHp: 98, enemySpawnInterval: 5.45, enemyPlan: { opening: ['orange_cannon', 'watermelon_guard', 'grape_archer', 'banana_raider'], count: 4 }, reward: { gold: 74 }, tutorialHint: 'bring_siege', unlockRules: [] },
     { stageId: 8, chapter: 2, type: 'resource', enemyLevel: 1.64, enemyWallHp: 108, enemySpawnInterval: 5.55, enemyPlan: { opening: ['coconut_guard', 'pineapple_lancer', 'grape_archer'], count: 4 }, reward: { gold: 90 }, tutorialHint: 'farm_juice', unlockRules: ['peach_medic'] },
     { stageId: 9, chapter: 2, type: 'challenge', enemyLevel: 1.75, enemyWallHp: 122, enemySpawnInterval: 5.25, enemyPlan: { opening: ['banana_raider', 'banana_raider', 'pineapple_lancer', 'orange_cannon'], count: 5 }, reward: { gold: 90 }, tutorialHint: 'protect_backline', unlockRules: [] },
-    { stageId: 10, chapter: 2, type: 'boss', enemyLevel: 1.95, enemyWallHp: 280, enemySpawnInterval: 5.5, enemyPlan: { opening: ['orange_cannon', 'pineapple_lancer', 'watermelon_guard'], count: 4 }, bossMechanic: 'artillery', reward: { gold: 122 }, tutorialHint: 'avoid_midline_stack', unlockRules: ['boss_2'] },
+    { stageId: 10, chapter: 2, type: 'normal', enemyLevel: 1.90, enemyWallHp: 132, enemySpawnInterval: 5.5, enemyPlan: { opening: ['orange_cannon', 'pineapple_lancer', 'watermelon_guard'], count: 4 }, reward: { gold: 122 }, tutorialHint: '', unlockRules: ['boss_2'] },
     { stageId: 11, chapter: 3, type: 'normal', enemyLevel: 2.05, enemyWallHp: 142, enemySpawnInterval: 5.15, enemyPlan: { opening: ['pear_frost', 'watermelon_guard', 'grape_archer', 'orange_cannon'], count: 5 }, reward: { gold: 106 }, tutorialHint: 'control_counter', unlockRules: ['blueberry_sniper'] },
     { stageId: 12, chapter: 3, type: 'mechanic', enemyLevel: 2.18, enemyWallHp: 158, enemySpawnInterval: 5.05, enemyPlan: { opening: ['pumpkin_roller', 'pineapple_lancer', 'grape_archer', 'watermelon_guard'], count: 5 }, reward: { gold: 114 }, tutorialHint: 'burst_before_roll', unlockRules: [] },
     { stageId: 13, chapter: 3, type: 'resource', enemyLevel: 2.30, enemyWallHp: 174, enemySpawnInterval: 5.15, enemyPlan: { opening: ['peach_medic', 'watermelon_guard', 'orange_cannon', 'banana_raider'], count: 5 }, reward: { gold: 136 }, tutorialHint: 'focus_support', unlockRules: ['lemon_assassin'] },
     { stageId: 14, chapter: 3, type: 'challenge', enemyLevel: 2.44, enemyWallHp: 192, enemySpawnInterval: 4.95, enemyPlan: { opening: ['banana_raider', 'lemon_assassin', 'grape_archer', 'pineapple_lancer', 'watermelon_guard'], count: 5 }, reward: { gold: 130 }, tutorialHint: 'anti_assassin_front', unlockRules: [] },
-    { stageId: 15, chapter: 3, type: 'boss', enemyLevel: 2.64, enemyWallHp: 450, enemySpawnInterval: 5.3, enemyPlan: { opening: ['coconut_guard', 'lemon_assassin', 'grape_archer', 'orange_cannon'], count: 5 }, bossMechanic: 'twin_pressure', reward: { gold: 162 }, tutorialHint: 'split_lanes', unlockRules: ['boss_3'] },
+    { stageId: 15, chapter: 3, type: 'normal', enemyLevel: 2.58, enemyWallHp: 205, enemySpawnInterval: 5.3, enemyPlan: { opening: ['coconut_guard', 'lemon_assassin', 'grape_archer', 'orange_cannon'], count: 5 }, reward: { gold: 162 }, tutorialHint: '', unlockRules: ['boss_3'] },
     { stageId: 16, chapter: 4, type: 'normal', enemyLevel: 2.75, enemyWallHp: 218, enemySpawnInterval: 4.85, enemyPlan: { opening: ['strawberry_knight', 'grape_archer', 'pineapple_lancer', 'orange_cannon'], count: 5 }, reward: { gold: 146 }, tutorialHint: 'frontline_rotation', unlockRules: ['pumpkin_roller'] },
     { stageId: 17, chapter: 4, type: 'mechanic', enemyLevel: 2.90, enemyWallHp: 240, enemySpawnInterval: 4.75, enemyPlan: { opening: ['avocado_brawler', 'pear_frost', 'grape_archer', 'banana_raider'], count: 5 }, reward: { gold: 154 }, tutorialHint: 'sustain_damage', unlockRules: [] },
     { stageId: 18, chapter: 4, type: 'resource', enemyLevel: 3.05, enemyWallHp: 264, enemySpawnInterval: 4.85, enemyPlan: { opening: ['orange_cannon', 'orange_cannon', 'watermelon_guard', 'peach_medic'], count: 5 }, reward: { gold: 180 }, tutorialHint: 'win_siege_race', unlockRules: ['kiwi_wildcard'] },
     { stageId: 19, chapter: 4, type: 'challenge', enemyLevel: 3.20, enemyWallHp: 292, enemySpawnInterval: 4.65, enemyPlan: { opening: ['olive_assassin', 'banana_raider', 'mango_arbalest', 'pineapple_lancer', 'watermelon_guard'], count: 5 }, reward: { gold: 170 }, tutorialHint: 'protect_support', unlockRules: [] },
-    { stageId: 20, chapter: 4, type: 'boss', enemyLevel: 3.45, enemyWallHp: 650, enemySpawnInterval: 5.1, enemyPlan: { opening: ['pumpkin_roller', 'pear_frost', 'orange_cannon', 'watermelon_guard', 'peach_medic'], count: 5 }, bossMechanic: 'summon_aura', reward: { gold: 210 }, tutorialHint: 'control_summons_then_siege', unlockRules: ['boss_4'] },
+    { stageId: 20, chapter: 4, type: 'normal', enemyLevel: 3.30, enemyWallHp: 310, enemySpawnInterval: 5.1, enemyPlan: { opening: ['pumpkin_roller', 'pear_frost', 'orange_cannon', 'watermelon_guard', 'peach_medic'], count: 5 }, reward: { gold: 210 }, tutorialHint: '', unlockRules: ['boss_4'] },
   ],
 };
 
@@ -350,13 +345,13 @@ function getStageDefinition(k) {
   const stageId = Math.max(1, Math.floor(Number(k) || 1));
   const direct = TUNING.stages.find(stage => stage.stageId === stageId);
   if (direct) return direct;
-  const boss = stageId % 5 === 0;
+  const boss = false; // 去Boss:程序化生成>20 关不再产生 boss 类型(combat-fixes-plan §1)
   const chapter = Math.floor((stageId - 1) / 5) + 1;
   const bossCycle = ['shield', 'summon', 'charge', 'heal', 'siege'];
   return {
     stageId,
     chapter,
-    type: boss ? TUNING.stageTypes.boss : TUNING.stageTypes.normal,
+    type: TUNING.stageTypes.normal,
     enemyPlan: { count: boss ? 5 : Math.min(5, 3 + Math.floor(stageId / 4)) },
     bossMechanic: boss ? bossCycle[(stageId / 5 - 1) % bossCycle.length] : '',
     reward: { gold: TUNING.rewards.baseGold + stageId * TUNING.rewards.goldPerStage + (boss ? TUNING.rewards.bossGoldBonus : 0) },
@@ -385,7 +380,7 @@ TECH_MILESTONES.sp = { title: '果汁号角', at: 5, desc: '开局果汁能量�
 function generateLevel(k) {
   const stageId = Math.max(1, Math.floor(Number(k) || 1));
   const def = getStageDefinition(stageId);
-  const isBossStage = def.type === TUNING.stageTypes.boss || (stageId > 0 && stageId % 5 === 0);
+  const isBossStage = def.type === TUNING.stageTypes.boss; // 去Boss:移除%5整除检测(现有定义无boss→恒false,不再加厚墙)
   const tunedEnemyLv = Number.isFinite(def.enemyLevel) ? def.enemyLevel : 1 + (stageId - 1) * 0.19 + (isBossStage ? 0.18 : 0);
   const tunedWallBase = isBossStage ? 82 : 56;
   const tunedWallGrow = isBossStage ? 1.15 : 1.10;

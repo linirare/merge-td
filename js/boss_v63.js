@@ -12,6 +12,7 @@
    纯 PVE 内容,不动 combat baseline(基线 harness 不加载本文件)。
    ============================================================ */
 (function installBossV63() {
+  return; // 去Boss:禁用整个命名Boss层(不再刷Boss大怪/护盾/炮击/双生/召唤;代码保留可回退)
   const BOSS_LEVEL_UNIT = 8; // 仅用于渲染放大;数值单独覆盖
 
   const BOSS_DEFS = {

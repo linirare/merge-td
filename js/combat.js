@@ -8,6 +8,12 @@ const SOLDIER_SPEED = 92;
 const CHASE_SPEED = 82;
 const SIEGE_SPEED = 104;
 const FIELD_PAD = 12;
+function battleTimeLimit() {
+  const k = Math.max(1, Number((state && state.currentLevel) || 1));
+  if (k <= 8) return 75;    // chapter 1-2:75s
+  if (k <= 15) return 90;   // chapter 3:90s
+  return 110;               // chapter 4+:110s
+}
 const LANE_TOLERANCE = 48;
 const SCAN_RANGE = 168;
 const TARGET_STICK_RANGE = 220;
@@ -810,4 +816,13 @@ function updateCombat() {
 
   if (state.playerWallHp <= 0) { state.lastBattleReport = buildBattleReport(false); state.phase = 'lost'; onGameOver(false); }
   else if (state.enemyWallHp <= 0) { state.lastBattleReport = buildBattleReport(true); state.phase = 'won'; onGameOver(true); }
+  // 计时器:治无限局(combat-fixes-plan §2A)。PvP 由 pvp-sim 独立判定,不参与。
+  else if (state.mode !== 'pvp' && (state.time || 0) >= battleTimeLimit()) {
+    const pPct = state.playerWallHp / Math.max(1, state.playerWallMax);
+    const ePct = state.enemyWallHp / Math.max(1, state.enemyWallMax);
+    const win = pPct > ePct + 0.02 || (Math.abs(pPct - ePct) <= 0.02 && (state.enemyWallDamageDealt || 0) > (state.playerWallDamageTaken || 0));
+    state.lastBattleReport = buildBattleReport(win);
+    state.phase = win ? 'won' : 'lost';
+    onGameOver(win);
+  }
 }
