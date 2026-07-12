@@ -13,7 +13,7 @@ const SCAN_RANGE = 168;
 const TARGET_STICK_RANGE = 220;
 const WALL_ATTACK_INTERVAL = 1.05;
 const BOW_SAFE_MIN = 66;
-const CROSS_LANE_EMERGENCY_RANGE = 50;
+const CROSS_LANE_EMERGENCY_RANGE = 120; // 修#6:50→120。邻路正常间距(~72px)原来看不见→径直去撞墙;放宽后邻路近敌可见
 const FIGHT_X_LEASH = 18;
 
 const ATTACK_RANGES = {
@@ -56,8 +56,8 @@ function sameLaneBlocker(s, enemies) {
     if (typeof isInvisible === 'function' && isInvisible(e)) continue;
     ensureLane(e);
     const laneDiff = Math.abs(e.laneIndex - s.laneIndex);
-    if (laneDiff > 1) continue;
-    if (laneDiff === 1) {
+    if (laneDiff > 2) continue; // 修#7:±1→±2,配合 #6 让邻路/隔一路的敌兵也能被兜底索敌
+    if (laneDiff >= 1) {
       if (meleeS) { if (!isForwardOf(s, e) || Math.abs(e.y - s.y) > 110) continue; }
       else { const distAdj = Math.hypot(e.x - s.x, e.y - s.y); const rng = typeof combatRange === 'function' ? combatRange(s) : 120; if (distAdj > rng) continue; }
     }

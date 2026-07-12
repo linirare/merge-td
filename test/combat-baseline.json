@@ -56,5 +56,9 @@
     "moved": 18,
     "eHp": 32
   },
-  "status_invis_target": false
+  "status_invis_target": false,
+  "cross_lane_engage_70px": {
+    "sideGap": 70,
+    "targeted": true
+  }
 }

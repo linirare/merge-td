@@ -173,6 +173,10 @@ const DRIVER = `
   function invisTarget(){ fresh(); const e=place('olive_assassin','enemy',4,2,300); applyStatus(e,e,'invisible',3.0); const p=place('banana_raider','player',3,2,340); return canSeeTarget(p,e); }
   R.status_invis_target = invisTarget();
 
+  // #6 跨路索敌:邻路侧向 70px(>旧上限50,<新上限120)的敌兵应能被锁定(旧代码看不见→径直撞墙)
+  function crossLaneEngage(){ fresh(); const my=midY(); const p=place('grape_archer',3,'player',2,my); const e=place('banana_raider',3,'enemy',3,my); e.laneIndex=3; e.x=p.laneX+70; e.laneX=e.x; state.playerSoldiers=[p]; state.enemySoldiers=[e]; const tgt=findTarget(p,state.enemySoldiers); return { sideGap:70, targeted:!!tgt }; }
+  R.cross_lane_engage_70px = crossLaneEngage();
+
   globalThis.__BASELINE__ = R;
 })();
 `;
