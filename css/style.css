@@ -1,13 +1,17 @@
 * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
 html, body {
   width: 100%; height: 100%;
-  background: radial-gradient(circle at 50% 12%, #fff7b8 0%, #dfff9b 33%, #8ee7a8 70%, #4dbb79 100%);
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   overflow: hidden;
   touch-action: none;
   color: #315326;
 }
-body::before {
+/* 老绿皮背景+光晕:仅当新皮 ui_redesign.css 未生效(未带 ui-redesign class)时渲染。
+   带了则交给 ui_redesign.css 的 body.ui-redesign 奶油渐变接管——消除 FOUC。 */
+body:not(.ui-redesign) {
+  background: radial-gradient(circle at 50% 12%, #fff7b8 0%, #dfff9b 33%, #8ee7a8 70%, #4dbb79 100%);
+}
+body:not(.ui-redesign)::before {
   content: "";
   position: fixed; inset: 0;
   pointer-events: none;
@@ -29,11 +33,14 @@ body::before {
   touch-action: none;
 }
 
-.panel {
-  position: fixed; inset: 0;
+/* 老玻璃态遮罩+白绿卡片:带 shell-v65 时由 ui_redesign.css 的玻璃面板接管 */
+body:not(.shell-v65) .panel {
   background: rgba(58, 123, 55, 0.34);
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
+}
+.panel {
+  position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
   z-index: 10;
   transition: opacity 0.22s ease, visibility 0.22s ease;
@@ -41,7 +48,7 @@ body::before {
   padding: 18px;
 }
 .panel.hide { display: none !important; opacity: 0; visibility: hidden; pointer-events: none; }
-.panel-inner {
+body:not(.shell-v65) .panel-inner {
   width: min(88vw, 350px);
   background: linear-gradient(180deg, #fffbe4 0%, #eaffc3 100%);
   border: 2px solid #ffffff;
@@ -54,14 +61,16 @@ body::before {
 }
 .panel.hide .panel-inner { transform: scale(0.94) translateY(12px); }
 .panel:not(.hide) .panel-inner { transform: scale(1) translateY(0); }
-.panel-inner h1 { color: #2c8d3f; font-size: 30px; line-height: 1; letter-spacing: 1px; text-shadow: 0 2px 0 rgba(255,255,255,0.65); }
-.panel-inner h2 { color: #2c8d3f; font-size: 22px; font-weight: 900; }
-.panel-inner .sub { color: #668f46; font-size: 12.5px; text-align: center; line-height: 1.5; }
+body:not(.shell-v65) .panel-inner h1 { color: #2c8d3f; font-size: 30px; line-height: 1; letter-spacing: 1px; text-shadow: 0 2px 0 rgba(255,255,255,0.65); }
+body:not(.shell-v65) .panel-inner h2 { color: #2c8d3f; font-size: 22px; font-weight: 900; }
+body:not(.shell-v65) .panel-inner .sub { color: #668f46; font-size: 12.5px; text-align: center; line-height: 1.5; }
 
-.menu-card { gap: 14px; }
-.game-logo { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
-.logo-mark { font-size: 34px; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(180deg, #fff176, #65d66e); border: 2px solid rgba(255,255,255,0.78); box-shadow: 0 7px 16px rgba(87,171,73,0.22); }
-.hero-preview {
+/* 老首页静态内容(menu-card/hero-preview/logo/castle/troop/menu-stats):仅无新皮时渲染,
+   带 shell-v65 后由 product_shell.js 的 renderHome 烫金版取代 */
+body:not(.shell-v65) .menu-card { gap: 14px; }
+body:not(.shell-v65) .game-logo { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+body:not(.shell-v65) .logo-mark { font-size: 34px; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(180deg, #fff176, #65d66e); border: 2px solid rgba(255,255,255,0.78); box-shadow: 0 7px 16px rgba(87,171,73,0.22); }
+body:not(.shell-v65) .hero-preview {
   position: relative;
   width: 100%; height: 156px;
   border-radius: 20px;
@@ -71,30 +80,31 @@ body::before {
     linear-gradient(180deg, rgba(255,248,188,0.94), rgba(162,239,137,0.92)),
     radial-gradient(circle at 50% 54%, rgba(255,211,71,0.36), transparent 34%);
 }
-.hero-preview::before {
+body:not(.shell-v65) .hero-preview::before {
   content: ""; position: absolute; inset: 18px 28px;
   border: 1px dashed rgba(48,153,64,0.28);
   border-radius: 999px;
 }
-.castle {
+body:not(.shell-v65) .castle {
   position: absolute; left: 50%; transform: translateX(-50%);
   padding: 5px 18px; border-radius: 999px;
   font-size: 12px; font-weight: 900;
   color: #fff; border: 2px solid rgba(255,255,255,0.72);
   box-shadow: 0 4px 10px rgba(0,0,0,0.10);
 }
-.enemy-castle { top: 15px; background: linear-gradient(180deg, #ff7891, #f13d5d); }
-.player-camp { bottom: 13px; background: linear-gradient(180deg, #69dc73, #25a953); }
-.lane-line { position: absolute; left: 50%; top: 44px; bottom: 42px; width: 5px; transform: translateX(-50%); border-radius: 8px; background: linear-gradient(#ff5d6c, #ffc93c, #53c96a); opacity: 0.92; }
-.troop-row { position: absolute; left: 50%; top: 62px; transform: translateX(-50%); display: flex; gap: 8px; }
-.troop-row span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 13px; background: rgba(255,255,255,0.58); border: 2px solid rgba(255,255,255,0.78); font-size: 18px; box-shadow: 0 5px 10px rgba(75,158,70,0.12); }
-.menu-stats { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.menu-stats span { padding: 8px 10px; border-radius: 14px; text-align: center; background: rgba(255,255,255,0.58); border: 1px solid rgba(52,180,78,0.16); font-size: 13px; color: #5f8540; }
-.menu-stats b { color: #2c8d3f; }
-.feature-chips { width: 100%; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
-.feature-chips span { padding: 5px 8px; border-radius: 999px; font-size: 11px; color: #3d8a39; background: rgba(255,255,255,0.62); border: 1px solid rgba(66,190,86,0.16); }
+body:not(.shell-v65) .enemy-castle { top: 15px; background: linear-gradient(180deg, #ff7891, #f13d5d); }
+body:not(.shell-v65) .player-camp { bottom: 13px; background: linear-gradient(180deg, #69dc73, #25a953); }
+body:not(.shell-v65) .lane-line { position: absolute; left: 50%; top: 44px; bottom: 42px; width: 5px; transform: translateX(-50%); border-radius: 8px; background: linear-gradient(#ff5d6c, #ffc93c, #53c96a); opacity: 0.92; }
+body:not(.shell-v65) .troop-row { position: absolute; left: 50%; top: 62px; transform: translateX(-50%); display: flex; gap: 8px; }
+body:not(.shell-v65) .troop-row span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 13px; background: rgba(255,255,255,0.58); border: 2px solid rgba(255,255,255,0.78); font-size: 18px; box-shadow: 0 5px 10px rgba(75,158,70,0.12); }
+body:not(.shell-v65) .menu-stats { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+body:not(.shell-v65) .menu-stats span { padding: 8px 10px; border-radius: 14px; text-align: center; background: rgba(255,255,255,0.58); border: 1px solid rgba(52,180,78,0.16); font-size: 13px; color: #5f8540; }
+body:not(.shell-v65) .menu-stats b { color: #2c8d3f; }
+body:not(.shell-v65) .feature-chips { width: 100%; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+body:not(.shell-v65) .feature-chips span { padding: 5px 8px; border-radius: 999px; font-size: 11px; color: #3d8a39; background: rgba(255,255,255,0.62); border: 1px solid rgba(66,190,86,0.16); }
 
-.btn-primary, .btn-secondary {
+/* 老绿按钮:带 shell-v65 后用 .gbtn(金皮)/.shell-primary-cta 等替代 */
+body:not(.shell-v65) .btn-primary, body:not(.shell-v65) .btn-secondary {
   width: 100%; padding: 13px 0;
   font-size: 16px; font-weight: 900;
   border: 0; border-radius: 16px; cursor: pointer;
@@ -103,9 +113,9 @@ body::before {
   transition: transform 0.12s, filter 0.12s, box-shadow 0.12s;
   box-shadow: inset 0 -3px 0 rgba(0,0,0,0.12), 0 8px 16px rgba(44,151,70,0.18);
 }
-.btn-primary { background: linear-gradient(180deg, #78df61 0%, #2eb45a 100%); }
-.btn-secondary { background: linear-gradient(180deg, #ffcf52 0%, #ff9f37 100%); color:#5b3f05; }
-.btn-secondary.small { padding: 10px 0; font-size: 13px; background: linear-gradient(180deg, #9be7ff 0%, #4db6ff 100%); color:#0f4e72; }
+body:not(.shell-v65) .btn-primary { background: linear-gradient(180deg, #78df61 0%, #2eb45a 100%); }
+body:not(.shell-v65) .btn-secondary { background: linear-gradient(180deg, #ffcf52 0%, #ff9f37 100%); color:#5b3f05; }
+body:not(.shell-v65) .btn-secondary.small { padding: 10px 0; font-size: 13px; background: linear-gradient(180deg, #9be7ff 0%, #4db6ff 100%); color:#0f4e72; }
 .btn-primary:active, .btn-secondary:active { transform: scale(0.96); filter: brightness(0.96); box-shadow: inset 0 2px 7px rgba(0,0,0,0.20); }
 .btn-primary.hide, .btn-secondary.hide { display: none; }
 .btn-reset {
