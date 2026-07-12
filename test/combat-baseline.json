@@ -51,7 +51,7 @@
   "boss_melon_shield": 0,
   "status_burn_kill": true,
   "status_frozen_block": {
-    "moved": 18,
+    "moved": 12,
     "eHp": 32
   },
   "status_invis_target": false,
