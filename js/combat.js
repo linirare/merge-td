@@ -390,6 +390,7 @@ function attackWall(s) {
     state.rings.push({ x: s.x, y: wall.attackY, r: 7, life: 0.35, maxLife: 0.35, color: THEME.gold });
     s.atkTimer = WALL_ATTACK_INTERVAL;
     state.shake = Math.max(state.shake, s.type === 'orange_cannon' ? 0.8 : 0.5); // VFX 強化:震感更明显
+    if (typeof playSfx === 'function' && (state.time || 0) - (state._lastWallSfx ?? -1) > 0.2) { playSfx('wall'); state._lastWallSfx = state.time || 0; } // 墙破音效(审计#7:sfxWallBreak 原本定义了却从没触发)
 
     // 协攻加成:排队兵给前排 +8%/名,封顶 +24%(原 combat_pacing_v19)
     const group = s.side === 'player' ? state.playerSoldiers : state.enemySoldiers;

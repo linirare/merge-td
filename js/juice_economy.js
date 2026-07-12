@@ -294,7 +294,9 @@
     }
     if (state.pendingPlace) return;
 
-    if (pointInRect(p, juiceSpawnButtonRect())) {
+    // 出球按钮加 hitSlop 扩命中区(审计 #4:按钮仅 30px 高,向操作区上下各扩,不动布局/绘制)
+    const _sb = juiceSpawnButtonRect();
+    if (pointInRect(p, { x: _sb.x - 8, y: _sb.y - 12, w: _sb.w + 16, h: _sb.h + 24 })) {
       juiceLastTap.time = 0;
       autoSummonFruitFromButton();
       return;
