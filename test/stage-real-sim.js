@@ -49,11 +49,20 @@ function mulberry32(seed) {
 }
 
 function buildSandbox() {
-  const seeded = mulberry32(0x51A2B3C4);
+  // 可重置的种子随机流:每关/每 run 由 __reseed__ 重置,使各关随机独立
+  // (旧版单条共享流→改任何早关行为会把下游流冲错位→前后对照假性 shuffle)
+  let rng = 0x51A2B3C4 >>> 0;
+  const seeded = function () {
+    rng |= 0; rng = (rng + 0x6D2B79F5) | 0;
+    let t = Math.imul(rng ^ (rng >>> 15), 1 | rng);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
   const realMath = Math;
   const sandbox = {
     console, JSON,
     Math: new Proxy(realMath, { get: (t, p) => (p === 'random' ? seeded : t[p]) }),
+    __reseed__: (n) => { rng = (n >>> 0); },
     Date: { now: () => 0 },
     performance: { now: () => 0 },
     requestAnimationFrame: () => 0, cancelAnimationFrame: () => {},
@@ -273,7 +282,8 @@ const DRIVER = `
     updateCombat();
   }
 
-  function runStage(k, strategy) {
+  function runStage(k, strategy, seed) {
+    if (typeof __reseed__ === 'function') __reseed__(seed >>> 0); // 每关每run独立随机,消除共享流串扰
     prepareMetaForStrategy(k, strategy);
     if (typeof resetAI === 'function') resetAI();
     if (typeof resetJuiceEconomyForLevel === 'function') resetJuiceEconomyForLevel(k);
@@ -309,10 +319,12 @@ const DRIVER = `
   const rows = [];
   for (let k = 1; k <= 20; k++) {
     const def = getStageDefinition(k);
-    for (const strategy of STRATEGIES) {
+    for (let sIdx = 0; sIdx < STRATEGIES.length; sIdx++) {
+      const strategy = STRATEGIES[sIdx];
       let wins = 0, timeouts = 0, tSum = 0, wallSum = 0, peakJuice = 0, maxUnits = 0;
       for (let i = 0; i < RUNS_PER_STAGE; i++) {
-        const r = runStage(k, strategy);
+        const seed = (0x51A2B3C4 ^ (k * 100003 + sIdx * 9973 + i * 101)) >>> 0; // 每关×策略×run 独立确定性种子
+        const r = runStage(k, strategy, seed);
         if (r.win) { wins++; tSum += r.time; wallSum += r.wall; }
         if (r.timeout) timeouts++;
         peakJuice += r.peakJuice || 0;
