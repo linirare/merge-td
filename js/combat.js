@@ -459,7 +459,7 @@ function attackTarget(s, target) {
   if (melee) { const d = Math.hypot(s.x - target.x, s.y - target.y); if (d > 30) { moveTowardEnemy(s, target); return; } }
 
   const dx = s.x - target.x, dy = s.y - target.y, dist = Math.sqrt(dx*dx + dy*dy);
-  if (isBack && dist < BOW_SAFE_MIN) { kiteAsBackline(s, target); return; }
+  if (isBack && !reachedWall(s) && dist < BOW_SAFE_MIN) { kiteAsBackline(s, target); return; }
   if (dist > range) { moveTowardEnemy(s, target); return; }
   if (dist > range + 6) return;
 
@@ -508,7 +508,20 @@ function updateSoldier(s, enemies) {
     return;
   }
 
-  // 找目标(优先防守城墙)
+  // 已到敌方城墙:优先攻城,不清完面前 blocker 不离开
+  if (reachedWall(s)) {
+    const blocker = sameLaneBlocker(s, enemies);
+    if (blocker) {
+      s.target = blocker.id;
+      s.mode = 'fight';
+      attackTarget(s, blocker);
+      return;
+    }
+    attackWall(s);
+    return;
+  }
+
+  // 未到城墙:正常索敌推进
   const target = findTarget(s, enemies) || sameLaneBlocker(s, enemies);
   if (target) {
     ensureLane(target);
@@ -520,19 +533,6 @@ function updateSoldier(s, enemies) {
     }
     s.target = target.id;
     attackTarget(s, target);
-    return;
-  }
-
-  if (reachedWall(s)) {
-    // 城墙前检查是否有需先清理的同/邻路敌兵(来自 lane_block_fix)
-    const blocker = sameLaneBlocker(s, enemies);
-    if (blocker) {
-      s.target = blocker.id;
-      s.mode = 'fight';
-      attackTarget(s, blocker);
-      return;
-    }
-    attackWall(s);
     return;
   }
   advanceTowardWall(s);
