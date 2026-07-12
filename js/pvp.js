@@ -293,6 +293,8 @@
     state.levelConfig = { id: 1, isBoss: false, enemyInitLevel: 1, enemyWallHp: state.enemyWallMax, enemySpawnInterval: 9999, reward: 0, desc: '实时 PVP' };
     // 服务器权威:棋盘/士兵/城墙全部由服务端快照驱动,客户端不再本地布局或跑战斗
     state.phase = 'playing';
+    pvp._gotSnap = false;
+    console.log('[PVP] match_start 服务器权威 build-3 · playerIndex=' + playerIndex + ' seed=' + pvp.seed + ' mode=' + state.mode);
     hidePvpPanels();
     setStatus('PVP 对战中');
     addFx(W / 2, LAYOUT.fieldY + 80, '实时对战开始', THEME.gold, 18);
@@ -315,6 +317,7 @@
   }
   function applySnapshot(snap) {
     if (state.mode !== 'pvp' || !snap || !snap.walls) return;
+    if (!pvp._gotSnap) { pvp._gotSnap = true; console.log('[PVP] 收到首个 snapshot → 服务端权威生效(兵=' + (snap.soldiers ? snap.soldiers.length : 0) + ')'); }
     const mySide = pvp.playerIndex === 1 ? 1 : 0;
     const flip = mySide === 1;
 
@@ -362,6 +365,7 @@
   // PvP 客户端逐帧:不驱动战斗,只把士兵插值到快照目标 + 视觉衰减
   function pvpClientUpdate(dt) {
     state.time = (state.time || 0) + dt;
+    if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 4); // 修:PvP 下也要衰减震动,否则一直震
     const k = Math.min(1, dt * 14);
     const lerp = (s) => { if (s.tx != null) s.x += (s.tx - s.x) * k; if (s.ty != null) s.y += (s.ty - s.y) * k; if (s.hitFlash > 0) s.hitFlash = Math.max(0, s.hitFlash - dt * 1.2); };
     for (const s of state.playerSoldiers) lerp(s);
@@ -620,6 +624,7 @@
   };
   window.startPvpMatch = startPvpMatch;
   window.pvpClientUpdate = pvpClientUpdate;
+  console.log('[PVP] pvp.js 服务器权威 build-3 已加载');
   // 测试钩子:让 headless 直接验证"快照→本地state(含视角翻转)"映射,不用起真两人对局
   window.__pvpTest = { applySnapshot, fieldMirrorY, setSide(i) { pvp.playerIndex = i; } };
 })();
