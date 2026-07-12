@@ -159,16 +159,24 @@
         window.chatMessages.push(message.message);
         if (window.chatMessages.length > 200) window.chatMessages.shift();
       }
-    } else if (message.type === 'new_mail') {
-      if (typeof account !== 'undefined' && account.getMail) account.getMail().catch(() => {});
-    } else if (message.type === 'new_announcement') {
-      if (typeof account !== 'undefined' && account.announcements) account.announcements().catch(() => {});
     } else if (message.type === 'resource_grant') {
       if (typeof account !== 'undefined' && account.user && (message.uid === account.user.uid || message.all)) {
         account.api('GET', '/api/user/profile').then(prof => {
           if (prof && !prof.error && account.user) { account.user.diamonds = prof.diamonds; account.user.gold = prof.gold; }
+          // 同步到客户端显示层(meta.gold/shell.gems)
+          if (typeof meta !== 'undefined' && prof.gold !== undefined) meta.gold = prof.gold;
+          if (typeof shell !== 'undefined' && prof.diamonds !== undefined) shell.gems = prof.diamonds;
+          if (typeof saveAll === 'function') try { saveAll(); } catch(e) {}
+          // 触发UI刷新:顶栏金币数字+钻石+邮件红点
+          if (typeof refreshResourceNumbers === 'function') refreshResourceNumbers();
+          const g = (message.gold || 0), d = (message.diamonds || 0);
+          if (g || d) { const t = [g?'金币+'+g:'', d?'钻石+'+d:''].filter(Boolean).join(', '); if (t && typeof hifiToast === 'function') hifiToast('管理员发放: ' + t); }
         }).catch(() => {});
       }
+    } else if (message.type === 'new_mail') {
+      if (typeof account !== 'undefined' && account.getMail) { account.getMail().catch(() => {}); if (typeof hifiToast === 'function') hifiToast('您有新的系统邮件'); }
+    } else if (message.type === 'new_announcement') {
+      if (typeof hifiToast === 'function') hifiToast('有新公告');
     } else if (message.type === 'error') {
       setStatus(message.message || 'PVP 错误');
     }
