@@ -67,13 +67,15 @@ function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const host = document.getElementById('wrap') || document.body;
   const rect = host.getBoundingClientRect();
-  const hostW = Math.max(1, rect.width || window.innerWidth);
-  const hostH = Math.max(1, rect.height || window.innerHeight);
-  // 高度优先:填满纵向空间,超宽部分由 #wrap overflow:hidden 居中裁切
-  scale = hostH / H;
-  if (W * scale > hostW * 1.12) scale = hostW * 1.12 / W; // 极端窄屏兜底,最多溢出12%
+  // 壳内框留 10px 边距,canvas 填满剩余空间
+  const margin = 10;
+  const availW = Math.max(1, rect.width - margin * 2);
+  const availH = Math.max(1, rect.height - margin * 2);
+  scale = Math.min(availW / W, availH / H);
   canvas.style.width = W * scale + 'px';
   canvas.style.height = H * scale + 'px';
+  canvas.style.left = (rect.width - W * scale) / 2 + 'px';
+  canvas.style.top = (rect.height - H * scale) / 2 + 'px';
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

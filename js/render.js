@@ -520,11 +520,11 @@ function drawHUD() {
   ctx.textAlign = 'right';
   ctx.fillStyle = THEME.textDim;
   ctx.fillText(`⏱ ${elapsed}s`, W - 12, LAYOUT.enemyInfoY + 13);
-  // SP 显示
-  ctx.font = 'bold 13px sans-serif';
-  ctx.textAlign = 'left';
+  // SP 显示(右上角,计时器上方)
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'right';
   ctx.fillStyle = state.sp > 0 ? THEME.gold : '#5a4a3a';
-  ctx.fillText(`⚡ ${state.sp}`, 12, LAYOUT.enemyInfoY + 13);
+  ctx.fillText(`⚡${state.sp}`, W - 12, LAYOUT.enemyInfoY + 26);
 
   // 兵数对比比例条
   const barW = 80, barH = 6;
