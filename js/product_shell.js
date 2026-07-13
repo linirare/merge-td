@@ -449,6 +449,7 @@
 
   function renderSquad() {
     ensureShellData();
+    console.log('[renderSquad] meta.unlocked:', JSON.stringify(meta.unlocked));
     document.getElementById('shellLabPanel')?.classList.add('hifi');
     const root = shellPage('shellLabPanel', 'shell-squad-page');
     const d = deck();
@@ -1127,6 +1128,7 @@
       const id = pool[Math.floor(Math.random() * pool.length)] || UNIT_POOL[0];
       const t = fruit(id);
       const isNew = !meta.unlocked.includes(id);
+      console.log('[gacha] pull', i, id, isNew ? 'NEW' : 'dup', 'pool len', meta.unlocked.length);
       if (isNew) {
         meta.unlocked.push(id);
         // 首次抽到=解锁角色,不给碎片
@@ -1174,7 +1176,7 @@
       }
       box.appendChild(item);
     }
-    overlay.querySelector('#closeGacha').addEventListener('click', () => { overlay.remove(); if (typeof saveMeta === 'function') saveMeta(); renderSquad(); });
+    overlay.querySelector('#closeGacha').addEventListener('click', () => { overlay.remove(); if (typeof saveMeta === 'function') saveMeta(); console.log('[gacha] meta.unlocked after saveMeta:', JSON.stringify(meta.unlocked)); renderSquad(); });
   }
 
   function startLadder() {
