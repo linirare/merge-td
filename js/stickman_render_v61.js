@@ -410,7 +410,12 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
 
   drawSoldier = function stickmanDrawSoldierV61(s) {
     if (!s || !s.alive) return;
-    if (typeof battleVisualPosV59 !== 'function' || typeof battleVisualYV59 !== 'function') return prevDraw(s);
+    if (window.RenderHooks && window.RenderHooks.beforeDrawSoldier) window.RenderHooks.beforeDrawSoldier.run(ctx, s);
+    if (typeof battleVisualPosV59 !== 'function' || typeof battleVisualYV59 !== 'function') {
+      prevDraw(s);
+      if (window.RenderHooks && window.RenderHooks.afterDrawSoldier) window.RenderHooks.afterDrawSoldier.run(ctx, s);
+      return;
+    }
 
     const t = TYPES[s.type] || TYPES[DEFAULT_DECK[0]];
     const tier = typeof battleUnitTierKeyV59 === 'function' ? battleUnitTierKeyV59(s) : 'normal';
@@ -497,6 +502,7 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
       drawBattleUnitHpV59(s, vis.x, hpY, Math.max(24, headR * 1.6));
     }
     ctx.restore();
+    if (window.RenderHooks && window.RenderHooks.afterDrawSoldier) window.RenderHooks.afterDrawSoldier.run(ctx, s);
   };
   drawSoldier._stickmanV61 = true;
 })();

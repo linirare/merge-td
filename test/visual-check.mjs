@@ -8,6 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const BASE = process.env.VISUAL_URL || 'http://localhost:3000';
 const NO_VISION = process.argv.includes('--no-vision');
 const STRICT = process.argv.includes('--strict');
+const VISUAL_TIMEOUT_MS = Number(process.env.VISUAL_TIMEOUT_MS || 120000);
 
 async function ensureLoggedIn(page) {
   // 如果登录门还在,注册一个视觉测试专用账号然后等门消失
@@ -40,7 +41,7 @@ function mmxDescribe(imgPath, prompt) {
 
 async function reachable(page) {
   try {
-    const response = await page.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 10000 });
+    const response = await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 10000 });
     return response && response.ok();
   } catch (e) {
     return false;
@@ -158,9 +159,12 @@ const SHOTS = [
   },
 ];
 
-(async () => {
-  const browser = await chromium.launch();
+let browser;
+
+async function run() {
+  browser = await chromium.launch({ timeout: 10000 });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, reducedMotion: 'reduce' });
+  page.setDefaultTimeout(8000);
   const errors = [];
   page.on('console', msg => {
     if (msg.type() === 'error') errors.push(msg.text());
@@ -175,7 +179,7 @@ const SHOTS = [
 
   const results = [];
   for (const shot of SHOTS) {
-    await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 10000 });
     await page.waitForTimeout(700);
     await ensureLoggedIn(page);
     await shot.setup(page);
@@ -189,10 +193,19 @@ const SHOTS = [
   }
 
   await browser.close();
+  browser = null;
   const errorSummary = errors.length ? errors.slice(0, 8).join(' | ') : 'none';
   console.log(`\n--- done: ${results.map(r => r.file).join(', ')} | console errors: ${errorSummary} ---`);
   if (STRICT && errors.length) process.exit(3);
-})().catch(err => {
+}
+
+Promise.race([
+  run(),
+  new Promise((_, reject) => setTimeout(() => reject(new Error(`visual-check timed out after ${VISUAL_TIMEOUT_MS}ms`)), VISUAL_TIMEOUT_MS)),
+]).catch(err => {
   console.error(err);
-  process.exit(1);
+  process.exitCode = 1;
+}).finally(async () => {
+  try { if (browser) await browser.close(); } catch (e) {}
+  process.exit(process.exitCode || 0);
 });

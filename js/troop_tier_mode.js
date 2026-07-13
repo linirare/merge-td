@@ -176,29 +176,39 @@ function patchTierSpawn() {
   spawnSoldierFromBall._troopTierPatchedV15 = true;
 }
 
+function drawTierLabelV15(ctxArg, s) {
+  if (!s || !s.squadMode || !s.alive) return;
+  const tier = s.troopTier || tierKey(s.level);
+  const color = TIER_COLOR[tier] || THEME.gold;
+  const name = s.troopName || tierName(s.type, s.level);
+  const fy = LAYOUT.fieldY, fh = LAYOUT.fieldH;
+  const depth = 0.78 + 0.25 * ((s.y - fy) / fh);
+  const r = (12 + s.level * 1.9) * (s.troopScale || 1) * depth;
+  const c = ctxArg || ctx;
+  c.save();
+  c.textAlign = 'center';
+  const w = Math.min(94, Math.max(54, name.length * 10 + 14));
+  c.fillStyle = 'rgba(0,0,0,0.58)';
+  roundRect(s.x - w / 2, s.y + r + 5, w, 16, 8);
+  c.fill();
+  c.font = '900 10px sans-serif';
+  c.fillStyle = color;
+  c.fillText(name, s.x, s.y + r + 17);
+  c.restore();
+}
+
 function patchTierDraw() {
+  if (window.RenderHooks && window.RenderHooks.afterDrawSoldier && !window.RenderHooks._tierLabelV15) {
+    window.RenderHooks.afterDrawSoldier.use(drawTierLabelV15, -10);
+    window.RenderHooks._tierLabelV15 = true;
+    return;
+  }
   if (typeof drawSoldier !== 'function' || drawSoldier._troopTierPatchedV15) return;
   const prevDraw = drawSoldier;
   drawSoldier = function tierDraw(s) {
     prevDraw(s);
-    if (!s.squadMode || !s.alive) return;
     if (drawSoldier._combatClarityPatched) return;
-    const tier = s.troopTier || tierKey(s.level);
-    const color = TIER_COLOR[tier] || THEME.gold;
-    const name = s.troopName || tierName(s.type, s.level);
-    const fy = LAYOUT.fieldY, fh = LAYOUT.fieldH;
-    const depth = 0.78 + 0.25 * ((s.y - fy) / fh);
-    const r = (12 + s.level * 1.9) * (s.troopScale || 1) * depth;
-    ctx.save();
-    ctx.textAlign = 'center';
-    const w = Math.min(94, Math.max(54, name.length * 10 + 14));
-    ctx.fillStyle = 'rgba(0,0,0,0.58)';
-    roundRect(s.x - w / 2, s.y + r + 5, w, 16, 8);
-    ctx.fill();
-    ctx.font = '900 10px sans-serif';
-    ctx.fillStyle = color;
-    ctx.fillText(name, s.x, s.y + r + 17);
-    ctx.restore();
+    drawTierLabelV15(ctx, s);
   };
   drawSoldier._troopTierPatchedV15 = true;
 }

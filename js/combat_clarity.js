@@ -135,6 +135,13 @@ function drawCleanSoldierBody(s) {
   ctx.textBaseline = 'alphabetic';
 }
 function patchCleanSoldierDraw() {
+  if (window.RenderHooks && window.RenderHooks.afterDrawSoldier && !window.RenderHooks._combatClaritySoldier) {
+    window.RenderHooks.afterDrawSoldier.use((ctxArg, s) => {
+      if (s && s.squadMode) drawCleanSoldierBody(s);
+    }, 10);
+    window.RenderHooks._combatClaritySoldier = true;
+    return;
+  }
   if (typeof drawSoldier !== 'function' || drawSoldier._combatClarityPatched) return;
   const prevDraw = drawSoldier;
   drawSoldier = function clarityDrawSoldier(s) {

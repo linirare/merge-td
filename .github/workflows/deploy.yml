@@ -13,10 +13,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install browser for UI checks
+        run: npx playwright install --with-deps chromium
+
       - name: Run tests
         env:
           JWT_SECRET: test-only
-        run: npm test
+        run: npm run check
 
       - name: Deploy via Railway API
         run: |

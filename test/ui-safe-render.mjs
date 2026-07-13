@@ -4,17 +4,29 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const { server } = require('../server/index');
+const TEST_TIMEOUT_MS = 20000;
 
 async function listen() {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   return `http://127.0.0.1:${server.address().port}`;
 }
 
-try {
+let browser;
+let closed = false;
+
+async function closeServer() {
+  if (closed) return;
+  closed = true;
+  await new Promise(resolve => server.close(() => resolve()));
+}
+
+async function run() {
   const base = await listen();
-  const browser = await chromium.launch();
+  browser = await chromium.launch({ timeout: 10000 });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  page.setDefaultTimeout(5000);
+  await page.goto(base + '/', { waitUntil: 'domcontentloaded', timeout: 8000 });
+  await page.waitForFunction(() => typeof window.productShellShowTab === 'function', null, { timeout: 8000 });
   await page.evaluate(() => {
     window.__xss = 0;
     const payload = '<img src=x onerror="window.__xss=1">';
@@ -30,18 +42,34 @@ try {
 
   await page.evaluate(() => window.productShellShowTab('rank'));
   await page.waitForTimeout(600);
-  await page.evaluate(() => document.querySelector('[data-mail]')?.click());
+  await page.evaluate(() => {
+    const btn = document.querySelector('[data-mail]');
+    if (!btn) throw new Error('mail button not found');
+    btn.click();
+  });
   await page.waitForTimeout(600);
-  await page.evaluate(() => document.querySelector('[data-chat]')?.click());
+  await page.evaluate(() => {
+    const btn = document.querySelector('[data-chat]');
+    if (!btn) throw new Error('chat button not found');
+    btn.click();
+  });
   await page.waitForTimeout(600);
 
   const xss = await page.evaluate(() => window.__xss);
   if (xss !== 0) throw new Error(`unsafe render executed injected code: ${xss}`);
-  await browser.close();
-  await new Promise(resolve => server.close(resolve));
   console.log('OK: user-controlled nickname/mail/chat/rank text is safely rendered');
+}
+
+try {
+  await Promise.race([
+    run(),
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`ui-safe-render timed out after ${TEST_TIMEOUT_MS}ms`)), TEST_TIMEOUT_MS)),
+  ]);
 } catch (err) {
   console.error(err);
-  try { server.close(() => process.exit(1)); }
-  catch (e) { process.exit(1); }
+  process.exitCode = 1;
+} finally {
+  try { if (browser) await browser.close(); } catch (e) {}
+  try { await closeServer(); } catch (e) {}
+  process.exit(process.exitCode || 0);
 }

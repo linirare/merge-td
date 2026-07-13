@@ -9,6 +9,7 @@ const ipConnections = new Map(); // ip→count 审计:per-IP 连接限流
 const MAX_CONNECTIONS_PER_IP = 5;
 const MAX_ROOMS = 200;
 const MAX_ROOM_ID_RETRIES = 100;
+const RECONNECT_TIMEOUT_MS = Math.max(1, Number(process.env.PVP_RECONNECT_TIMEOUT_MS || 30000));
 // 僵尸连接清理:每60s扫描,90s无心跳→关闭(审计P0-6)
 setInterval(() => {
   const now = Date.now();
@@ -281,6 +282,8 @@ function leaveRoom(client, notify = true) {
 }
 
 function disconnectClient(client) {
+  if (!client || client._closed) return;
+  client._closed = true;
   leaveObserve(client);
   const room = rooms.get(client.roomId);
   const wasPlaying = room && room.battle && !room._finished && (client.index === 0 || client.index === 1) && room.players[client.index] === client;
@@ -289,6 +292,9 @@ function disconnectClient(client) {
     // 对局中断线:保留房间 30s 等待重连
     broadcast(room, { type: 'peer_disconnected', roomId: room.id }, client);
     if (room.observers) for (const obs of room.observers) send(obs, { type: 'peer_disconnected', roomId: room.id });
+    room._reconnectSlot = client.index;
+    room._reconnectDeck = sanitizeDeck(client.deck || []);
+    room._reconnectReady = !!client.ready;
     room.players[client.index] = null;
     client.roomId = 'reconnect:' + room.id;
     room._reconnectTimer = setTimeout(() => {
@@ -300,8 +306,11 @@ function disconnectClient(client) {
         let t = 0; try { t = Math.floor((room.battle.snapshot().t) || 0); } catch (e) {}
         finishMatch(room, { seed: room.seed, winner: remaining.index, duration: t, reason: 'disconnect_timeout' });
       } else { stopBattleLoop(room); }
+      room._reconnectSlot = null;
+      room._reconnectDeck = null;
+      room._reconnectReady = false;
       if (!room.players[0] && !room.players[1]) rooms.delete(room.id);
-    }, 30000);
+    }, RECONNECT_TIMEOUT_MS);
   } else {
     leaveRoom(client, true);
   }
@@ -338,14 +347,20 @@ function reconnectRoom(client, roomId) {
   if (!room) return sendError(client, 'room_not_found');
   if (!room._reconnectTimer) return sendError(client, 'reconnect_expired');
   // 找到断线玩家的空位
-  const slot = room.players[0] === null ? 0 : room.players[1] === null ? 1 : -1;
+  const savedSlot = Number.isInteger(room._reconnectSlot) ? room._reconnectSlot : -1;
+  const slot = savedSlot >= 0 && room.players[savedSlot] === null
+    ? savedSlot
+    : (room.players[0] === null ? 0 : room.players[1] === null ? 1 : -1);
   if (slot < 0) return sendError(client, 'room_full');
   clearTimeout(room._reconnectTimer);
   room._reconnectTimer = null;
   client.roomId = room.id;
   client.index = slot;
-  client.deck = room.players[slot] ? room.players[slot].deck || [] : [];
-  client.ready = true;
+  client.deck = sanitizeDeck(room._reconnectDeck || []);
+  client.ready = !!room._reconnectReady;
+  room._reconnectSlot = null;
+  room._reconnectDeck = null;
+  room._reconnectReady = false;
   room.players[slot] = client;
   send(client, { type: 'reconnected', ...roomState(room), playerIndex: slot });
   broadcast(room, { type: 'peer_reconnected', roomId: room.id });

@@ -119,7 +119,7 @@ function showOverflowPopup() {
   popup.classList.remove('hide');
 }
 
-document.getElementById('btnOverflowClose').addEventListener('click', () => document.getElementById('overflowPopup').classList.add('hide'));
+document.getElementById('btnOverflowClose')?.addEventListener('click', () => document.getElementById('overflowPopup')?.classList.add('hide'));
 
 /* ——— 保存/读取 meta ——— */
 const META_KEY = 'merge_td_meta_v1';
@@ -179,8 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('upgradePanel').classList.remove('hide');
     renderUpgrades();
   });
-  document.getElementById('btnUpClose').addEventListener('click', () => document.getElementById('upgradePanel').classList.add('hide'));
-  document.getElementById('btnHelpClose').addEventListener('click', () => document.getElementById('helpPanel').classList.add('hide'));
+  document.getElementById('btnUpClose')?.addEventListener('click', () => document.getElementById('upgradePanel')?.classList.add('hide'));
+  document.getElementById('btnHelpClose')?.addEventListener('click', () => document.getElementById('helpPanel')?.classList.add('hide'));
   /* 结算按钮用事件代理防 cloneNode 引用失效(F6) */
   document.getElementById('resultPanel')?.addEventListener('click', (e) => {
     const btn = e.target.closest('#btnRetry, #btnMenu, #btnNext');
@@ -211,9 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.textContent = '继续按住以确认...';
   };
   const resetCancel = () => { clearTimeout(resetTimer); resetBtn.textContent = '长按重置数据'; };
-  resetBtn.addEventListener('mousedown', resetStart);
-  resetBtn.addEventListener('mouseup', resetCancel);
-  resetBtn.addEventListener('mouseleave', resetCancel);
-  resetBtn.addEventListener('touchstart', resetStart, { passive: false });
-  resetBtn.addEventListener('touchend', resetCancel);
+  resetBtn?.addEventListener('mousedown', resetStart);
+  resetBtn?.addEventListener('mouseup', resetCancel);
+  resetBtn?.addEventListener('mouseleave', resetCancel);
+  resetBtn?.addEventListener('touchstart', resetStart, { passive: false });
+  resetBtn?.addEventListener('touchend', resetCancel);
 });

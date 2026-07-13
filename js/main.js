@@ -252,6 +252,8 @@ function update(dt) {
       if (d.x < 20 || d.x > W - 20) d.vx *= -1;
     }
   }
+
+  if (window.GameHooks && window.GameHooks.update) window.GameHooks.update.run(dt);
 }
 
 let dt_global = 0;
