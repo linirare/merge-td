@@ -925,8 +925,21 @@
     if (!(loggedIn() && account.getMail)) { showEmpty('登录后查看邮件'); return; }
     account.getMail().then(mails => {
       if (!Array.isArray(mails) || !mails.length) { showEmpty(); return; }
-      list.innerHTML = mails.map(m => `<div class="mail-item">${m.is_read ? '' : '<span class="dot"></span>'}<span class="mi"><svg class="icon"><use href="#i-gift"/></svg></span><div class="mc"><h4>${escapeHtml(m.title || '邮件')}</h4><p>${escapeHtml(m.body || '')}</p></div><button class="gbtn" data-mailid="${escapeHtml(m.id)}" style="min-height:40px;padding:8px 12px;font-size:14px">领取</button></div>`).join('');
-      list.querySelectorAll('[data-mailid]').forEach(b => b.addEventListener('click', () => { if (account.readMail) account.readMail(b.dataset.mailid).catch(() => {}); b.textContent = '已领'; b.classList.add('gray'); }));
+      list.innerHTML = mails.map(m => `<div class="mail-item">${m.is_read ? '' : '<span class="dot"></span>'}<span class="mi"><svg class="icon"><use href="#i-gift"/></svg></span><div class="mc"><h4>${escapeHtml(m.title || '邮件')}</h4><p>${escapeHtml(m.body || '')}</p></div>${m.is_read ? '<span class="gbtn gray" style="font-size:12px;padding:8px 10px">已领</span>' : `<button class="gbtn" data-mailid="${escapeHtml(m.id)}" style="min-height:40px;padding:8px 12px;font-size:14px">领取</button>`}</div>`).join('');
+      list.querySelectorAll('[data-mailid]').forEach(b => b.addEventListener('click', function onClickMail() {
+        b.disabled = true; b.textContent = '...';
+        account.readMail(b.dataset.mailid).then(r => {
+          if (r && r.granted) {
+            if (r.granted.diamonds) { shell.gems = (shell.gems || 0) + r.granted.diamonds; }
+            if (r.granted.gold) { meta.gold = (meta.gold || 0) + r.granted.gold; }
+            // 同步服务端最新值到 fa_srv 标记,防止 bootAuth 再次加差值
+            if (r.server_diamonds != null) { try { localStorage.setItem('fa_srv_gems', String(r.server_diamonds)); } catch(e) {} }
+            if (r.server_gold != null) { try { localStorage.setItem('fa_srv_gold', String(r.server_gold)); } catch(e) {} }
+            saveAll(); refreshResourceNumbers();
+          }
+          b.textContent = '已领'; b.classList.add('gray');
+        }).catch(() => { b.disabled = false; b.textContent = '领取'; });
+      }));
     }).catch(() => showEmpty('邮件加载失败'));
   }
 

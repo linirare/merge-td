@@ -100,10 +100,13 @@ app.get('/api/mail', authMiddleware, (req, res) => res.json(db.prepare('SELECT *
 app.post('/api/mail/read', authMiddleware, (req, res) => {
   const b = req.body || {};
   if (!b.id) return res.status(400).json({ error: 'id required' });
+  // 原子领奖:只有第一条成功把 is_read=0→1 的请求才能发奖励,避免并发双领
+  const r = db.prepare('UPDATE mail SET is_read=1 WHERE id=? AND uid=? AND is_read=0').run(b.id, req.uid);
+  if (r.changes === 0) return res.json({ ok: true, granted: null }); // 已领过,幂等返回
   const mail = db.prepare('SELECT * FROM mail WHERE id=? AND uid=?').get(b.id, req.uid);
   if (!mail) return res.status(404).json({ error: 'mail not found' });
   let granted = null;
-  if (!mail.is_read && mail.rewards_json && mail.rewards_json !== '{}') {
+  if (mail.rewards_json && mail.rewards_json !== '{}') {
     try {
       const rewards = JSON.parse(mail.rewards_json);
       const g = clampInt(rewards.gold || 0, 0, 50000, 0);     // 运营邮件上限(审计C10)
@@ -118,8 +121,7 @@ app.post('/api/mail/read', authMiddleware, (req, res) => {
       }
     } catch(e) {}
   }
-  db.prepare('UPDATE mail SET is_read=1 WHERE id=? AND uid=?').run(b.id, req.uid);
-  res.json({ ok: true, granted });
+  res.json({ ok: true, granted, server_gold: (db.prepare('SELECT gold FROM users WHERE uid=?').get(req.uid) || {}).gold, server_diamonds: (db.prepare('SELECT diamonds FROM users WHERE uid=?').get(req.uid) || {}).diamonds });
 });
 
 app.post('/api/checkin', authMiddleware, (req, res) => {
