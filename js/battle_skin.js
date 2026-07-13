@@ -48,12 +48,24 @@ function drawField() {
 
   if (!_fieldGrad || _fieldFY !== fy || _fieldFH !== fh) {
     _fieldGrad = ctx.createLinearGradient(0, fy, 0, fy + fh);
-    _fieldGrad.addColorStop(0, 'rgba(248,234,195,0.94)');
-    _fieldGrad.addColorStop(0.50, 'rgba(244,230,185,0.88)');
-    _fieldGrad.addColorStop(1, 'rgba(237,222,174,0.90)');
+    _fieldGrad.addColorStop(0, 'rgba(246,231,188,0.98)');
+    _fieldGrad.addColorStop(0.50, 'rgba(238,221,172,0.94)');
+    _fieldGrad.addColorStop(1, 'rgba(232,207,143,0.96)');
     _fieldFY = fy; _fieldFH = fh;
   }
-  drawPanel(x, fy, w, fh, 18, _fieldGrad, 'rgba(221,200,147,0.72)');
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#5b3618';
+  roundRect(x + 3, fy + 5, w, fh, 16);
+  ctx.fill();
+  ctx.restore();
+  drawPanel(x, fy, w, fh, 16, _fieldGrad, 'rgba(167,126,50,0.48)');
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.58)';
+  ctx.lineWidth = 1.2;
+  roundRect(x + 1, fy + 1, w - 2, fh - 2, 15);
+  ctx.stroke();
+  ctx.restore();
 
   // 上下墙前安全带，只做空间暗示，不放文字、不做大提示。
   ctx.save();
@@ -64,42 +76,63 @@ function drawField() {
   ctx.fill();
   ctx.restore();
 
+  const laneTop = fy + 32;
+  const laneBottom = fy + fh - 34;
+  const laneH = laneBottom - laneTop;
+  ctx.save();
+  for (let c = 0; c < COLS; c++) {
+    const lx = BOARD_X + c * (CELL + GAP) + CELL / 2;
+    const lanePanelW = CELL * 0.72;
+    ctx.fillStyle = c % 2 === 0 ? 'rgba(255,255,255,0.065)' : 'rgba(149,104,36,0.045)';
+    roundRect(lx - lanePanelW / 2, laneTop, lanePanelW, laneH, 12);
+    ctx.fill();
+  }
+  ctx.restore();
+
   for (let c = 0; c < COLS; c++) {
     const lx = BOARD_X + c * (CELL + GAP) + CELL / 2;
     const st = state.laneStats?.[c];
-    let laneColor = 'rgba(181,117,10,0.12)';
-    let laneW = c === 2 ? 1.35 : 1.0;
+    let laneColor = 'rgba(136,91,26,0.18)';
+    let laneW = c === 2 ? 1.45 : 1.05;
 
     if (st?.status === 'enemy_adv' || st?.status === 'wall_danger') {
-      laneColor = 'rgba(230,110,120,0.14)';
-      laneW = 1.2;
+      laneColor = 'rgba(212,65,85,0.26)';
+      laneW = 1.8;
     } else if (st?.status === 'player_adv' || st?.status === 'siege_ready') {
-      laneColor = 'rgba(181,117,10,0.17)';
-      laneW = 1.25;
+      laneColor = 'rgba(39,159,95,0.23)';
+      laneW = 1.7;
     } else if (st?.status === 'clash') {
-      laneColor = 'rgba(220,170,70,0.16)';
-      laneW = 1.18;
+      laneColor = 'rgba(206,139,42,0.26)';
+      laneW = 1.65;
     }
 
     ctx.save();
     ctx.strokeStyle = laneColor;
     ctx.lineWidth = laneW;
     ctx.beginPath();
-    ctx.moveTo(lx, fy + 32);
-    ctx.lineTo(lx, fy + fh - 32);
+    ctx.moveTo(lx, laneTop);
+    ctx.lineTo(lx, laneBottom);
     ctx.stroke();
     ctx.restore();
   }
 
   ctx.save();
-  ctx.strokeStyle = 'rgba(224,178,88,0.18)';
+  const midY = fy + fh / 2;
+  const midGrad = ctx.createLinearGradient(x + 18, midY, x + w - 18, midY);
+  midGrad.addColorStop(0, 'rgba(255,255,255,0.02)');
+  midGrad.addColorStop(0.5, 'rgba(120,75,18,0.30)');
+  midGrad.addColorStop(1, 'rgba(255,255,255,0.02)');
+  ctx.strokeStyle = midGrad;
   ctx.setLineDash([7, 8]);
-  ctx.lineWidth = 1.0;
+  ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.moveTo(x + 18, fy + fh / 2);
-  ctx.lineTo(x + w - 18, fy + fh / 2);
+  ctx.moveTo(x + 18, midY);
+  ctx.lineTo(x + w - 18, midY);
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(122,78,20,0.09)';
+  roundRect(x + 34, midY - 19, w - 68, 38, 19);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -219,8 +252,9 @@ function battleUnitStyleV59(side) {
     : { main:'#D4A843', dark:'#5E3A12', hp:'#F5C242', glow:'rgba(245,194,66,0.30)', outline:'rgba(255,250,235,0.94)' };
 }
 function battleVisualYV59(s) {
-  const topSafe = LAYOUT.fieldY + 10;
-  const bottomSafe = LAYOUT.fieldY + LAYOUT.fieldH - 10;
+  const sieging = s && (s.mode === 'siege' || s.mode === 'siege_queue' || s.mode === 'siege_support');
+  const topSafe = LAYOUT.fieldY + (sieging ? 10 : 18);
+  const bottomSafe = LAYOUT.fieldY + LAYOUT.fieldH - (sieging ? 10 : 42);
   return battleClampV59(s.y, topSafe, bottomSafe);
 }
 function battleHashV59(s) {
@@ -237,7 +271,7 @@ function battleVisualPosV59(s, r) {
   const oy = ((Math.floor(h / 5) % 3) - 1) * Math.min(4.5, Math.max(1.5, r * 0.10));
   return {
     x: battleClampV59(s.x + ox, 26 + r, W - 26 - r),
-    y: battleClampV59(baseY + oy, LAYOUT.fieldY + 10, LAYOUT.fieldY + LAYOUT.fieldH - 10),
+    y: battleClampV59(baseY + oy, LAYOUT.fieldY + 18, LAYOUT.fieldY + LAYOUT.fieldH - 42),
   };
 }
 

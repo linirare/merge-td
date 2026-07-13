@@ -25,6 +25,7 @@ const FILES = [
   'js/config.js',
   'js/layout_v56.js',
   'js/state.js',
+  'js/hooks.js',
   'js/board.js',
   'js/combat.js',
   'js/ai.js',
@@ -36,6 +37,7 @@ const FILES = [
   'js/status_engine_v61.js',
   'js/boss_v63.js',
   'js/dynamic_difficulty_v64.js',
+  'js/build_combo_v2.js',
 ];
 
 function mulberry32(seed) {
@@ -148,8 +150,21 @@ const DRIVER = `
 
   function botActionCost() {
     const cfg = TUNING && TUNING.juice ? TUNING.juice : {};
-    state.summonCostCounter = Math.max(1, Number(state.summonCostCounter || 1));
-    return Math.min(Number(cfg.maxActionCost || 12), state.summonCostCounter);
+    const count = Math.max(0, Math.floor(Number(state.summonActionCount || 0)));
+    const curve = Array.isArray(cfg.actionCostCurve) ? cfg.actionCostCurve : null;
+    let cost = curve && curve.length ? Number(curve[Math.min(count, curve.length - 1)]) || 1 : Math.max(1, Number(state.summonCostCounter || 1));
+    state.summonCostCounter = count + 1;
+    return Math.min(Number(cfg.maxActionCost || 12), cost);
+  }
+
+  function botMarkSummonAction() {
+    state.summonActionCount = Math.max(0, Math.floor(Number(state.summonActionCount || 0))) + 1;
+    state.summonCostCounter = state.summonActionCount + 1;
+  }
+
+  function botUrgentCost() {
+    const cfg = TUNING && TUNING.juice ? TUNING.juice : {};
+    return Math.max(1, Number(cfg.urgentCost || 2));
   }
 
   function botPickType(strategy) {
@@ -161,7 +176,7 @@ const DRIVER = `
     const deck = activeDeck();
     const preferred = pattern.filter(id => deck.includes(id));
     const pool = preferred.length ? preferred : deck;
-    return pool[(state.summonCount || 0) % pool.length] || randomType(deck);
+    return randomType(pool);
   }
 
   function botSummonLevel(strategy) {
@@ -176,11 +191,11 @@ const DRIVER = `
     let placed = 0;
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (placed >= limit) return;
+      if (state.playerSlots[r][c]) continue;
       const cost = botActionCost();
       if (state.sp < cost) return;
-      if (state.playerSlots[r][c]) continue;
       state.sp -= cost;
-      state.summonCostCounter = cost + 1;
+      botMarkSummonAction();
       state.summonCount = (state.summonCount || 0) + 1;
       const type = botPickType(strategy);
       const ball = createBall(type, botSummonLevel(strategy));
@@ -198,10 +213,9 @@ const DRIVER = `
       if (!best || ball.level > best.ball.level) best = { r, c, ball };
     }
     if (!best) return;
-    const cost = botActionCost();
+    const cost = botUrgentCost();
     if (state.sp < cost) return;
     state.sp -= cost;
-    state.summonCostCounter = cost + 1;
     spawnSoldierFromBall(best.ball, best.r, best.c, 'player', true);
     best.ball.spawnTimer = Math.max(best.ball.spawnTimer || 0, 1.2);
   }
@@ -210,8 +224,11 @@ const DRIVER = `
     meta = createMeta();
     meta.highestLevel = k;
     meta.gold = 999999;
-    meta.deck = DEFAULT_DECK.slice();
     meta.unlocked = typeof progressUnlocked === 'function' ? progressUnlocked(meta) : DEFAULT_DECK.slice();
+    meta.deck = DEFAULT_DECK.slice();
+    if (strategy.id === 'standard' && k >= 6 && meta.unlocked.includes('mint_supply')) {
+      meta.deck = normalizeDeck(['watermelon_guard', 'grape_archer', 'pineapple_lancer', 'orange_cannon', 'mint_supply']);
+    }
     const growth = strategy.id === 'standard'
       ? Math.min(10, Math.floor((k + 1) / 2))
       : strategy.id === 'light'
@@ -280,6 +297,24 @@ const DRIVER = `
     }
 
     updateCombat();
+    if (window.GameHooks && window.GameHooks.update) window.GameHooks.update.run(dt);
+  }
+
+  function comboSnapshot() {
+    const m = state._buildComboV2 && state._buildComboV2.metrics ? state._buildComboV2.metrics : {};
+    return {
+      maxMergeLevel: Number(m.maxMergeLevel || 0),
+      firstLv2Time: m.firstLv2Time == null ? null : Number(m.firstLv2Time),
+      firstLv3Time: m.firstLv3Time == null ? null : Number(m.firstLv3Time),
+      pairComboCount: Number(m.pairComboCount || 0),
+      formedAt: m.formedAt == null ? null : Number(m.formedAt),
+      summonCount: Number(m.summonCount || state.summonCount || 0),
+      mergeCount: Number(m.mergeCount || state.merges || 0),
+    };
+  }
+
+  function stageResult(extra) {
+    return Object.assign(extra, comboSnapshot());
   }
 
   function runStage(k, strategy, seed) {
@@ -291,6 +326,7 @@ const DRIVER = `
     state.phase = 'playing';
     state.sp = Number((TUNING && TUNING.juice && TUNING.juice.start) || state.sp || 8);
     state.summonCostCounter = 1;
+    state.summonActionCount = 0;
     let botTimer = 0;
     let urgentTimer = 0;
     let peakJuice = state.sp || 0;
@@ -310,10 +346,10 @@ const DRIVER = `
       stepFrame();
       peakJuice = Math.max(peakJuice, state.sp || 0);
       maxUnits = Math.max(maxUnits, (state.playerSoldiers || []).filter(s => s && s.alive).length);
-      if (state.enemyWallHp <= 0) return { win: 1, time: state.time, wall: state.playerWallHp / state.playerWallMax, peakJuice, maxUnits };
-      if (state.playerWallHp <= 0) return { win: 0, time: state.time, wall: 0, peakJuice, maxUnits };
+      if (state.enemyWallHp <= 0) return stageResult({ win: 1, time: state.time, wall: state.playerWallHp / state.playerWallMax, peakJuice, maxUnits });
+      if (state.playerWallHp <= 0) return stageResult({ win: 0, time: state.time, wall: 0, peakJuice, maxUnits });
     }
-    return { win: 0, time: state.time, wall: state.playerWallHp / state.playerWallMax, timeout: 1, peakJuice, maxUnits };
+    return stageResult({ win: 0, time: state.time, wall: state.playerWallHp / state.playerWallMax, timeout: 1, peakJuice, maxUnits });
   }
 
   const rows = [];
@@ -322,6 +358,8 @@ const DRIVER = `
     for (let sIdx = 0; sIdx < STRATEGIES.length; sIdx++) {
       const strategy = STRATEGIES[sIdx];
       let wins = 0, timeouts = 0, tSum = 0, wallSum = 0, peakJuice = 0, maxUnits = 0;
+      let maxMergeLevel = 0, pairComboCount = 0, summonCount = 0, mergeCount = 0;
+      let lv2Sum = 0, lv2N = 0, lv3Sum = 0, lv3N = 0, formedSum = 0, formedN = 0;
       for (let i = 0; i < RUNS_PER_STAGE; i++) {
         const seed = (0x51A2B3C4 ^ (k * 100003 + sIdx * 9973 + i * 101)) >>> 0; // 每关×策略×run 独立确定性种子
         const r = runStage(k, strategy, seed);
@@ -329,6 +367,13 @@ const DRIVER = `
         if (r.timeout) timeouts++;
         peakJuice += r.peakJuice || 0;
         maxUnits += r.maxUnits || 0;
+        maxMergeLevel = Math.max(maxMergeLevel, r.maxMergeLevel || 0);
+        pairComboCount += r.pairComboCount || 0;
+        summonCount += r.summonCount || 0;
+        mergeCount += r.mergeCount || 0;
+        if (r.firstLv2Time != null) { lv2Sum += r.firstLv2Time; lv2N++; }
+        if (r.firstLv3Time != null) { lv3Sum += r.firstLv3Time; lv3N++; }
+        if (r.formedAt != null) { formedSum += r.formedAt; formedN++; }
       }
       rows.push({
         stage: k,
@@ -341,6 +386,13 @@ const DRIVER = `
         avgWallLeft: wins ? Math.round((wallSum / wins) * 100) : 0,
         avgPeakJuice: Math.round(peakJuice / RUNS_PER_STAGE),
         avgMaxUnits: Math.round(maxUnits / RUNS_PER_STAGE),
+        maxMergeLevel,
+        firstLv2Time: lv2N ? +(lv2Sum / lv2N).toFixed(1) : null,
+        firstLv3Time: lv3N ? +(lv3Sum / lv3N).toFixed(1) : null,
+        pairComboCount: +(pairComboCount / RUNS_PER_STAGE).toFixed(1),
+        formedAt: formedN ? +(formedSum / formedN).toFixed(1) : null,
+        summonCount: +(summonCount / RUNS_PER_STAGE).toFixed(1),
+        mergeCount: +(mergeCount / RUNS_PER_STAGE).toFixed(1),
         timeouts,
       });
       if (VERBOSE) console.error('  stage ' + k + ' ' + strategy.id + ' done (' + wins + '/' + RUNS_PER_STAGE + ' win, ' + timeouts + ' timeout)');
@@ -380,6 +432,11 @@ for (const r of rows) {
     String(r.avgWallLeft + '%').padStart(5) + '  ' +
     String(r.avgPeakJuice).padStart(5) + '  ' +
     String(r.avgMaxUnits).padStart(5) + '  ' +
+    String(r.maxMergeLevel).padStart(5) + '  ' +
+    String(r.firstLv2Time == null ? '-' : r.firstLv2Time + 's').padStart(5) + '  ' +
+    String(r.firstLv3Time == null ? '-' : r.firstLv3Time + 's').padStart(5) + '  ' +
+    String(r.pairComboCount).padStart(5) + ' ' +
+    String(r.formedAt == null ? '-' : r.formedAt + 's').padStart(6) + ' ' +
     String(r.timeouts).padStart(3) + '   ' +
     'time:' + tFlag + ' win:' + wrFlag
   );
@@ -392,6 +449,10 @@ for (const r of rows) {
   assert.ok(r.winRate >= 0 && r.winRate <= 100, 'winRate in range');
   assert.ok(r.runs === simRunsPerStage, 'ran configured runs');
   assert.ok(['no_action', 'light', 'standard'].includes(r.strategy), 'known strategy');
+  assert.ok(r.maxMergeLevel >= 0 && r.maxMergeLevel <= 7, 'maxMergeLevel in range');
+  assert.ok(r.pairComboCount >= 0, 'pairComboCount should be non-negative');
+  assert.ok(r.summonCount >= 0, 'summonCount should be non-negative');
+  assert.ok(r.mergeCount >= 0, 'mergeCount should be non-negative');
 }
 assert.strictEqual(rows.filter(r => r.boss && r.strategy === 'standard').length, 4, 'four boss stages in 1-20');
 console.log('\nOK: real-combat sim ran stages 1-20 x 3 strategies (structure valid)');

@@ -311,34 +311,46 @@ function drawJuiceLayer() {
 
   for (const b of j.beams) {
     const a = Math.max(0, b.life / b.maxLife);
-    ctx.globalAlpha = a;
+    const dx = b.x2 - b.x1;
+    const dy = b.y2 - b.y1;
+    const sx = b.x1 + dx * 0.42;
+    const sy = b.y1 + dy * 0.42;
+    const ex = b.x1 + dx * 0.72;
+    const ey = b.y1 + dy * 0.72;
+    ctx.globalAlpha = Math.min(0.42, a * 0.58);
     ctx.strokeStyle = b.color;
-    ctx.lineWidth = 7 * a + 1;
+    ctx.lineWidth = 4 * a + 1;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(b.x1, b.y1);
-    ctx.lineTo(b.x2, b.y2);
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
     ctx.stroke();
-    ctx.globalAlpha = Math.min(1, a * 0.85);
+    ctx.globalAlpha = Math.min(0.38, a * 0.50);
     ctx.strokeStyle = '#fff8d0';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
-    ctx.moveTo(b.x1, b.y1);
-    ctx.lineTo(b.x2, b.y2);
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
     ctx.stroke();
   }
 
   for (const s of j.slashes) {
     const a = Math.max(0, s.life / s.maxLife);
-    ctx.globalAlpha = a;
+    const dx = s.x2 - s.x1;
+    const dy = s.y2 - s.y1;
+    const sx = s.x1 + dx * 0.34;
+    const sy = s.y1 + dy * 0.34;
+    const ex = s.x1 + dx * 0.72;
+    const ey = s.y1 + dy * 0.72;
+    ctx.globalAlpha = Math.min(0.54, a * 0.72);
     ctx.strokeStyle = s.color;
-    ctx.lineWidth = s.width * a;
+    ctx.lineWidth = Math.min(4.5, s.width) * a;
     ctx.lineCap = 'round';
     ctx.shadowColor = s.color;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 5;
     ctx.beginPath();
-    ctx.moveTo(s.x1, s.y1);
-    ctx.lineTo(s.x2, s.y2);
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
     ctx.stroke();
     ctx.shadowBlur = 0;
   }

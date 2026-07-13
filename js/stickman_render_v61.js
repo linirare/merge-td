@@ -14,8 +14,8 @@
 /* ---------- 0) 等级缩放 & 角色动画参数表 ---------- */
 
 // 等级驱动头部/身体缩放因子
-const HEAD_SCALE_BY_LEVEL = [0, 0.65, 0.78, 0.94, 1.15, 1.42, 1.75, 2.15];
-const BODY_SCALE_BY_LEVEL = [0, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16];
+const HEAD_SCALE_BY_LEVEL = [0, 0.58, 0.66, 0.76, 0.90, 1.05, 1.22, 1.40];
+const BODY_SCALE_BY_LEVEL = [0, 0.085, 0.092, 0.100, 0.108, 0.116, 0.124, 0.132];
 
 // 按职责的走路/待机动画参数
 const ROLE_ANIM = {
@@ -408,6 +408,211 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
     return s._faceDirV61;
   }
 
+  function roleColorV61(role) {
+    return ({
+      tank: '#38d878',
+      front: '#7ee0a0',
+      rush: '#ffcf4a',
+      back: '#8bc7ff',
+      siege: '#ff9f43',
+      control: '#b99cff',
+      support: '#63e6be',
+      merge: '#d6b8ff',
+    })[role] || '#f5c242';
+  }
+
+  function drawRoleMarkV61(x, y, r, role, isEnemy) {
+    const mark = role || 'front';
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = isEnemy ? 'rgba(255,238,232,0.94)' : 'rgba(244,255,235,0.96)';
+    ctx.fillStyle = isEnemy ? 'rgba(255,238,232,0.18)' : 'rgba(244,255,235,0.18)';
+    ctx.lineWidth = Math.max(2.2, r * 0.13);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (mark === 'tank' || mark === 'front') {
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.48);
+      ctx.lineTo(r * 0.42, -r * 0.20);
+      ctx.lineTo(r * 0.30, r * 0.34);
+      ctx.lineTo(0, r * 0.55);
+      ctx.lineTo(-r * 0.30, r * 0.34);
+      ctx.lineTo(-r * 0.42, -r * 0.20);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else if (mark === 'rush') {
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.42 + i * r * 0.16, r * 0.42);
+        ctx.lineTo(r * 0.36 + i * r * 0.16, -r * 0.46);
+        ctx.stroke();
+      }
+    } else if (mark === 'back') {
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.46, i * r * 0.22);
+        ctx.lineTo(r * 0.46, i * r * 0.08);
+        ctx.stroke();
+      }
+    } else if (mark === 'siege') {
+      roundRect(-r * 0.42, -r * 0.25, r * 0.62, r * 0.50, r * 0.08);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(r * 0.18, 0);
+      ctx.lineTo(r * 0.54, -r * 0.16);
+      ctx.stroke();
+    } else if (mark === 'support' || mark === 'merge') {
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.48);
+      ctx.lineTo(0, r * 0.48);
+      ctx.moveTo(-r * 0.48, 0);
+      ctx.lineTo(r * 0.48, 0);
+      ctx.stroke();
+      if (mark === 'merge') {
+        ctx.beginPath();
+        ctx.rect(-r * 0.24, -r * 0.24, r * 0.48, r * 0.48);
+        ctx.stroke();
+      }
+    } else if (mark === 'control') {
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.44, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.38, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawTacticalUnitV61(s, t, tier, st, vis, role, lv, depth) {
+    const isEnemy = s.side === 'enemy';
+    const tierScale = tier === 'legendary' ? 1.18 : tier === 'advanced' ? 1.10 : tier === 'elite' ? 1.05 : 1;
+    const r = (17 + Math.min(4, Math.max(0, lv - 1)) * 1.35) * depth * tierScale;
+    const side = isEnemy ? '#d94155' : '#28b867';
+    const sideDark = isEnemy ? '#7a1b28' : '#155f38';
+    const face = t.color || st.main || '#f5c242';
+    const roleColor = roleColorV61(role);
+    const hpRatio = Math.max(0, Math.min(1, (Number(s.hp) || 0) / Math.max(1, Number(s.maxHp) || 1)));
+    const showHp = hpRatio < 0.985 || (s.hitFlash || 0) > 0.02 || (s.shield || 0) > 0;
+    const fighting = s.mode === 'fight' || s.mode === 'siege' || s.mode === 'siege_support';
+
+    ctx.save();
+    if (typeof isInvisible === 'function' && isInvisible(s)) ctx.globalAlpha = 0.42;
+
+    ctx.fillStyle = 'rgba(48,30,12,0.20)';
+    ctx.beginPath();
+    ctx.ellipse(vis.x, vis.y + r * 0.68, r * 1.05, r * 0.30, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (fighting || (s.hitFlash || 0) > 0.02) {
+      ctx.strokeStyle = (s.hitFlash || 0) > 0.02 ? 'rgba(255,255,255,0.95)' : roleColor;
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha *= 0.88;
+      ctx.beginPath();
+      ctx.arc(vis.x, vis.y, r + 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = typeof isInvisible === 'function' && isInvisible(s) ? 0.42 : 1;
+    }
+
+    ctx.fillStyle = isEnemy ? 'rgba(90,18,30,0.88)' : 'rgba(19,78,47,0.88)';
+    ctx.strokeStyle = side;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.arc(vis.x, vis.y, r + 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    const grad = ctx.createRadialGradient(vis.x - r * 0.25, vis.y - r * 0.28, r * 0.2, vis.x, vis.y, r);
+    grad.addColorStop(0, 'rgba(255,255,255,0.82)');
+    grad.addColorStop(0.18, face);
+    grad.addColorStop(1, sideDark);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(vis.x, vis.y, r - 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(vis.x, vis.y, r - 2.5, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(vis.x - r * 0.22, vis.y - r * 0.35, r * 0.62, r * 0.28, -0.38, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(32,18,8,0.30)';
+    ctx.beginPath();
+    ctx.arc(vis.x, vis.y, r * 0.58, 0, Math.PI * 2);
+    ctx.fill();
+    drawRoleMarkV61(vis.x, vis.y, r, role, isEnemy);
+
+    ctx.fillStyle = face;
+    ctx.strokeStyle = isEnemy ? '#ffd5db' : '#eaffdf';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(vis.x - r * 0.42, vis.y - r * 0.44, r * 0.16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = roleColor;
+    roundRect(vis.x - r * 0.68, vis.y + r * 0.68, r * 1.36, 4.5, 2.5);
+    ctx.fill();
+
+    if (lv >= 2) {
+      ctx.fillStyle = '#f6c343';
+      ctx.strokeStyle = 'rgba(87,48,12,0.72)';
+      ctx.lineWidth = 1.2;
+      roundRect(vis.x + r * 0.28, vis.y - r * 0.98, r * 0.88, 15, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = '900 10px sans-serif';
+      ctx.fillStyle = '#5a3010';
+      ctx.fillText('L' + lv, vis.x + r * 0.72, vis.y - r * 0.98 + 7.5);
+    }
+
+    if (showHp) {
+      const bw = Math.max(24, r * 1.78);
+      const by = vis.y - r - 9;
+      ctx.fillStyle = 'rgba(63,38,18,0.42)';
+      roundRect(vis.x - bw / 2, by, bw, 4.2, 3);
+      ctx.fill();
+      ctx.fillStyle = hpRatio > 0.5 ? '#52d36b' : hpRatio > 0.25 ? '#f7c948' : '#ef4444';
+      roundRect(vis.x - bw / 2, by, Math.max(2, bw * hpRatio), 4.2, 3);
+      ctx.fill();
+      if ((s.shield || 0) > 0) {
+        const sr = Math.max(0, Math.min(1, Number(s.shield || 0) / Math.max(1, Number(s.maxShield || s.maxHp * 0.45))));
+        ctx.fillStyle = '#72c4ff';
+        roundRect(vis.x - bw / 2, by - 3.4, bw * sr, 2.4, 2);
+        ctx.fill();
+      }
+    }
+
+    if (s.statusEffects) {
+      const hasSlow = s.statusEffects.slow && s.statusEffects.slow.timer > 0;
+      const hasBurn = s.statusEffects.burning && s.statusEffects.burning.timer > 0;
+      if (hasSlow || hasBurn) {
+        ctx.strokeStyle = hasBurn ? 'rgba(255,128,55,0.85)' : 'rgba(132,210,255,0.85)';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(vis.x, vis.y, r + 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    if (s._boss && typeof drawBossBadgeV59 === 'function') {
+      drawBossBadgeV59(s, vis.x, vis.y - r - 30, Math.max(86, r * 3.4));
+    }
+    ctx.restore();
+  }
+
   drawSoldier = function stickmanDrawSoldierV61(s) {
     if (!s || !s.alive) return;
     if (window.RenderHooks && window.RenderHooks.beforeDrawSoldier) window.RenderHooks.beforeDrawSoldier.run(ctx, s);
@@ -438,6 +643,9 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
     // 视觉位置
     const r = (13 + lv * 1.18) * depth * tierScale * roleScale;
     const vis = battleVisualPosV59(s, r);
+    drawTacticalUnitV61(s, t, tier, st, vis, role, lv, depth);
+    if (window.RenderHooks && window.RenderHooks.afterDrawSoldier) window.RenderHooks.afterDrawSoldier.run(ctx, s);
+    return;
 
     // 走路相位
     const dyStep = s.y - (s._pyV61 ?? s.y);
@@ -472,7 +680,7 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
 
     // 脚下光环(敌我区分)
     ctx.fillStyle = st.main;
-    ctx.globalAlpha = invis ? 0.18 : 0.62;
+    ctx.globalAlpha = invis ? 0.12 : 0.30;
     ctx.beginPath(); ctx.ellipse(vis.x, groundY + 1, headR * 1.15, headR * 0.25, 0, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = invis ? 0.4 : 1;
 

@@ -15,6 +15,13 @@ function eventPoint(ev) {
   return toGame(p.clientX, p.clientY);
 }
 
+function currentUrgentDispatchCost() {
+  if (typeof window !== 'undefined' && typeof window.nextUrgentDispatchCost === 'function') {
+    return Math.max(1, Math.floor(Number(window.nextUrgentDispatchCost()) || 1));
+  }
+  return URGENT_DISPATCH_COST;
+}
+
 function summonFruitAt(r, c) {
   if (state.playerSlots[r][c]) return false;
   const center = slotCenter(r, c, false);
@@ -76,16 +83,17 @@ function onDown(ev) {
   if (lastTap.r === r && lastTap.c === c && (now - lastTap.time) < 350) {
     const alive = state.playerSoldiers.filter(s => s.alive).length;
     const center = slotCenter(r, c, false);
-    if (state.sp < URGENT_DISPATCH_COST) {
+    const dispatchCost = currentUrgentDispatchCost();
+    if (state.sp < dispatchCost) {
       addFx(center.x, center.y - 24, '果汁不足，无法急派', THEME.accent, 13);
     } else if (alive >= MAX_SOLDIERS) {
       addFx(center.x, center.y - 24, '兵数已满', THEME.accent, 13);
     } else {
-      state.sp -= URGENT_DISPATCH_COST;
+      state.sp -= dispatchCost;
       const soldier = spawnSoldierFromBall(ball, r, c, 'player', true);
       ball.spawnTimer = Math.max(ball.spawnTimer || 0, 1.2);
       state.rings.push({ x: center.x, y: center.y, r: 8, life: 0.34, maxLife: 0.34, color: THEME.gold });
-      addFx(center.x, center.y - 24, soldier ? `果汁 -${URGENT_DISPATCH_COST} · 急派兵!` : '无法派兵', soldier ? THEME.gold : THEME.accent, 13);
+      addFx(center.x, center.y - 24, soldier ? `果汁 -${dispatchCost} · 急派兵!` : '无法派兵', soldier ? THEME.gold : THEME.accent, 13);
     }
     lastTap.time = 0;
     return;

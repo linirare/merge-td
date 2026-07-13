@@ -21,8 +21,27 @@
 
   function actionCost() {
     if (!state) return 1;
-    state.summonCostCounter = Math.max(1, Number(state.summonCostCounter || 1));
-    return Math.min(juiceNumber('maxActionCost', 12), state.summonCostCounter); // 设计 §3.2:操作次数表到 12 为止
+    const count = Math.max(0, Math.floor(Number(state.summonActionCount || 0)));
+    const curve = Array.isArray(juiceTuning().actionCostCurve) ? juiceTuning().actionCostCurve : null;
+    let cost = 1;
+    if (curve && curve.length) {
+      cost = Number(curve[Math.min(count, curve.length - 1)]) || 1;
+    } else {
+      cost = Math.max(1, Number(state.summonCostCounter || 1));
+    }
+    state.summonCostCounter = count + 1;
+    return Math.min(juiceNumber('maxActionCost', 12), cost);
+  }
+
+  function markPlayerSummonAction() {
+    if (!state) return;
+    state.summonActionCount = Math.max(0, Math.floor(Number(state.summonActionCount || 0))) + 1;
+    state.summonCostCounter = state.summonActionCount + 1;
+  }
+
+  function urgentDispatchCost() {
+    if (state && (state.mode === 'pvp' || window.__pvpMode)) return actionCost();
+    return Math.max(1, Math.floor(juiceNumber('urgentCost', 2)));
   }
 
   function enemyActionCost() {
@@ -39,6 +58,7 @@
   }
 
   window.nextJuiceActionCost = function(){ return typeof actionCost === 'function' ? actionCost() : 1; };
+  window.nextUrgentDispatchCost = function(){ return typeof urgentDispatchCost === 'function' ? urgentDispatchCost() : 2; };
 
   function juiceSpawnButtonRect() {
     if (typeof window.getJuiceSpawnButtonRectV60 === 'function') return window.getJuiceSpawnButtonRectV60();
@@ -89,6 +109,7 @@
     state.sp = (typeof getSpStart === 'function' ? getSpStart(meta) : 10) + starSp;
     state.enemySp = juiceNumber('enemyStart', 8);
     state.summonCostCounter = 1;
+    state.summonActionCount = 0;
     state.enemySummonCostCounter = 1;
     state._wallPityTriggers = 0;
     state._juicePlayerTimer = 0;
@@ -236,7 +257,7 @@
     state.playerSlots[r][c].spawnTimer = Math.max(state.playerSlots[r][c].spawnTimer, 2.2);
     state.sp -= cost;
     state.summonCount = (state.summonCount || 0) + 1;
-    state.summonCostCounter = cost + 1;
+    markPlayerSummonAction();
     pulseJuice(-cost, 'spend');
 
     const t = TYPES[type];
@@ -304,7 +325,7 @@
     if (juiceLastTap.r === r && juiceLastTap.c === c && (now - juiceLastTap.time) < 350) {
       const alive = state.playerSoldiers.filter(s => s.alive).length;
       const center = slotCenter(r, c, false);
-      const cost = actionCost();
+      const cost = urgentDispatchCost();
       if ((state.sp || 0) < cost) {
         pulseJuice(0, 'lack');
         addFx(center.x, center.y - 24, `果汁不足 · 需${cost}`, THEME.accent, 11);
@@ -314,7 +335,7 @@
         const soldier = spawnSoldierFromBall(ball, r, c, 'player', true);
         if (soldier) {
           state.sp -= cost;
-          state.summonCostCounter = cost + 1;
+          if (state.mode === 'pvp' || window.__pvpMode) markPlayerSummonAction();
           ball.spawnTimer = Math.max(ball.spawnTimer || 0, 1.2);
           pulseJuice(-cost, 'spend');
           state.rings.push({ x: center.x, y: center.y, r: 8, life: 0.34, maxLife: 0.34, color: THEME.gold });

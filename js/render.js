@@ -392,24 +392,35 @@ function drawProjectiles() {
 function drawAttackFx() {
   for (const a of state.attackFx) {
     const alpha = a.life / a.maxLife;
+    if (alpha < 0.22) continue;
     ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2.5;
-    ctx.shadowColor = '#ff4a3a';
-    ctx.shadowBlur = 6;
+    ctx.globalAlpha = Math.min(0.28, alpha * 0.46);
+    ctx.strokeStyle = a.crit ? '#ffe27a' : 'rgba(255,255,255,0.78)';
+    ctx.lineWidth = a.crit ? 2.2 : 1.25;
+    ctx.shadowColor = a.crit ? '#ffb347' : 'rgba(255,74,58,0.42)';
+    ctx.shadowBlur = a.crit ? 5 : 2;
     ctx.beginPath();
-    ctx.moveTo(a.x1, a.y1);
-    ctx.lineTo(a.x2, a.y2);
+    const dx = a.x2 - a.x1;
+    const dy = a.y2 - a.y1;
+    const hitT = a.crit ? 0.5 : 0.62;
+    const seg = a.crit ? 0.58 : 0.34;
+    const sx = a.x1 + dx * Math.max(0, hitT - seg / 2);
+    const sy = a.y1 + dy * Math.max(0, hitT - seg / 2);
+    const ex = a.x1 + dx * Math.min(1, hitT + seg / 2);
+    const ey = a.y1 + dy * Math.min(1, hitT + seg / 2);
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
     ctx.stroke();
     // 闪光点在中点
-    const mx = (a.x1 + a.x2) / 2, my = (a.y1 + a.y2) / 2;
-    ctx.fillStyle = '#fff';
-    ctx.shadowColor = '#ffdd4a';
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.arc(mx, my, 3 * alpha, 0, Math.PI * 2);
-    ctx.fill();
+    if (a.crit) {
+      const mx = (a.x1 + a.x2) / 2, my = (a.y1 + a.y2) / 2;
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = '#ffdd4a';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(mx, my, 2.5 * alpha, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 }
@@ -418,16 +429,35 @@ function drawAttackFx() {
 function drawFx() {
   for (const f of state.fx) {
     const alpha = f.life / f.maxLife;
-    const scale = f.vx ? 1 : (1 + (1 - alpha) * 0.3);
+    const isBuildFx = f.priority === 'build';
+    const scale = isBuildFx ? 1 : (f.vx ? 1 : (1 + (1 - alpha) * 0.3));
     ctx.save();
-    const baseY = f.vx ? f.y : (f.y - (1 - alpha) * 30);
+    const baseY = isBuildFx ? (f.y - (1 - alpha) * 8) : (f.vx ? f.y : (f.y - (1 - alpha) * 30));
     ctx.translate(f.x, baseY);
     if (scale !== 1) ctx.scale(scale, scale);
-    ctx.globalAlpha = f.vx ? Math.min(alpha * 2, 1) : alpha;
+    ctx.globalAlpha = isBuildFx ? Math.min(alpha * 1.6, 1) : (f.vx ? Math.min(alpha * 2, 1) : alpha);
     ctx.font = `bold ${f.size}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillStyle = f.color;
-    ctx.fillText(f.text, 0, 0);
+    if (isBuildFx) {
+      const textW = ctx.measureText(f.text).width;
+      const boxW = textW + 22;
+      const boxH = Math.max(24, f.size + 12);
+      ctx.fillStyle = 'rgba(48, 28, 12, 0.78)';
+      roundRect(-boxW / 2, -boxH + 7, boxW, boxH, 10);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 228, 130, 0.72)';
+      ctx.lineWidth = 1.5;
+      roundRect(-boxW / 2, -boxH + 7, boxW, boxH, 10);
+      ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+      ctx.strokeText(f.text, 0, -6);
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.text, 0, -6);
+    } else {
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.text, 0, 0);
+    }
     ctx.restore();
   }
 }
@@ -581,8 +611,11 @@ function draw() {
   }
 
   // 兵（画在棋盘之后，避免被格子遮盖）；Z 排序：Y 越小越靠上
-  for (const s of state.playerSoldiers.filter(s => s.alive).sort((a,b) => a.y - b.y)) drawSoldier(s);
-  for (const s of state.enemySoldiers.filter(s => s.alive).sort((a,b) => a.y - b.y)) drawSoldier(s);
+  const visibleSoldiers = state.playerSoldiers
+    .concat(state.enemySoldiers)
+    .filter(s => s && s.alive)
+    .sort((a, b) => (a.y - b.y) || ((a.side === 'enemy') - (b.side === 'enemy')));
+  for (const s of visibleSoldiers) drawSoldier(s);
 
   // 拖拽中的球
   if (state.drag) {

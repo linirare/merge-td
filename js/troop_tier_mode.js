@@ -122,8 +122,9 @@ function reinforceTroop(target, ball, center) {
   target.battleReady = true;
   target._tierBoost = 1.2;
   const color = TIER_COLOR[target.troopTier] || THEME.gold;
-  addFx(target.x, target.y - 30, target.level > oldLevel ? `${target.troopName} 进阶!` : `${target.troopName} 补强`, color, 12);
-  addFx(target.x, target.y - 44, `+${heal}`, THEME.safe, 10);
+  if ((Number(target.level) || 1) >= 5 || target.level > oldLevel) {
+    addFx(target.x, target.y - 30, target.level > oldLevel ? `${target.troopName} 进阶!` : `${target.troopName} 补强`, color, 12);
+  }
   state.rings.push({ x: target.x, y: target.y, r: 9 + target.level, life: 0.24, maxLife: 0.24, color });
   return target;
 }
@@ -170,7 +171,7 @@ function patchTierSpawn() {
     applyTroopTierStats(s);
     s.hp = s.maxHp;
     ball.spawnTimer = Math.max(ball.spawnTimer || 0, tierDeployCd(ball.type, ball.level));
-    addFx(center.x, center.y - 24, `派遣 ${s.troopName}`, TIER_COLOR[s.troopTier] || THEME.gold, 12);
+    if (ball.level >= 5) addFx(center.x, center.y - 24, `派遣 ${s.troopName}`, TIER_COLOR[s.troopTier] || THEME.gold, 12);
     return s;
   };
   spawnSoldierFromBall._troopTierPatchedV15 = true;
@@ -178,6 +179,7 @@ function patchTierSpawn() {
 
 function drawTierLabelV15(ctxArg, s) {
   if (!s || !s.squadMode || !s.alive) return;
+  if ((Number(s.level) || 1) < 7) return;
   const tier = s.troopTier || tierKey(s.level);
   const color = TIER_COLOR[tier] || THEME.gold;
   const name = s.troopName || tierName(s.type, s.level);

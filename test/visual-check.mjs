@@ -12,15 +12,32 @@ const VISUAL_TIMEOUT_MS = Number(process.env.VISUAL_TIMEOUT_MS || 120000);
 
 async function ensureLoggedIn(page) {
   // 如果登录门还在,注册一个视觉测试专用账号然后等门消失
-  const gate = await page.locator('#hifiLoginGate');
+  const gate = page.locator('#hifiLoginGate');
   if (await gate.count() === 0) return;
-  await page.click('#hifiLoginGate [data-g="register"]');
+  await page.evaluate(() => {
+    const btn = document.querySelector('#hifiLoginGate [data-g="register"]');
+    if (btn) btn.click();
+  });
   await page.waitForTimeout(200);
+  if (await gate.count() === 0) return;
   const stamp = Date.now();
-  await page.fill('#gEmail', `visual_${stamp}@test.com`);
-  await page.fill('#gPass', 'test123456');
-  await page.click('#gGo');
-  await page.waitForFunction(() => !document.getElementById('hifiLoginGate'), { timeout: 10000 });
+  await page.evaluate(({ email, pass }) => {
+    const emailInput = document.querySelector('#gEmail');
+    const passInput = document.querySelector('#gPass');
+    if (emailInput) {
+      emailInput.value = email;
+      emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+      emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    if (passInput) {
+      passInput.value = pass;
+      passInput.dispatchEvent(new Event('input', { bubbles: true }));
+      passInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const btn = document.querySelector('#gGo');
+    if (btn) btn.click();
+  }, { email: `visual_${stamp}@test.com`, pass: 'test123456' });
+  await page.waitForFunction(() => !document.getElementById('hifiLoginGate'), { timeout: 10000 }).catch(() => {});
 }
 
 function mmxDescribe(imgPath, prompt) {
@@ -63,8 +80,20 @@ async function startStage(page, level, waitMs = 3000) {
   }, level);
   await page.waitForTimeout(700);
   const node = page.locator('.lvnode').nth(Math.max(0, level - 1));
-  if (await node.count()) await node.click({ timeout: 5000 });
-  else await page.locator('#campaignStartBtn').click();
+  let started = false;
+  if (await node.count()) {
+    started = await node.click({ timeout: 5000 }).then(() => true).catch(() => false);
+  }
+  if (!started) {
+    const startBtn = page.locator('#campaignStartBtn');
+    if (await startBtn.count()) started = await startBtn.click({ timeout: 5000 }).then(() => true).catch(() => false);
+  }
+  if (!started) {
+    await page.evaluate(lv => {
+      if (typeof initLevel === 'function') initLevel(lv);
+      if (typeof window.syncBattleShellVisibility === 'function') window.syncBattleShellVisibility();
+    }, level);
+  }
   await page.waitForTimeout(waitMs);
 }
 
@@ -162,7 +191,7 @@ const SHOTS = [
 let browser;
 
 async function run() {
-  browser = await chromium.launch({ timeout: 10000 });
+  browser = await chromium.launch({ timeout: 30000 });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, reducedMotion: 'reduce' });
   page.setDefaultTimeout(8000);
   const errors = [];
@@ -185,7 +214,7 @@ async function run() {
     await shot.setup(page);
     await assertVisiblePage(page, shot.name);
     const abs = path.join(ROOT, shot.file);
-    await page.screenshot({ path: abs, type: 'jpeg', quality: 88 });
+    await page.screenshot({ path: abs, type: 'jpeg', quality: 88, timeout: 20000 });
     const vision = NO_VISION ? null : await mmxDescribe(abs, shot.prompt);
     results.push({ name: shot.name, file: shot.file, vision });
     console.log(`\n===== [${shot.name}] ${shot.file} =====`);

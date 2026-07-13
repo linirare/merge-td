@@ -1,6 +1,6 @@
 /* ============================================================
-   水果突击 · Combat Clarity Layer
-   目标：减少战斗表现层噪音。兵阶单位只保留一个主铭牌、一个兵阶标签、一个血条。
+   Fruit Assault - Combat Clarity Layer
+   Keeps squad rendering readable and reduces combat text noise.
    Loaded after troop_tier_mode.js.
    ============================================================ */
 
@@ -10,16 +10,27 @@
 })();
 
 function cleanRoleLabel(role) {
-  return ({ tank:'前排', front:'枪线', rush:'突击', back:'远程', siege:'攻城', support:'支援', control:'控制', merge:'引擎' })[role] || '兵';
+  return ({
+    tank: '\u524d\u6392',
+    front: '\u67aa\u7ebf',
+    rush: '\u7a81\u51fb',
+    back: '\u8fdc\u7a0b',
+    siege: '\u653b\u57ce',
+    support: '\u652f\u63f4',
+    control: '\u63a7\u5236',
+    merge: '\u5f15\u64ce',
+  })[role] || '\u5175';
 }
+
 function cleanTierLabel(s) {
-  if (typeof TIER_LABEL !== 'undefined' && s.troopTier) return TIER_LABEL[s.troopTier] || '兵';
-  if (s.level >= 7) return '将领';
-  if (s.level === 6) return '高级兵';
-  if (s.level === 5) return '精英兵';
-  if (s.level >= 3) return '大兵';
-  return '小兵';
+  if (typeof TIER_LABEL !== 'undefined' && s.troopTier) return TIER_LABEL[s.troopTier] || '\u5175';
+  if (s.level >= 7) return '\u5c06\u9886';
+  if (s.level === 6) return '\u9ad8\u7ea7\u5175';
+  if (s.level === 5) return '\u7cbe\u82f1\u5175';
+  if (s.level >= 3) return '\u5927\u5175';
+  return '\u5c0f\u5175';
 }
+
 function cleanTierColor(s) {
   if (typeof TIER_COLOR !== 'undefined' && s.troopTier) return TIER_COLOR[s.troopTier] || THEME.gold;
   if (s.level >= 7) return '#fff176';
@@ -28,6 +39,28 @@ function cleanTierColor(s) {
   if (s.level >= 3) return '#9be7ff';
   return '#eaffc3';
 }
+
+function clarityNearbyCount(s, radius) {
+  if (!state || !s) return 0;
+  const all = []
+    .concat(Array.isArray(state.playerSoldiers) ? state.playerSoldiers : [])
+    .concat(Array.isArray(state.enemySoldiers) ? state.enemySoldiers : []);
+  const rr = radius * radius;
+  let n = 0;
+  for (const other of all) {
+    if (!other || other === s || !other.alive) continue;
+    const dx = other.x - s.x;
+    const dy = other.y - s.y;
+    if (dx * dx + dy * dy <= rr) n++;
+  }
+  return n;
+}
+
+function clarityShouldShowIdentity(s) {
+  if (!s) return false;
+  return false;
+}
+
 function drawCleanHpBar(s, x, y, w) {
   const ratio = clamp01(s.hp / Math.max(1, s.maxHp));
   ctx.fillStyle = 'rgba(0,0,0,0.48)';
@@ -43,9 +76,11 @@ function drawCleanHpBar(s, x, y, w) {
     ctx.fill();
   }
 }
+
 function drawCleanSoldierBody(s) {
   const t = TYPES[s.type] || TYPES[DEFAULT_DECK[0]];
-  const fy = LAYOUT.fieldY, fh = LAYOUT.fieldH;
+  const fy = LAYOUT.fieldY;
+  const fh = LAYOUT.fieldH;
   const depth = 0.78 + 0.25 * ((s.y - fy) / fh);
   const scale = s.troopScale || (1 + Math.max(0, s.level - 1) * 0.07);
   const r = (14 + s.level * 1.45) * depth * scale;
@@ -54,10 +89,10 @@ function drawCleanSoldierBody(s) {
   const name = s.troopName || t.name;
   const roleText = cleanRoleLabel(t.role);
   const tierText = cleanTierLabel(s);
+  const showIdentity = clarityShouldShowIdentity(s);
 
   ctx.save();
 
-  // 当前状态圈，只保留一种主状态，不叠多个圈。
   let ringColor = s.side === 'player' ? 'rgba(83,201,106,0.55)' : 'rgba(255,92,92,0.50)';
   if (s.mode === 'siege') ringColor = 'rgba(255,201,60,0.75)';
   else if (s.mode === 'backline') ringColor = 'rgba(77,182,255,0.62)';
@@ -68,13 +103,11 @@ function drawCleanSoldierBody(s) {
   ctx.ellipse(s.x, s.y + r * 0.26, r * 1.02, r * 0.48, 0, 0, Math.PI * 2);
   ctx.stroke();
 
-  // 阴影
   ctx.fillStyle = 'rgba(0,0,0,0.24)';
   ctx.beginPath();
   ctx.ellipse(s.x, s.y + r + 5, r * 0.92, 4.5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // 身体和头部：比旧小兵更大、更像单个可读单位。
   ctx.fillStyle = s.hitFlash > 0 ? '#ff3a28' : sideColor;
   roundRect(s.x - r * 0.55, s.y - r * 0.03, r * 1.10, r * 1.16, 7);
   ctx.fill();
@@ -93,7 +126,6 @@ function drawCleanSoldierBody(s) {
   ctx.fillStyle = '#fff';
   ctx.fillText(t.icon, s.x, s.y - r * 0.36);
 
-  // 星级小章
   ctx.fillStyle = 'rgba(0,0,0,0.50)';
   ctx.beginPath();
   ctx.arc(s.x + r * 0.72, s.y + r * 0.16, r * 0.34, 0, Math.PI * 2);
@@ -104,22 +136,22 @@ function drawCleanSoldierBody(s) {
 
   drawCleanHpBar(s, s.x, s.y - r - 11, r * 2.0);
 
-  // 只显示一个上方定位标签。
-  ctx.font = '900 11px sans-serif';
-  ctx.strokeStyle = 'rgba(0,0,0,0.52)';
-  ctx.lineWidth = 3;
-  ctx.strokeText(`${tierText} · ${roleText}`, s.x, s.y - r - 21);
-  ctx.fillStyle = color;
-  ctx.fillText(`${tierText} · ${roleText}`, s.x, s.y - r - 21);
+  if (showIdentity) {
+    ctx.font = '900 11px sans-serif';
+    ctx.strokeStyle = 'rgba(0,0,0,0.52)';
+    ctx.lineWidth = 3;
+    ctx.strokeText(`${tierText} · ${roleText}`, s.x, s.y - r - 21);
+    ctx.fillStyle = color;
+    ctx.fillText(`${tierText} · ${roleText}`, s.x, s.y - r - 21);
 
-  // 只显示一个下方主铭牌。
-  const w = Math.min(98, Math.max(56, name.length * 10 + 14));
-  ctx.fillStyle = 'rgba(0,0,0,0.58)';
-  roundRect(s.x - w / 2, s.y + r + 9, w, 16, 8);
-  ctx.fill();
-  ctx.font = '900 10px sans-serif';
-  ctx.fillStyle = color;
-  ctx.fillText(name, s.x, s.y + r + 21);
+    const w = Math.min(98, Math.max(56, String(name).length * 10 + 14));
+    ctx.fillStyle = 'rgba(0,0,0,0.58)';
+    roundRect(s.x - w / 2, s.y + r + 9, w, 16, 8);
+    ctx.fill();
+    ctx.font = '900 10px sans-serif';
+    ctx.fillStyle = color;
+    ctx.fillText(name, s.x, s.y + r + 21);
+  }
 
   if ((s.reinforceStacks || 0) > 0) {
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
@@ -134,9 +166,11 @@ function drawCleanSoldierBody(s) {
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
 }
+
 function patchCleanSoldierDraw() {
   if (window.RenderHooks && window.RenderHooks.afterDrawSoldier && !window.RenderHooks._combatClaritySoldier) {
     window.RenderHooks.afterDrawSoldier.use((ctxArg, s) => {
+      if (typeof drawSoldier === 'function' && drawSoldier._stickmanV61) return;
       if (s && s.squadMode) drawCleanSoldierBody(s);
     }, 10);
     window.RenderHooks._combatClaritySoldier = true;
@@ -145,7 +179,6 @@ function patchCleanSoldierDraw() {
   if (typeof drawSoldier !== 'function' || drawSoldier._combatClarityPatched) return;
   const prevDraw = drawSoldier;
   drawSoldier = function clarityDrawSoldier(s) {
-    // 兵阶/兵团单位不用旧绘制链，避免旧小兵、兵团xN、兵阶铭牌三层叠加。
     if (s && s.squadMode) {
       drawCleanSoldierBody(s);
       return;
@@ -154,17 +187,66 @@ function patchCleanSoldierDraw() {
   };
   drawSoldier._combatClarityPatched = true;
 }
+
 function patchFxDensity() {
   if (typeof addFx !== 'function' || addFx._combatClarityPatched) return;
   const oldAddFx = addFx;
-  let lastTinyFxTime = 0;
+  const highPriorityWords = ['BUILD', '\u8054\u52a8', '\u63a5\u901a', '\u6210\u578b'];
+  const combatWords = ['\u514b\u5236', '\u4f18\u52bf', '\u53d7\u5236', '\u51fb\u7834', '\u7834\u57ce'];
+
+  function activeFieldFxCount() {
+    if (!state || !Array.isArray(state.fx) || typeof LAYOUT === 'undefined') return 0;
+    const top = LAYOUT.fieldY - 30;
+    const bottom = LAYOUT.fieldY + LAYOUT.fieldH + 30;
+    return state.fx.filter(f => f && f.life > 0 && f.y >= top && f.y <= bottom).length;
+  }
+
+  function pushPriorityFx(x, y, text, color, size, fxLife, priority) {
+    if (!state || !Array.isArray(state.fx)) return oldAddFx(x, y, text, color, size);
+    const item = { x, y, text, color, size, life: fxLife, maxLife: fxLife, priority };
+    state.fx.push(item);
+    return item;
+  }
+
   addFx = function clarityAddFx(x, y, text, color, size = 12, life = 0.85) {
     const now = state?.time || 0;
     const str = String(text || '');
+    const isBuildFx = highPriorityWords.some(word => str.includes(word));
+    if (isBuildFx) {
+      const fixed = str.includes('BUILD') || str.includes('\u8054\u52a8') || str.includes('\u63a5\u901a');
+      const fixedY = typeof LAYOUT !== 'undefined' ? LAYOUT.fieldY + 30 : y;
+      return pushPriorityFx(
+        fixed ? W / 2 : x,
+        fixed ? fixedY : y,
+        str,
+        color,
+        Math.max(Number(size) || 12, fixed ? 15 : 13),
+        fixed ? 1.35 : 1.05,
+        'build'
+      );
+    }
+
+    state._combatClarityFxV2 = state._combatClarityFxV2 || {};
+    const bucket = state._combatClarityFxV2;
     const isLowValueDamage = /^-\d+$/.test(str) && Number(str.slice(1)) < 12;
-    if (isLowValueDamage && now - lastTinyFxTime < 0.18) return null;
-    if (isLowValueDamage) lastTinyFxTime = now;
-    return oldAddFx(x, y, text, color, Math.min(size, 13), Math.min(life, 0.78));
+    const isRawDamage = /^-\d+$/.test(str);
+    const rawDamageValue = isRawDamage ? Number(str.slice(1)) || 0 : 0;
+    const isCombatKeyword = combatWords.some(word => str.includes(word));
+    const crowded = activeFieldFxCount() > 16;
+
+    if (isRawDamage && rawDamageValue < 20) return null;
+    if (isLowValueDamage && now - (bucket.lastTiny || 0) < 0.24) return null;
+    if (isRawDamage && crowded) return null;
+    if (isRawDamage && now - (bucket.lastRaw || 0) < 0.18) return null;
+    if (isCombatKeyword && now - (bucket.lastKeyword || 0) < 0.20) return null;
+
+    if (isLowValueDamage) bucket.lastTiny = now;
+    if (isRawDamage) bucket.lastRaw = now;
+    if (isCombatKeyword) bucket.lastKeyword = now;
+
+    const nextSize = isRawDamage ? Math.min(size, 10) : Math.min(size, isCombatKeyword ? 13 : 12);
+    const nextLife = isRawDamage ? 0.46 : Math.min(life, 0.72);
+    return oldAddFx(x, y, text, color, nextSize, nextLife);
   };
   addFx._combatClarityPatched = true;
 }

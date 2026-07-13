@@ -79,6 +79,7 @@ const TYPES = {
 const UNIT_POOL = Object.keys(TYPES);
 const OLD_DEFAULT_DECK = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'];
 const DEFAULT_DECK = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'];
+const STARTER_BUILD_DECK = ['watermelon_guard','grape_archer','pineapple_lancer','orange_cannon','mint_supply'];
 const DECK_SIZE = 5;
 const TYPE_IDS = UNIT_POOL;
 const BASIC_UNLOCKED = DEFAULT_DECK.slice();
@@ -111,6 +112,7 @@ function syncProgressUnlocks(m = null) {
   const list = progressUnlocked(m);
   // 合并抽卡已解锁但进度未到的水果,不丢失 gacha 成果
   m.unlocked = [...new Set([...list, ...(Array.isArray(m.unlocked) ? m.unlocked : [])])].filter(id => TYPES[id]);
+  if ((Math.max(1, m.highestLevel || 1) >= 6) && shouldAutoStarterBuildDeck(m.deck, m.unlocked)) m.deck = STARTER_BUILD_DECK.slice();
   if (!Array.isArray(m.deck) || m.deck.length === 0) m.deck = DEFAULT_DECK.slice();
   m.deck = normalizeDeck(m.deck).filter(id => (Array.isArray(m.unlocked) ? m.unlocked : list).includes(id));
   for (const id of DEFAULT_DECK) if (m.deck.length < DECK_SIZE && (Array.isArray(m.unlocked) ? m.unlocked : list).includes(id) && !m.deck.includes(id)) m.deck.push(id);
@@ -144,6 +146,12 @@ function shouldForceNewDefaultDeck(deck) {
     || sig === OLD_DEFAULT_DECK.join('|')
     || sig === ['grape_archer','banana_raider','pineapple_lancer','watermelon_guard'].join('|')
     || sig === ['watermelon_guard','grape_archer','orange_cannon','peach_medic','kiwi_wildcard'].join('|');
+}
+function shouldAutoStarterBuildDeck(deck, unlocked) {
+  const sig = deckSignature(deck);
+  return Array.isArray(unlocked)
+    && unlocked.includes('mint_supply')
+    && (sig === DEFAULT_DECK.join('|') || sig === OLD_DEFAULT_DECK.join('|'));
 }
 function normalizeDeck(deck) {
   const result = shouldForceNewDefaultDeck(deck) ? DEFAULT_DECK.slice() : normalizeDeckNoFill(deck);
@@ -289,6 +297,8 @@ const TUNING = {
     enemyStart: 8,
     passiveInterval: 5.0,
     enemyActionInterval: 4.0,
+    actionCostCurve: [1, 1, 2, 2, 3, 3, 4, 4, 5, 6],
+    urgentCost: 1,
     maxActionCost: 12,
     wallPitySteps: 4,
     wallPityGain: 3,
@@ -313,16 +323,16 @@ const TUNING = {
   },
   bossMechanics: {}, // 去Boss:清空所有Boss机制(不再刷Boss大怪/护盾/炮击/双生/召唤)
   stages: [
-    { stageId: 1, chapter: 1, type: 'normal', enemyLevel: 1.00, enemyWallHp: 48, enemySpawnInterval: 6.1, enemyPlan: { opening: ['watermelon_guard', 'banana_raider'], count: 2 }, reward: { gold: 26 }, tutorialHint: 'merge_pair', unlockRules: ['starter_deck'] },
-    { stageId: 2, chapter: 1, type: 'normal', enemyLevel: 1.08, enemyWallHp: 56, enemySpawnInterval: 6.0, enemyPlan: { opening: ['watermelon_guard', 'grape_archer', 'banana_raider'], count: 3 }, reward: { gold: 34 }, tutorialHint: 'hold_frontline', unlockRules: [] },
-    { stageId: 3, chapter: 1, type: 'normal', enemyLevel: 1.16, enemyWallHp: 64, enemySpawnInterval: 5.9, enemyPlan: { opening: ['pineapple_lancer', 'grape_archer', 'banana_raider'], count: 3 }, reward: { gold: 42 }, tutorialHint: 'urgent_dispatch', unlockRules: [] },
-    { stageId: 4, chapter: 1, type: 'mechanic', enemyLevel: 1.26, enemyWallHp: 76, enemySpawnInterval: 5.75, enemyPlan: { opening: ['watermelon_guard', 'pineapple_lancer', 'orange_cannon', 'grape_archer'], count: 4 }, reward: { gold: 50 }, tutorialHint: 'lane_pressure', unlockRules: [] },
-    { stageId: 5, chapter: 1, type: 'normal', enemyLevel: 1.36, enemyWallHp: 82, enemySpawnInterval: 5.8, enemyPlan: { opening: ['watermelon_guard', 'watermelon_guard', 'grape_archer'], count: 3 }, reward: { gold: 82 }, tutorialHint: '', unlockRules: ['boss_1'] },
-    { stageId: 6, chapter: 2, type: 'normal', enemyLevel: 1.45, enemyWallHp: 88, enemySpawnInterval: 5.55, enemyPlan: { opening: ['banana_raider', 'grape_archer', 'pineapple_lancer', 'watermelon_guard'], count: 4 }, reward: { gold: 66 }, tutorialHint: 'counter_rush', unlockRules: ['coconut_guard'] },
-    { stageId: 7, chapter: 2, type: 'mechanic', enemyLevel: 1.55, enemyWallHp: 98, enemySpawnInterval: 5.45, enemyPlan: { opening: ['orange_cannon', 'watermelon_guard', 'grape_archer', 'banana_raider'], count: 4 }, reward: { gold: 74 }, tutorialHint: 'bring_siege', unlockRules: [] },
-    { stageId: 8, chapter: 2, type: 'resource', enemyLevel: 1.64, enemyWallHp: 108, enemySpawnInterval: 5.55, enemyPlan: { opening: ['coconut_guard', 'pineapple_lancer', 'grape_archer'], count: 4 }, reward: { gold: 90 }, tutorialHint: 'farm_juice', unlockRules: ['peach_medic'] },
-    { stageId: 9, chapter: 2, type: 'challenge', enemyLevel: 1.75, enemyWallHp: 122, enemySpawnInterval: 5.25, enemyPlan: { opening: ['banana_raider', 'banana_raider', 'pineapple_lancer', 'orange_cannon'], count: 5 }, reward: { gold: 90 }, tutorialHint: 'protect_backline', unlockRules: [] },
-    { stageId: 10, chapter: 2, type: 'normal', enemyLevel: 1.90, enemyWallHp: 132, enemySpawnInterval: 5.5, enemyPlan: { opening: ['orange_cannon', 'pineapple_lancer', 'watermelon_guard'], count: 4 }, reward: { gold: 122 }, tutorialHint: '', unlockRules: ['boss_2'] },
+    { stageId: 1, chapter: 1, type: 'normal', enemyLevel: 1.00, enemyWallHp: 80, enemySpawnInterval: 6.1, enemyPlan: { opening: ['watermelon_guard', 'banana_raider'], count: 2 }, reward: { gold: 26 }, tutorialHint: 'merge_pair', unlockRules: ['starter_deck'] },
+    { stageId: 2, chapter: 1, type: 'normal', enemyLevel: 1.08, enemyWallHp: 88, enemySpawnInterval: 6.0, enemyPlan: { opening: ['watermelon_guard', 'grape_archer', 'banana_raider'], count: 3 }, reward: { gold: 34 }, tutorialHint: 'hold_frontline', unlockRules: [] },
+    { stageId: 3, chapter: 1, type: 'normal', enemyLevel: 1.14, enemyWallHp: 108, enemySpawnInterval: 6.2, enemyPlan: { opening: ['pineapple_lancer', 'grape_archer', 'banana_raider'], count: 3 }, reward: { gold: 42 }, tutorialHint: 'urgent_dispatch', unlockRules: [] },
+    { stageId: 4, chapter: 1, type: 'mechanic', enemyLevel: 1.12, enemyWallHp: 96, enemySpawnInterval: 6.45, enemyPlan: { opening: ['watermelon_guard', 'pineapple_lancer', 'orange_cannon', 'grape_archer'], count: 4 }, reward: { gold: 50 }, tutorialHint: 'lane_pressure', unlockRules: [] },
+    { stageId: 5, chapter: 1, type: 'normal', enemyLevel: 1.20, enemyWallHp: 110, enemySpawnInterval: 6.35, enemyPlan: { opening: ['watermelon_guard', 'watermelon_guard', 'grape_archer'], count: 3 }, reward: { gold: 82 }, tutorialHint: '', unlockRules: ['boss_1'] },
+    { stageId: 6, chapter: 2, type: 'normal', enemyLevel: 1.38, enemyWallHp: 132, enemySpawnInterval: 5.95, enemyPlan: { opening: ['banana_raider', 'grape_archer', 'pineapple_lancer', 'watermelon_guard'], count: 4 }, reward: { gold: 66 }, tutorialHint: 'counter_rush', unlockRules: ['coconut_guard'] },
+    { stageId: 7, chapter: 2, type: 'mechanic', enemyLevel: 1.45, enemyWallHp: 145, enemySpawnInterval: 5.85, enemyPlan: { opening: ['orange_cannon', 'watermelon_guard', 'grape_archer', 'banana_raider'], count: 4 }, reward: { gold: 74 }, tutorialHint: 'bring_siege', unlockRules: [] },
+    { stageId: 8, chapter: 2, type: 'resource', enemyLevel: 1.54, enemyWallHp: 172, enemySpawnInterval: 5.95, enemyPlan: { opening: ['coconut_guard', 'pineapple_lancer', 'grape_archer'], count: 4 }, reward: { gold: 90 }, tutorialHint: 'farm_juice', unlockRules: ['peach_medic'] },
+    { stageId: 9, chapter: 2, type: 'challenge', enemyLevel: 1.64, enemyWallHp: 188, enemySpawnInterval: 5.65, enemyPlan: { opening: ['banana_raider', 'banana_raider', 'pineapple_lancer', 'orange_cannon'], count: 5 }, reward: { gold: 90 }, tutorialHint: 'protect_backline', unlockRules: [] },
+    { stageId: 10, chapter: 2, type: 'normal', enemyLevel: 1.58, enemyWallHp: 185, enemySpawnInterval: 6.25, enemyPlan: { opening: ['orange_cannon', 'pineapple_lancer', 'watermelon_guard'], count: 3 }, reward: { gold: 122 }, tutorialHint: '', unlockRules: ['boss_2'] },
     { stageId: 11, chapter: 3, type: 'normal', enemyLevel: 2.05, enemyWallHp: 142, enemySpawnInterval: 5.15, enemyPlan: { opening: ['pear_frost', 'watermelon_guard', 'grape_archer', 'orange_cannon'], count: 5 }, reward: { gold: 106 }, tutorialHint: 'control_counter', unlockRules: ['blueberry_sniper'] },
     { stageId: 12, chapter: 3, type: 'mechanic', enemyLevel: 2.18, enemyWallHp: 158, enemySpawnInterval: 5.05, enemyPlan: { opening: ['pumpkin_roller', 'pineapple_lancer', 'grape_archer', 'watermelon_guard'], count: 5 }, reward: { gold: 114 }, tutorialHint: 'burst_before_roll', unlockRules: [] },
     { stageId: 13, chapter: 3, type: 'resource', enemyLevel: 2.30, enemyWallHp: 174, enemySpawnInterval: 5.15, enemyPlan: { opening: ['peach_medic', 'watermelon_guard', 'orange_cannon', 'banana_raider'], count: 5 }, reward: { gold: 136 }, tutorialHint: 'focus_support', unlockRules: ['lemon_assassin'] },

@@ -71,8 +71,8 @@ function drawBackground() {
 
 function boardContainerStyleV48(isEnemy) {
   return isEnemy
-    ? { fill:'rgba(255,246,243,0.88)', stroke:'rgba(224,150,160,0.55)', title:'#c86e78', slot:'rgba(255,250,247,0.64)', slotLine:'rgba(220,165,175,0.42)' }
-    : { fill:'rgba(255,250,235,0.88)', stroke:'rgba(181,117,10,0.32)', title:'#c7ab5e', slot:'rgba(252,248,238,0.64)', slotLine:'rgba(181,117,10,0.24)' };
+    ? { fill:'rgba(255,246,243,0.72)', stroke:'rgba(178,91,104,0.34)', title:'#c86e78', slot:'rgba(255,250,247,0.34)', slotLine:'rgba(177,112,123,0.23)' }
+    : { fill:'rgba(255,250,235,0.72)', stroke:'rgba(143,93,23,0.25)', title:'#c7ab5e', slot:'rgba(252,248,238,0.34)', slotLine:'rgba(143,93,23,0.17)' };
 }
 
 function drawBoard(slots, isEnemy, dragHint = null) {
@@ -95,14 +95,14 @@ function drawBoard(slots, isEnemy, dragHint = null) {
       let fill = st.slot;
       let stroke = st.slotLine;
       if (canMerge || action === 'merge') { fill = 'rgba(255,247,214,0.88)'; stroke = 'rgba(255,200,60,0.82)'; }
-      else if (isSnap || isEmptyTarget) { fill = 'rgba(252,248,238,0.80)'; stroke = 'rgba(181,117,10,0.44)'; }
+      else if (isSnap || isEmptyTarget) { fill = 'rgba(252,248,238,0.58)'; stroke = 'rgba(181,117,10,0.36)'; }
 
       ctx.save();
       ctx.fillStyle = fill;
       roundRect(x + 3, y + 3, CELL - 6, CELL - 6, 12);
       ctx.fill();
       ctx.strokeStyle = stroke;
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = ball ? 1.2 : 0.9;
       roundRect(x + 3.5, y + 3.5, CELL - 7, CELL - 7, 12);
       ctx.stroke();
       ctx.restore();

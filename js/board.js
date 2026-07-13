@@ -91,6 +91,19 @@ function initEnemyOpening(k, level) {
     }
   }
 }
+function initBuildEnemyOpening(k, level) {
+  const plan = state.levelConfig && state.levelConfig.enemyPlan;
+  if (!plan) return;
+  const positions = [[1, 2], [0, 2], [2, 2]];
+  const opening = Array.isArray(plan.opening) ? plan.opening : [];
+  const targetCount = Math.min(positions.length, k <= 3 ? 1 : k <= 6 ? 2 : 3);
+  const enemyLevel = Math.max(1, Math.min(level, k >= 8 ? 2 : 1));
+  for (let i = 0; i < targetCount; i++) {
+    const [r, c] = positions[i];
+    const id = normalizeTypeId(opening[i] || randomEnemyType());
+    placeBall(state.enemySlots, r, c, TYPES[id] ? id : randomEnemyType(), enemyLevel);
+  }
+}
 function autoSpawnBall(slots, level = 1, enemy = false) {
   const empties = emptySlots(slots);
   if (empties.length === 0) return null;
@@ -191,6 +204,8 @@ function initLevel(k) {
   const eFrac = lv.enemyInitLevel - eLv;
   const eLevel = eFrac > 0.68 ? eLv + 1 : eLv;
   // 敌方也不再预置水果营:由AI用敌方果汁自行召唤(见 juice_economy.js tryEnemyJuiceSummon)
+
+  initBuildEnemyOpening(k, eLevel);
 
   state.playerWallHp = BASE_WALL_HP + getWallBonus(meta);
   state.playerWallMax = state.playerWallHp;
