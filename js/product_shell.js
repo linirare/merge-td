@@ -1013,6 +1013,11 @@
   }
 
   function startCampaign(level) {
+    const raw = typeof normalizeDeckNoFill === 'function' ? normalizeDeckNoFill(meta.deck) : (meta.deck || []);
+    if (raw.length < DECK_SIZE) {
+      hifiToast(`需要上阵全部${DECK_SIZE}个水果（当前${raw.length}个）`);
+      return;
+    }
     meta.deck = typeof normalizeDeck === 'function' ? normalizeDeck(meta.deck) : meta.deck;
     if (typeof saveMeta === 'function') saveMeta();
     hidePanels();
