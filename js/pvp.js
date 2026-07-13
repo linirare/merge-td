@@ -421,12 +421,20 @@
       state.enemySlots = reconstructBoard(opBoard);
     }
 
+    // 保存上一帧士兵状态(用于生成特效)
+    const oldState = {}, oldPos = {};
+    for (const s of state.playerSoldiers) { oldState[s.id] = s.hp; oldPos[s.id] = { x: s.x, y: s.y }; }
+    for (const s of state.enemySoldiers) { oldState[s.id] = s.hp; oldPos[s.id] = { x: s.x, y: s.y }; }
+    const oldIds = new Set(Object.keys(oldState));
+
     // 士兵:按 side 映射 player/enemy;side1 翻 y;插值保留旧对象平滑移动
     const prev = {};
     for (const s of state.playerSoldiers) prev[s.id] = s;
     for (const s of state.enemySoldiers) prev[s.id] = s;
     const mine = [], theirs = [];
+    const newIds = new Set();
     for (const su of (snap.soldiers || [])) {
+      newIds.add(String(su.id));
       const isMine = su.side === mySide;
       const tx = su.x;
       const ty = flip ? fieldMirrorY(su.y) : su.y;
@@ -438,7 +446,41 @@
       if (su.hit) o.hitFlash = 0.28;
       o._faceDir = flip ? -(su.face || 0) : (su.face || 0);
       (isMine ? mine : theirs).push(o);
+
+      // --- 根据快照 diff 生成视觉特效 ---
+      const oldHp = oldState[su.id];
+      if (su.hit) {
+        // 受击位置:扩散环
+        state.rings.push({ x: tx, y: ty, r: 3, life: 0.45, maxLife: 0.45, color: isMine ? '#ff6b4a' : '#4aff6b' });
+        // 从最近的敌人画一条攻击线
+        const enemies = isMine ? state.enemySoldiers : state.playerSoldiers;
+        let near = null, nearD = 9999;
+        for (const e of enemies) { const d = Math.abs(e.x - tx) + Math.abs(e.y - ty); if (d < nearD) { nearD = d; near = e; } }
+        if (near && nearD < 300) state.attackFx.push({ x1: near.x, y1: near.y, x2: tx, y2: ty, life: 0.22, maxLife: 0.22 });
+      }
+      // 扣血数字
+      if (oldHp != null && su.hp < oldHp && su.hp > 0) {
+        const dmg = Math.min(oldHp - su.hp, 9999);
+        if (dmg > 0) state.fx.push({ x: tx, y: ty - 14, text: '-' + dmg, color: isMine ? '#ff6b4a' : '#4aff6b', size: 11, life: 0.85, maxLife: 0.85, vx: 0, vy: -24 });
+      }
     }
+
+    // 阵亡特效:上一帧有、本帧消失的士兵
+    for (const id of oldIds) {
+      if (!newIds.has(id)) {
+        const pos = oldPos[id];
+        if (pos) state.rings.push({ x: pos.x, y: pos.y, r: 2, life: 0.55, maxLife: 0.55, color: '#ff8866' });
+      }
+    }
+    // 出兵特效:本帧新增的士兵
+    for (const su of (snap.soldiers || [])) {
+      if (!oldIds.has(String(su.id))) {
+        const isMine = su.side === mySide;
+        const ty2 = flip ? fieldMirrorY(su.y) : su.y;
+        state.rings.push({ x: su.x, y: ty2, r: 1, life: 0.45, maxLife: 0.45, color: isMine ? '#ffd700' : '#ff8c00' });
+      }
+    }
+
     state.playerSoldiers = mine;
     state.enemySoldiers = theirs;
   }
