@@ -21,6 +21,12 @@ function unlockedListV20() {
       for (const id of item.ids) if (!list.includes(id)) list.push(id);
     }
   }
+  // 包含抽卡已解锁的卡牌(可能在进度解锁之前就抽到了)
+  if (meta && Array.isArray(meta.unlocked)) {
+    for (const id of meta.unlocked) {
+      if (TYPES[id] && !list.includes(id)) list.push(id);
+    }
+  }
   return list.filter(id => TYPES[id]);
 }
 
@@ -45,7 +51,8 @@ function patchDeckCoreNoAutoFillV20() {
   syncProgressUnlocks = function syncProgressUnlocksLooseV20(m = null) {
     const list = unlockedListV20();
     if (!m) return list;
-    m.unlocked = list.slice();
+    // 合并进度解锁 + 已有解锁(含抽卡获得),确保 gacha 新卡不被丢弃
+    m.unlocked = [...new Set([...list, ...(Array.isArray(m.unlocked) ? m.unlocked : [])])].filter(id => TYPES[id]);
     m.deck = sanitizeDeckLooseV20(m.deck || DEFAULT_DECK, false);
     return list;
   };
