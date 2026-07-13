@@ -50,6 +50,8 @@ app.post('/api/auth/register', (req, res) => {
   db.prepare('INSERT INTO users (uid, email, password_hash, nickname) VALUES (?,?,?,?)').run(uid, emailText, hash, nicknameText);
   db.prepare('INSERT INTO user_saves (uid) VALUES (?)').run(uid);
   db.prepare('INSERT INTO leaderboard (uid) VALUES (?)').run(uid);
+  // 新手注册欢迎邮件
+  db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)').run(uid, '🎉 欢迎加入水果突击！', '这是您的注册大礼包，包含50000金币和50000钻石！点击领取后刷新页面即可到账。', JSON.stringify({ gold: 50000, diamonds: 50000 }));
   return res.json(publicUser({ uid, token: signToken(uid), nickname: nicknameText, avatar: '🍉', level: 1, exp: 0, diamonds: 0, gold: 0 }));
 });
 
@@ -110,7 +112,7 @@ app.post('/api/mail/read', authMiddleware, (req, res) => {
     try {
       const rewards = JSON.parse(mail.rewards_json);
       const g = clampInt(rewards.gold || 0, 0, 50000, 0);     // 运营邮件上限(审计C10)
-      const d = clampInt(rewards.diamonds || 0, 0, 10000, 0);
+      const d = clampInt(rewards.diamonds || 0, 0, 100000, 0);
       const f = clampInt(rewards.fragments || 0, 0, 5000, 0);
       if (g || d) { db.prepare('UPDATE users SET gold=gold+?, diamonds=diamonds+? WHERE uid=?').run(g, d, req.uid); granted = { gold: g, diamonds: d }; }
       if (f) {

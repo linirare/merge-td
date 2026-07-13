@@ -919,28 +919,97 @@
   }
 
   function openMail() {
-    const body = openSheet('邮件', '<div id="hifiMailList"><div style="text-align:center;color:#8a7a5a;padding:24px;font-weight:800">加载中…</div></div>');
-    const list = body.querySelector('#hifiMailList');
-    const showEmpty = (m) => { list.innerHTML = `<div style="text-align:center;color:#8a7a5a;padding:28px 12px;font-weight:800;line-height:1.8">${m || '暂无邮件'}<br><small style="color:#7a6a4a">登录联网后收取系统邮件</small></div>`; };
-    if (!(loggedIn() && account.getMail)) { showEmpty('登录后查看邮件'); return; }
-    account.getMail().then(mails => {
-      if (!Array.isArray(mails) || !mails.length) { showEmpty(); return; }
-      list.innerHTML = mails.map(m => `<div class="mail-item">${m.is_read ? '' : '<span class="dot"></span>'}<span class="mi"><svg class="icon"><use href="#i-gift"/></svg></span><div class="mc"><h4>${escapeHtml(m.title || '邮件')}</h4><p>${escapeHtml(m.body || '')}</p></div>${m.is_read ? '<span class="gbtn gray" style="font-size:12px;padding:8px 10px">已领</span>' : `<button class="gbtn" data-mailid="${escapeHtml(m.id)}" style="min-height:40px;padding:8px 12px;font-size:14px">领取</button>`}</div>`).join('');
-      list.querySelectorAll('[data-mailid]').forEach(b => b.addEventListener('click', function onClickMail() {
-        b.disabled = true; b.textContent = '...';
-        account.readMail(b.dataset.mailid).then(r => {
-          if (r && r.granted) {
-            if (r.granted.diamonds) { shell.gems = (shell.gems || 0) + r.granted.diamonds; }
-            if (r.granted.gold) { meta.gold = (meta.gold || 0) + r.granted.gold; }
-            // 同步服务端最新值到 fa_srv 标记,防止 bootAuth 再次加差值
-            if (r.server_diamonds != null) { try { localStorage.setItem('fa_srv_gems', String(r.server_diamonds)); } catch(e) {} }
-            if (r.server_gold != null) { try { localStorage.setItem('fa_srv_gold', String(r.server_gold)); } catch(e) {} }
-            saveAll(); refreshResourceNumbers();
+    const body = openSheet('邮件', '<div id="hifiMailPanel"><div class="mail-status">加载中…</div></div>');
+    const panel = body.querySelector('#hifiMailPanel');
+    if (!document.getElementById('hifiMailStyle')) {
+      const s = document.createElement('style');
+      s.id = 'hifiMailStyle'; s.textContent = `
+.mail-entry{display:flex;align-items:center;gap:10px;padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer}
+.mail-entry:hover{background:rgba(255,255,255,.04)}
+.mail-dot{width:8px;height:8px;border-radius:50%;background:#ffc93c;flex-shrink:0}
+.mail-dot.read{background:transparent}
+.mail-icon{font-size:18px;flex-shrink:0}
+.mail-title{flex:1;font-weight:700;font-size:13px;color:#eadbc0;text-align:left}
+.mail-badge{background:#ff6078;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:999px}
+.mail-status{text-align:center;color:#8a7a5a;padding:32px 12px;font-weight:800}
+.mail-detail-header{margin-bottom:10px;text-align:left}
+.mail-detail-header h3{margin:0;font-size:15px;color:#eadbc0;text-align:left}
+.mail-detail-header small{font-size:10px;color:#8a7a5a}
+.mail-detail-body{font-size:13px;color:#c9b78a;line-height:1.6;margin-bottom:14px;text-align:left;word-break:break-word}
+.mail-rewards{display:flex;flex-direction:column;gap:6px}
+.reward-tag{background:rgba(255,201,60,.10);border:1px solid rgba(255,201,60,.22);border-radius:10px;padding:8px 12px;font-weight:900;font-size:14px;color:#ffc93c;text-align:center}
+.claimed-tag{text-align:center;color:#8a7a5a;font-weight:800;font-size:13px;padding:8px}`;
+      document.head.appendChild(s);
+    }
+    if (!(loggedIn() && account.getMail)) { panel.innerHTML = '<div class="mail-status">登录后查看邮件</div>'; return; }
+    let mailsCache = [];
+    function renderList() {
+      panel.innerHTML = `<div id="mailListContainer">${mailsCache.map(m => `
+        <div class="mail-entry" data-id="${escapeHtml(String(m.id))}">
+          <span class="mail-dot ${m.is_read ? 'read' : ''}"></span>
+          <span class="mail-icon">${(!m.is_read && m.rewards_json && m.rewards_json !== '{}') ? '🎁' : '📧'}</span>
+          <span class="mail-title">${escapeHtml(m.title || '邮件')}</span>
+          ${!m.is_read ? '<span class="mail-badge">NEW</span>' : ''}
+        </div>`).join('')}</div>
+      <div id="mailDetailContainer" style="display:none"></div>`;
+      panel.querySelectorAll('.mail-entry').forEach(el => el.addEventListener('click', () => showDetail(el.dataset.id)));
+    }
+    function showDetail(id) {
+      const mail = mailsCache.find(m => String(m.id) === id);
+      if (!mail) return;
+      document.getElementById('mailListContainer').style.display = 'none';
+      const detail = document.getElementById('mailDetailContainer');
+      detail.style.display = 'block';
+      let rewardsHtml = '';
+      if (mail.rewards_json && mail.rewards_json !== '{}') {
+        try {
+          const r = JSON.parse(mail.rewards_json);
+          const items = [];
+          if (r.gold) items.push({ icon:'🪙', label:'金币', val:r.gold });
+          if (r.diamonds) items.push({ icon:'💎', label:'钻石', val:r.diamonds });
+          if (r.fragments) items.push({ icon:'🧩', label:'碎片', val:r.fragments });
+          if (items.length) {
+            rewardsHtml = `<div class="mail-rewards">${items.map(t => `<span class="reward-tag">${t.icon} ${t.label} ×${t.val}</span>`).join('')}</div>`;
+            rewardsHtml += mail.is_read
+              ? '<div class="claimed-tag">✅ 已领取</div>'
+              : '<button class="gbtn blk" id="mailClaimBtn" style="width:100%;margin-top:10px;padding:10px 0">🎁 领取奖励</button>';
           }
-          b.textContent = '已领'; b.classList.add('gray');
-        }).catch(() => { b.disabled = false; b.textContent = '领取'; });
-      }));
-    }).catch(() => showEmpty('邮件加载失败'));
+        } catch(e) {}
+      }
+      detail.innerHTML = `
+        <button class="gbtn" id="mailBackBtn" style="padding:5px 10px;font-size:12px;margin-bottom:10px">← 返回列表</button>
+        <div>
+          <div class="mail-detail-header"><h3>${escapeHtml(mail.title || '邮件')}</h3><small>${mail.created_at ? escapeHtml(mail.created_at) : ''}</small></div>
+          <div class="mail-detail-body">${escapeHtml(mail.body || '(无正文)')}</div>
+          ${rewardsHtml}
+        </div>`;
+      detail.querySelector('#mailBackBtn').addEventListener('click', () => {
+        document.getElementById('mailListContainer').style.display = '';
+        detail.style.display = 'none';
+      });
+      const claimBtn = detail.querySelector('#mailClaimBtn');
+      if (claimBtn) {
+        claimBtn.addEventListener('click', function onClick() {
+          this.disabled = true; this.textContent = '…';
+          account.readMail(mail.id).then(r => {
+            if (r && r.granted) {
+              if (r.granted.diamonds) shell.gems = (shell.gems || 0) + r.granted.diamonds;
+              if (r.granted.gold) meta.gold = (meta.gold || 0) + r.granted.gold;
+              if (r.server_diamonds != null) try { localStorage.setItem('fa_srv_gems', String(r.server_diamonds)); } catch(e) {}
+              if (r.server_gold != null) try { localStorage.setItem('fa_srv_gold', String(r.server_gold)); } catch(e) {}
+              saveAll(); refreshResourceNumbers();
+              mail.is_read = 1;
+              account.getMail().then(newMails => { if (Array.isArray(newMails)) mailsCache = newMails; renderList(); }).catch(() => renderList());
+            }
+            this.textContent = '✅ 已领取'; this.classList.add('gray');
+          }).catch(() => { this.disabled = false; this.textContent = '🎁 领取奖励'; });
+        });
+      }
+    }
+    account.getMail().then(mails => {
+      if (!Array.isArray(mails) || !mails.length) { panel.innerHTML = '<div class="mail-status">暂无邮件</div>'; return; }
+      mailsCache = mails; renderList();
+    }).catch(() => { panel.innerHTML = '<div class="mail-status">邮件加载失败</div>'; });
   }
 
   function openChat() {
