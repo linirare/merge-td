@@ -28,7 +28,7 @@
       playerWallY: 540 + push,
       playerBoardY: 584 + push,
       operationY: 796 + push,
-      operationH: 38,
+      operationH: 48,
       bottomY: h - 22,
     });
   };

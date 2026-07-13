@@ -39,6 +39,7 @@ function adminAuth(req, res, next) {
 }
 
 function mountAdmin(app) {
+  if (!process.env.ADMIN_PASS) console.warn('[admin] 使用默认密码 admin123，生产环境请设置 ADMIN_PASS 环境变量');
   // 管理员登录:独立账号密码+爆破限速(审计S10:5次/15min)
   const loginAttempts = new Map();
   app.post('/api/admin/login', (req, res) => {
@@ -50,7 +51,6 @@ function mountAdmin(app) {
     const { username, password } = req.body || {};
     const adminUser = process.env.ADMIN_USER || 'admin';
     const adminPass = process.env.ADMIN_PASS || 'admin123';
-    if (!adminPass) return res.status(500).json({ error: 'ADMIN_PASS 环境变量未配置' });
     if (String(username) === adminUser && String(password) === adminPass) {
       const token = signAdminToken();
       return res.json({ ok: true, token });
@@ -165,11 +165,23 @@ function mountAdmin(app) {
 
   // 公告管理:创建(审计P0-3:加start_time/end_time)
   app.post('/api/admin/announcement', authMiddleware, adminAuth, (req, res) => {
-    const { title, body, active, start_time, end_time } = req.body || {};
+    const { title, body, active, start_time, end_time, rewards_json } = req.body || {};
     const safeTitle = safeText(title, 120);
     if (!safeTitle) return res.status(400).json({ error: 'title required' });
     const id = require('crypto').randomBytes(6).toString('hex');
-    db.prepare('INSERT INTO announcements (id,title,body,active,start_time,end_time) VALUES (?,?,?,?,?,?)').run(id, safeTitle, safeText(body, 500), (active === false ? 0 : 1), safeText(start_time, 40) || '', safeText(end_time, 40) || '');
+    const rewards = typeof rewards_json === 'string' ? rewards_json : JSON.stringify(rewards_json || '{}');
+    try { JSON.parse(rewards); } catch(e) { return res.status(400).json({ error: 'invalid rewards_json' }); }
+    db.prepare('INSERT INTO announcements (id,title,body,active,start_time,end_time,rewards_json) VALUES (?,?,?,?,?,?,?)').run(id, safeTitle, safeText(body, 500), (active === false ? 0 : 1), safeText(start_time, 40) || '', safeText(end_time, 40) || '', rewards);
+    // 如果公告附带道具奖励,自动给全服发系统邮件
+    const parsed = JSON.parse(rewards);
+    if (parsed && (parsed.gold || parsed.diamonds || parsed.fragments)) {
+      const rewardTitle = '公告奖励: ' + safeTitle;
+      const rewardBody = safeText(body, 500) || '点击领取公告附带的奖励';
+      const uids = db.prepare('SELECT uid FROM users').all();
+      const stmt = db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)');
+      const tx = db.transaction(() => { for (const u of uids) stmt.run(u.uid, rewardTitle, rewardBody, rewards); });
+      tx();
+    }
     try { const { broadcastAll } = require('./pvp-server'); broadcastAll(null, { type: 'new_announcement', id }); } catch(e) {}
     res.json({ ok: true, id });
   });

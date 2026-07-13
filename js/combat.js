@@ -570,7 +570,7 @@ function updateSoldier(s, enemies) {
 }
 
 function applySeparation(soldiers) {
-  const sepDist = 28; // 加大分离距离,防火柴人堆叠看不清
+  const sepDist = 38; // 分离距离,防士兵视觉堆叠
   for (let i = 0; i < soldiers.length; i++) {
     const a = soldiers[i];
     if (!isCombatant(a)) continue;

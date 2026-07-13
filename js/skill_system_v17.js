@@ -165,7 +165,7 @@ function patchFruitPassiveSkillsV17() {
           const cap = Math.round(s.maxHp * (rank >= 4 ? 0.42 : 0.34));
           s.shield = Math.min(cap, (s.shield || 0) + shield);
           s.maxShield = Math.max(s.maxShield || 0, cap);
-          const cdReduce = (typeof starSkillCdReduce === 'function' && meta && meta.shardsTotal) ? starSkillCdReduce(Math.max(1, ...Object.values(meta.shardsTotal).map(s => typeof starLevelFromShards === 'function' ? starLevelFromShards(s || 0) : 1))) : 0;
+          const cdReduce = (typeof starSkillCdReduce === 'function' && typeof window !== 'undefined' && window.shell) ? (() => { const s = window.shell; const maxLv = Math.max(...UNIT_POOL.map(id => s?.fruitLv?.[id] || 1), 1); const st = typeof heroStarTier === 'function' ? heroStarTier(maxLv) : 1; return starSkillCdReduce(st); })() : 0;
           s.skillTimer = Math.max(2.5, ([0, 6.0, 5.7, 5.4, 5.0][rank] || 6.0) - cdReduce);
           addSkillShieldV17(s, shield);
           countSkillCastV17(s);

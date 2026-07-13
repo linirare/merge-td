@@ -139,16 +139,16 @@ function upgradeKey(typeId, stat) {
 function getUpgradeLv(meta, typeId, stat) {
   return meta.upgrades[upgradeKey(typeId, stat)] || 0;
 }
-function fragShards(meta, typeId) {
-  return (meta.shardsTotal && meta.shardsTotal[normalizeTypeId(typeId)]) || 0;
-}
+
 function getAtkMul(meta, typeId) {
-  const base = 1 + getUpgradeLv(meta, typeId, 'atk') * UPGRADE_PER_LV;
-  return base * (typeof fragmentAtkMul === 'function' ? fragmentAtkMul(fragShards(meta, typeId)) : 1);
+  const s = typeof window !== 'undefined' ? window.shell : null;
+  const lv = s?.fruitLv?.[typeId] || 1;
+  return heroMul(lv);
 }
 function getHpMul(meta, typeId) {
-  const base = 1 + getUpgradeLv(meta, typeId, 'hp') * UPGRADE_PER_LV;
-  return base * (typeof fragmentHpMul === 'function' ? fragmentHpMul(fragShards(meta, typeId)) : 1);
+  const s = typeof window !== 'undefined' ? window.shell : null;
+  const lv = s?.fruitLv?.[typeId] || 1;
+  return heroMul(lv);
 }
 function getWallBonus(meta) {
   return meta.wallLv * WALL_PER_LV;

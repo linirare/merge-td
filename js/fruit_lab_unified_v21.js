@@ -52,25 +52,6 @@ function labStatPreviewV21(t) {
 function labTechLvV21(id, stat) {
   return typeof getUpgradeLv === 'function' ? getUpgradeLv(meta, id, stat) : (meta.upgrades?.[`${id}_${stat}`] || 0);
 }
-function labUpgradeKeyV21(id, stat) {
-  return typeof upgradeKey === 'function' ? upgradeKey(id, stat) : `${id}_${stat}`;
-}
-function labCanUpgradeV21(lv) {
-  const cost = upgradeCost(lv + 1);
-  return meta.gold >= cost && lv < UPGRADE_MAX;
-}
-function labDoUpgradeV21(id, stat) {
-  const lv = labTechLvV21(id, stat);
-  if (lv >= UPGRADE_MAX) return;
-  const cost = upgradeCost(lv + 1);
-  if (meta.gold < cost) return;
-  const key = labUpgradeKeyV21(id, stat);
-  meta.upgrades[key] = (meta.upgrades[key] || 0) + 1;
-  meta.gold -= cost;
-  saveMeta();
-  refreshGold();
-  renderFruitLabV21();
-}
 function labDoGlobalUpgradeV21(kind) {
   const lv = kind === 'wall' ? (meta.wallLv || 0) : (meta.spLv || 0);
   const max = kind === 'wall' ? WALL_UPGRADE_MAX : SP_UPGRADE_MAX;
@@ -122,7 +103,7 @@ function ensureFruitLabPanelV21() {
 
   const style = document.createElement('style');
   style.textContent = `
-    .fruit-lab-inner-v21{max-height:92vh;overflow:hidden}.fruit-lab-head-v21{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px}.fruit-lab-head-v21 h2{margin-bottom:2px}.fruit-lab-gold-v21{font-size:13px;font-weight:900;color:#36551e;background:rgba(255,255,255,.64);border:1px solid rgba(83,201,106,.18);border-radius:999px;padding:7px 10px;white-space:nowrap}.fruit-lab-selected-v21{width:100%;margin-top:6px}.lab-mini-title-v21{font-size:11px;font-weight:900;color:#5c7a35;margin:0 0 4px 4px;text-align:left}.fruit-lab-global-v21{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0}.global-tech-card-v21{background:rgba(255,255,255,.60);border:1px solid rgba(83,201,106,.16);border-radius:14px;padding:8px;display:flex;align-items:center;justify-content:space-between;gap:7px}.global-tech-card-v21 b{font-size:12px;color:#244b21}.global-tech-card-v21 small{display:block;font-size:9px;color:#73904e;margin-top:2px}.fruit-lab-list-v21{width:100%;max-height:475px;overflow-y:auto;display:grid;grid-template-columns:1fr;gap:8px;padding:2px}.fruit-lab-card-v21{position:relative;background:rgba(255,255,255,.64);border:1px solid rgba(83,201,106,.15);border-radius:16px;padding:9px;box-shadow:0 5px 12px rgba(45,126,66,.08)}.fruit-lab-card-v21.on{border:2px solid #53c96a;background:rgba(232,255,205,.88)}.fruit-lab-card-v21.locked{opacity:.55}.lab-card-top-v21{display:grid;grid-template-columns:30px 36px 1fr auto;gap:8px;align-items:center}.lab-tier-v21{height:24px;border-radius:8px;background:#263b19;color:#fff7b0;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center}.lab-icon-v21{font-size:28px;line-height:1}.lab-name-v21{font-size:13px;font-weight:900;color:#244b21}.lab-role-v21{font-size:10px;color:#2c8d3f;margin-top:2px}.lab-status-v21{font-size:9px;border-radius:999px;background:#ffc93c;color:#795000;font-weight:900;padding:3px 6px;white-space:nowrap}.lab-info-grid-v21{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:4px;margin:7px 0}.lab-info-grid-v21 span{font-size:10px;color:#31551f;background:rgba(255,255,255,.62);border:1px solid rgba(90,130,54,.16);border-radius:7px;padding:4px;text-align:center}.lab-lvpath-v21{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:6px 0}.lab-lvpath-v21 span{font-size:8px;background:#e8f6c2;color:#5a7831;border-radius:5px;padding:2px 1px;text-align:center}.lab-lvpath-v21 .skill{background:#d6dfb6}.lab-lvpath-v21 .skill.on{background:#ffe37a;color:#684200;font-weight:900}.lab-skill-v21{background:rgba(255,244,184,.72);border:1px solid rgba(255,192,58,.35);border-radius:10px;padding:6px 8px;margin:6px 0;text-align:left}.lab-skill-v21 b{font-size:11px;color:#4b3b13}.lab-skill-v21 span{display:block;font-size:10px;color:#74551c;margin-top:2px}.lab-skill-v21 em{display:block;font-style:normal;font-size:9px;color:#8c6b24;margin-top:2px}.lab-actions-v21{display:grid;grid-template-columns:82px 1fr 1fr;gap:6px;align-items:stretch}.lab-btn-v21{border:0;border-radius:10px;font-size:11px;font-weight:900;padding:7px 5px;background:#53c96a;color:white;box-shadow:0 3px 0 rgba(35,95,41,.20)}.lab-btn-v21.off{background:#ff6078}.lab-btn-v21.lock{background:#9ab678}.lab-tech-v21{border-radius:10px;background:rgba(255,255,255,.60);border:1px solid rgba(83,201,106,.14);padding:6px;text-align:left}.lab-tech-v21 b{font-size:10px;color:#31551f}.lab-tech-v21 small{font-size:9px;color:#6f9251;display:block}.lab-tech-v21 button,.global-tech-card-v21 button{margin-top:4px;border:0;border-radius:8px;background:#ffc93c;color:#795000;font-weight:900;font-size:10px;padding:4px 7px}.lab-tech-v21 button:disabled,.global-tech-card-v21 button:disabled{opacity:.55;background:#c6d5ad;color:#657a4a}.deck-chip.removeable{position:relative;cursor:pointer}.deck-chip.removeable:after{content:'×';position:absolute;right:4px;top:2px;background:#ff6078;color:white;width:15px;height:15px;border-radius:50%;font-size:11px;line-height:15px}`;
+    .fruit-lab-inner-v21{max-height:92vh;overflow:hidden}.fruit-lab-head-v21{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px}.fruit-lab-head-v21 h2{margin-bottom:2px}.fruit-lab-gold-v21{font-size:13px;font-weight:900;color:#36551e;background:rgba(255,255,255,.64);border:1px solid rgba(83,201,106,.18);border-radius:999px;padding:7px 10px;white-space:nowrap}.fruit-lab-selected-v21{width:100%;margin-top:6px}.lab-mini-title-v21{font-size:11px;font-weight:900;color:#5c7a35;margin:0 0 4px 4px;text-align:left}.fruit-lab-global-v21{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0}.global-tech-card-v21{background:rgba(255,255,255,.60);border:1px solid rgba(83,201,106,.16);border-radius:14px;padding:8px;display:flex;align-items:center;justify-content:space-between;gap:7px}.global-tech-card-v21 b{font-size:12px;color:#244b21}.global-tech-card-v21 small{display:block;font-size:9px;color:#73904e;margin-top:2px}.fruit-lab-list-v21{width:100%;max-height:475px;overflow-y:auto;display:grid;grid-template-columns:1fr;gap:8px;padding:2px}.fruit-lab-card-v21{position:relative;background:rgba(255,255,255,.64);border:1px solid rgba(83,201,106,.15);border-radius:16px;padding:9px;box-shadow:0 5px 12px rgba(45,126,66,.08)}.fruit-lab-card-v21.on{border:2px solid #53c96a;background:rgba(232,255,205,.88)}.fruit-lab-card-v21.locked{opacity:.55}.lab-card-top-v21{display:grid;grid-template-columns:30px 36px 1fr auto;gap:8px;align-items:center}.lab-tier-v21{height:24px;border-radius:8px;background:#263b19;color:#fff7b0;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center}.lab-icon-v21{font-size:28px;line-height:1}.lab-name-v21{font-size:13px;font-weight:900;color:#244b21}.lab-role-v21{font-size:10px;color:#2c8d3f;margin-top:2px}.lab-status-v21{font-size:9px;border-radius:999px;background:#ffc93c;color:#795000;font-weight:900;padding:3px 6px;white-space:nowrap}.lab-info-grid-v21{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:4px;margin:7px 0}.lab-info-grid-v21 span{font-size:10px;color:#31551f;background:rgba(255,255,255,.62);border:1px solid rgba(90,130,54,.16);border-radius:7px;padding:4px;text-align:center}.lab-lvpath-v21{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:6px 0}.lab-lvpath-v21 span{font-size:8px;background:#e8f6c2;color:#5a7831;border-radius:5px;padding:2px 1px;text-align:center}.lab-lvpath-v21 .skill{background:#d6dfb6}.lab-lvpath-v21 .skill.on{background:#ffe37a;color:#684200;font-weight:900}.lab-skill-v21{background:rgba(255,244,184,.72);border:1px solid rgba(255,192,58,.35);border-radius:10px;padding:6px 8px;margin:6px 0;text-align:left}.lab-skill-v21 b{font-size:11px;color:#4b3b13}.lab-skill-v21 span{display:block;font-size:10px;color:#74551c;margin-top:2px}.lab-skill-v21 em{display:block;font-style:normal;font-size:9px;color:#8c6b24;margin-top:2px}.lab-actions-v21{display:grid;grid-template-columns:82px 1fr;gap:6px;align-items:stretch}.lab-btn-v21{border:0;border-radius:10px;font-size:11px;font-weight:900;padding:7px 5px;background:#53c96a;color:white;box-shadow:0 3px 0 rgba(35,95,41,.20)}.lab-btn-v21.off{background:#ff6078}.lab-btn-v21.lock{background:#9ab678}.lab-tech-v21{border-radius:10px;background:rgba(255,255,255,.60);border:1px solid rgba(83,201,106,.14);padding:6px;text-align:left}.lab-tech-v21 b{font-size:10px;color:#31551f}.lab-tech-v21 small{font-size:9px;color:#6f9251;display:block}.lab-tech-v21 button,.global-tech-card-v21 button{margin-top:4px;border:0;border-radius:8px;background:#ffc93c;color:#795000;font-weight:900;font-size:10px;padding:4px 7px}.lab-tech-v21 button:disabled,.global-tech-card-v21 button:disabled{opacity:.55;background:#c6d5ad;color:#657a4a}.deck-chip.removeable{position:relative;cursor:pointer}.deck-chip.removeable:after{content:'×';position:absolute;right:4px;top:2px;background:#ff6078;color:white;width:15px;height:15px;border-radius:50%;font-size:11px;line-height:15px}`;
   document.head.appendChild(style);
 
   document.getElementById('btnFruitLabClose').addEventListener('click', () => {
@@ -164,10 +145,8 @@ function renderFruitLabCardV21(id, unlocked) {
   const full = meta.deck.length >= DECK_SIZE && !on;
   const s = labStatPreviewV21(t);
   const skill = labSkillV21(id);
-  const atkLv = labTechLvV21(id, 'atk');
-  const hpLv = labTechLvV21(id, 'hp');
-  const atkCost = upgradeCost(atkLv + 1);
-  const hpCost = upgradeCost(hpLv + 1);
+  const heroLv = Math.max(1, Math.min(typeof HERO_MAX !== 'undefined' ? HERO_MAX : 20, Number(window.shell?.fruitLv?.[id] || 1)));
+  const heroPct = Math.round((heroMul(heroLv) - 1) * 100);
   const el = document.createElement('div');
   el.className = 'fruit-lab-card-v21' + (on ? ' on' : '') + (locked ? ' locked' : '');
   el.innerHTML = `
@@ -182,12 +161,9 @@ function renderFruitLabCardV21(id, unlocked) {
     <div class="lab-skill-v21"><b>${skill.name}</b><span>${skill.unlock}</span><em>${skill.grow}</em></div>
     <div class="lab-actions-v21">
       <button class="lab-btn-v21 ${on ? 'off' : locked || full ? 'lock' : ''}" data-action="deck">${locked ? '未解锁' : on ? '下阵' : full ? '先下阵' : '上阵'}</button>
-      <div class="lab-tech-v21"><b>攻击科技 Lv.${atkLv}</b><small>每级 +${Math.round(UPGRADE_PER_LV * 100)}% 攻击</small><button data-action="atk" ${atkLv >= UPGRADE_MAX || meta.gold < atkCost ? 'disabled' : ''}>${atkLv >= UPGRADE_MAX ? 'MAX' : atkCost + '🍋'}</button></div>
-      <div class="lab-tech-v21"><b>耐久科技 Lv.${hpLv}</b><small>每级 +${Math.round(UPGRADE_PER_LV * 100)}% 生命</small><button data-action="hp" ${hpLv >= UPGRADE_MAX || meta.gold < hpCost ? 'disabled' : ''}>${hpLv >= UPGRADE_MAX ? 'MAX' : hpCost + '🍋'}</button></div>
+      <div class="lab-tech-v21"><b>英雄等级 Lv.${heroLv}</b><small>攻血 +${heroPct}%</small></div>
     </div>`;
   el.querySelector('[data-action="deck"]').addEventListener('click', () => labToggleDeckV21(id));
-  el.querySelector('[data-action="atk"]').addEventListener('click', () => labDoUpgradeV21(id, 'atk'));
-  el.querySelector('[data-action="hp"]').addEventListener('click', () => labDoUpgradeV21(id, 'hp'));
   return el;
 }
 function renderFruitLabV21() {

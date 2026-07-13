@@ -103,6 +103,40 @@
   .chatrow .who{color:var(--gold);font-weight:800;margin-right:8px;}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#2a1f14;border:1px solid var(--gold);color:var(--gold);font-weight:800;padding:12px 22px;border-radius:12px;opacity:0;transition:.3s;box-shadow:0 10px 24px rgba(0,0,0,.5);z-index:99;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .hamb{display:none;}
+  .overlay{display:none;}
+  @media(max-width:768px){
+    .hamb{display:inline-flex;align-items:center;gap:6px;padding:8px;border-radius:10px;color:var(--muted);font-size:20px;}
+    .hamb:hover{color:var(--fg);}
+    body{flex-direction:column;}
+    .side{position:fixed;top:0;left:-280px;width:260px;height:100vh;z-index:20;transition:left .25s;}
+    .side.open{left:0;}
+    .overlay{display:block;position:fixed;inset:0;z-index:19;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;}
+    .overlay.show{opacity:1;pointer-events:auto;}
+    .stats{grid-template-columns:1fr 1fr;}
+    .grid2{grid-template-columns:1fr;}
+    .attach{flex-wrap:wrap;}
+    .attach .a{flex:1 1 100%;}
+    .top{padding:12px 14px;}
+    .top h1{font-size:18px;}
+    .top .search{max-width:none;flex:1;min-width:0;}
+    .top .sp{display:none;}
+    .top .badge-live{font-size:12px;white-space:nowrap;}
+    .content{padding:16px 14px;}
+    table{font-size:13px;}
+    th,td{padding:8px 10px;}
+  }
+  @media(max-width:480px){
+    .stats{grid-template-columns:1fr;}
+    .stat{padding:14px;}
+    .stat b{font-size:24px;}
+    .top{padding:10px 10px;gap:8px;}
+    .top h1{font-size:16px;}
+    .top .search{display:none;}
+    .btn{width:100%;justify-content:center;}
+    .op{flex-direction:column;}
+    .op button{width:100%;justify-content:center;}
+  }
 </style>
 </head>
 <body>
@@ -134,9 +168,11 @@
   </nav>
   <div class="me"><span class="av"><svg class="icon"><use href="#i-user"/></svg></span><div><b>admin</b><small>超级管理员</small></div></div>
 </aside>
+<div class="overlay" onclick="this.classList.remove('show');document.querySelector('.side').classList.remove('open')"></div>
 
 <div class="main">
   <div class="top">
+    <button class="hamb" onclick="document.querySelector('.side').classList.toggle('open');document.querySelector('.overlay').classList.toggle('show')">☰</button>
     <h1 id="pageTitle">数据概览</h1>
     <div class="search"><svg class="icon"><use href="#i-search"/></svg><input placeholder="搜索 UID / 昵称…" /></div>
     <span class="sp"></span>
@@ -199,6 +235,11 @@
           <div class="field"><label>公告内容</label><textarea placeholder="活动时间 / 规则 / 奖励…"></textarea></div>
           <div class="field"><label>生效时间</label><input type="text" id="noticeStartTime" placeholder="开始时间,如 2026-07-12 12:00" /></div>
           <div class="field"><label>结束时间</label><input type="text" id="noticeEndTime" placeholder="结束时间,如 2026-07-20 23:59" /></div>
+          <div class="field"><label>附件奖励(自动通过邮件发放)</label><div class="attach">
+            <span class="a"><svg class="icon"><use href="#i-coin"/></svg>金币<input id="noticeGold" value="0"/></span>
+            <span class="a"><svg class="icon"><use href="#i-gem"/></svg>钻石<input id="noticeDiamond" value="0"/></span>
+            <span class="a"><svg class="icon"><use href="#i-gift"/></svg>碎片<input id="noticeFrag" value="0"/></span>
+          </div></div>
           <button class="btn" id="btnSendNotice"><svg class="icon"><use href="#i-send"/></svg>发布公告</button>
         </div>
         <div class="panel">
@@ -280,6 +321,7 @@
     document.querySelectorAll('.nav a').forEach(a => a.classList.remove('on'));
     el.classList.add('on');
     document.getElementById('pageTitle').textContent = TITLES[p];
+    if (window.innerWidth < 768) { document.querySelector('.side')?.classList.remove('open'); document.querySelector('.overlay')?.classList.remove('show'); }
     if (p === 'dash') loadDash();
     else if (p === 'users') loadUsers();
     else if (p === 'chat') loadChat();
@@ -408,9 +450,13 @@
     if (!title) { toast('请输入公告标题'); return; }
     const start_time = document.getElementById('noticeStartTime')?.value?.trim() || '';
     const end_time = document.getElementById('noticeEndTime')?.value?.trim() || '';
+    const goldAmt = parseInt(document.getElementById('noticeGold')?.value) || 0;
+    const gemAmt = parseInt(document.getElementById('noticeDiamond')?.value) || 0;
+    const fragAmt = parseInt(document.getElementById('noticeFrag')?.value) || 0;
     try {
       const noticeBody = document.getElementById('p-notice').querySelector('textarea')?.value || '';
-      const r = await api('POST', '/api/admin/announcement', { title, body: noticeBody, start_time, end_time });
+      const rewards_json = JSON.stringify({ gold: goldAmt, diamonds: gemAmt, fragments: fragAmt });
+      const r = await api('POST', '/api/admin/announcement', { title, body: noticeBody, start_time, end_time, rewards_json });
       if (r.ok) { toast('公告已发布'); loadNotices(); document.getElementById('noticeTitle').value = ''; document.getElementById('p-notice').querySelector('textarea').value = ''; }
     } catch(e) { toast('发布失败: ' + e.message); }
   });

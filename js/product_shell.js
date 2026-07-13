@@ -16,19 +16,7 @@
     saveShell();
     if (renderShop) renderShop('gacha');
   }
-  const INIT_MAX = 7;
-  // Lv1->7 升级消耗:碎片+金币 (设计档 §7.1 碎片指数 + 金币=碎片×10)
-  const INIT_LEVELS = [
-    { lv: 1, frags: 0, gold: 0 },
-    { lv: 2, frags: 5, gold: 50 },
-    { lv: 3, frags: 20, gold: 200 },
-    { lv: 4, frags: 80, gold: 800 },
-    { lv: 5, frags: 320, gold: 3200 },
-    { lv: 6, frags: 1280, gold: 12800 },
-    { lv: 7, frags: 5120, gold: 51200 },
-  ];
-  function initFragCost(lv) { const t = INIT_LEVELS.find(x => x.lv === lv + 1); return t ? t.frags : Infinity; }
-  function initGoldCost(lv) { const t = INIT_LEVELS.find(x => x.lv === lv + 1); return t ? t.gold : Infinity; }
+  // 英雄等级 1-20 (消耗和加成定义在 config.js)
 
   const tabs = [
     { id: 'home', icon: '🏡', label: '首页' },
@@ -62,7 +50,7 @@
   }
 
   function loadShell() {
-    const base = { gems: 0, fragments: {}, fruitLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0 };
+    const base = { gems: 0, fragments: {}, fruitLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0, pityR_t: 0, pityE_t: 0 };
     try {
       const raw = localStorage.getItem(SHELL_KEY);
       if (raw) return Object.assign(base, JSON.parse(raw));
@@ -129,18 +117,16 @@
 
   function initLv(id) {
     id = normalizeTypeId(id);
-    return Math.max(1, Math.min(INIT_MAX, Number(shell.fruitLv?.[id] || 1)));
+    return Math.max(1, Math.min(typeof HERO_MAX !== 'undefined' ? HERO_MAX : 20, Number(shell.fruitLv?.[id] || 1)));
   }
 
   function initUpgradeCost(id) {
-    return initFragCost(initLv(id));
-  }
-  function initUpgradeGoldCost(id) {
-    return initGoldCost(initLv(id));
+    const lv = initLv(id);
+    return typeof heroFragCost === 'function' ? heroFragCost(lv) : Infinity;
   }
 
   function applyInitLevel(id, level) {
-    return Math.max(level || 1, initLv(id));
+    return level || 1;
   }
 
   function isUnlocked(id) {
@@ -371,7 +357,7 @@
         <div class="hero-spot"></div>
 
         <div class="side-l">
-          <button class="ring daily-float" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">${dailyReady ? '🎁 补给' : '✅ 已领'}</span>${dailyReady ? '<span class="badge pulse">+${DAILY_GOLD}🪙</span>' : ''}</button>
+          <button class="ring daily-float" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">${dailyReady ? '🎁 补给' : '✅ 已领'}</span>${dailyReady ? '<span class="badge pulse">+' + DAILY_GOLD + '🪙 +' + DAILY_GEMS + '💎</span>' : ''}</button>
           <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg></span><span class="lbl">邮件</span></button>
           <button class="ring" data-chat><span class="inner" style="background:radial-gradient(circle at 40% 34%,#8FE0A0,#2E9A56)"><svg class="icon"><use href="#i-chat"/></svg></span><span class="lbl">聊天</span></button>
         </div>
@@ -552,17 +538,16 @@
     detailId = id;
     const t = fruit(id);
     const lv = initLv(id);
-    const shards = (meta.shardsTotal && meta.shardsTotal[id]) || 0;
-    const star = typeof starLevelFromShards === 'function' ? starLevelFromShards(shards) : 1;
-    const sl = [1, 2, 3, 4, 5, 6, 7].map(k => `<svg class="icon ${k <= star ? 'on' : ''}"><use href="#i-star"/></svg>`).join('');
+    const starTier = typeof heroStarTier === 'function' ? heroStarTier(lv) : 1;
+    const sl = [1, 2, 3, 4, 5, 6, 7].map(k => `<svg class="icon ${k <= starTier ? 'on' : ''}"><use href="#i-star"/></svg>`).join('');
     const body = document.getElementById('hifiCardBody');
     if (!body) return;
     body.innerHTML =
-      `<div class="hero"><div class="big">${hifiDisc(id, 42)}</div><div style="flex:1"><h3>${t.name}</h3><div class="tags"><span class="rchip" style="background:${RAR_COLOR[t.rarity] || '#9AA6B2'}">${RAR_KEY[t.rarity] || 'N'}</span><span class="rchip" style="background:#5c4a2a;color:#F3E3C0">${roleZh(t.role)}</span><span style="font-weight:800;font-size:12px;color:#C9B48A">局内 Lv.${lv}</span></div><div class="stars-line" style="margin-top:6px">${sl}</div></div></div>`
-      + `<div class="ctabs">${[['attr', '属性·技能'], ['grow', '等级成长'], ['star', '星级特效']].map(([k, l]) => `<button class="ctab ${detailTab === k ? 'on' : ''}" data-ctab="${k}">${l}</button>`).join('')}</div>`
+      `<div class="hero"><div class="big">${hifiDisc(id, 42)}</div><div style="flex:1"><h3>${t.name}</h3><div class="tags"><span class="rchip" style="background:${RAR_COLOR[t.rarity] || '#9AA6B2'}">${RAR_KEY[t.rarity] || 'N'}</span><span class="rchip" style="background:#5c4a2a;color:#F3E3C0">${roleZh(t.role)}</span><span style="font-weight:800;font-size:12px;color:#C9B48A">Lv.${lv}</span></div><div class="stars-line" style="margin-top:6px">${sl}</div></div></div>`
+      + `<div class="ctabs">${[['attr', '属性·技能'], ['grow', '等级成长']].map(([k, l]) => `<button class="ctab ${detailTab === k ? 'on' : ''}" data-ctab="${k}">${l}</button>`).join('')}</div>`
       + `<div id="hifiCardTabBody"></div>`
       + `<div id="hifiCardActions" style="display:flex;gap:10px;margin-top:14px"></div>`
-      + `<div class="srcnote">数值/成长由里子引擎实时计算(TYPES + 养成/星级表)· 养成 Lv1-20 与星级随累计碎片自动提升</div>`;
+      + `<div class="srcnote">英雄等级 Lv1-20,每级+40%攻血。同名水果局内合成升级(★1-7,×1~5倍)。</div>`;
     renderCardTab(detailTab);
     renderCardActions(id);
     body.querySelectorAll('.ctab[data-ctab]').forEach(b => b.addEventListener('click', () => { detailTab = b.dataset.ctab; renderCardDetail(id); }));
@@ -572,37 +557,30 @@
     const id = detailId;
     const t = fruit(id);
     const lv = initLv(id);
-    const shards = (meta.shardsTotal && meta.shardsTotal[id]) || 0;
-    const cult = typeof cultivateLevelFromShards === 'function' ? cultivateLevelFromShards(shards) : 0;
-    const star = typeof starLevelFromShards === 'function' ? starLevelFromShards(shards) : 1;
+    const atkMul = typeof getAtkMul === 'function' ? getAtkMul(meta, id) : 1;
+    const hpMul = typeof getHpMul === 'function' ? getHpMul(meta, id) : 1;
+    const heroPct = Math.round((heroMul(lv) - 1) * 100);
+    const starTier = typeof heroStarTier === 'function' ? heroStarTier(lv) : 1;
     let h = '';
     if (tab === 'attr') {
-      const atkMul = typeof getAtkMul === 'function' ? getAtkMul(meta, id) : 1;
-      const hpMul = typeof getHpMul === 'function' ? getHpMul(meta, id) : 1;
-      h = `<div class="sec"><h4><svg class="icon"><use href="#i-sword"/></svg>当前属性(含养成/星级)</h4><div class="statrow">`
+      h = `<div class="sec"><h4><svg class="icon"><use href="#i-sword"/></svg>当前属性(英雄Lv${lv}·+${heroPct}%)</h4><div class="statrow">`
         + `<div class="s"><svg class="icon" style="color:#EF4444"><use href="#i-sword"/></svg>攻击<b>${Math.round(t.atk * atkMul)}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#2FBF71"><use href="#i-heart"/></svg>血量<b>${Math.round(t.hp * hpMul)}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#9AA6B2"><use href="#i-shield"/></svg>护甲<b>${t.armor || 0}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#38C6E8"><use href="#i-refresh"/></svg>攻速<b>${t.speed}s</b></div>`
         + `<div class="s"><svg class="icon" style="color:#F5C242"><use href="#i-flame"/></svg>攻城<b>×${t.siege}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#C77BE8"><use href="#i-vs"/></svg>职责<b style="font-size:13px">${roleZh(t.role)}</b></div></div>`
-        + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 攻${t.atk}/血${t.hp} × 养成×星级加成</p></div>`
+        + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 攻${t.atk}/血${t.hp} × ${heroPct}% 英雄等级加成</p></div>`
         + `<div class="sec"><h4><svg class="icon"><use href="#i-flame"/></svg>专属技能 · ${skillZh(t)}</h4><div class="skillbox"><div class="nm">${skillZh(t)}</div><p>${t.desc || ''}</p></div></div>`;
     } else if (tab === 'grow') {
-      const lad = [1, 2, 3, 4, 5, 6, 7].map(l => `<div class="lv ${l === lv ? 'cur' : ''} ${LV_KEY[l] ? 'key' : ''}"><b>Lv${l}</b><small>×${LEVEL_MUL[l]}${LV_KEY[l] ? '<br>' + LV_KEY[l] : ''}</small></div>`).join('');
-      const cb = Math.round((typeof cultivateBonusAt === 'function' ? cultivateBonusAt(cult) : 0) * 100);
-      const cmax = typeof CULTIVATE_MAX !== 'undefined' ? CULTIVATE_MAX : 20;
-      const nextCum = cult < cmax && typeof cultivateCumCost === 'function' ? cultivateCumCost(cult + 1) : null;
-      h = `<div class="sec"><h4><svg class="icon"><use href="#i-cards"/></svg>局内成长 Lv1-7</h4><div class="ladder">${lad}</div><p class="srcnote" style="text-align:left;margin-top:8px">Lv1-3 数值 · Lv4 解锁技能 · Lv5 强化 · Lv6-7 质变(碎片+金币升)</p></div>`
-        + `<div class="sec"><h4><svg class="icon"><use href="#i-gift"/></svg>碎片养成 Lv1-20(累计碎片自动)</h4><div class="cbar"><span style="width:${cult / cmax * 100}%"></span></div><div class="cnote"><span>当前 Lv.${cult}/${cmax} · 攻血 +${cb}%</span><span>${nextCum != null ? `累计 ${shards}/${nextCum} 自动升` : '已满级'}</span></div></div>`;
-    } else {
-      const sa = Math.round((typeof starAtkBonus === 'function' ? starAtkBonus(star) : 0) * 100);
-      const sh = Math.round((typeof starHpBonus === 'function' ? starHpBonus(star) : 0) * 100);
-      const eff = [['基础', `攻 +${sa}% · 血 +${sh}%`, star >= 1], ['★3', '技能 CD -0.5s', star >= 3], ['★5', '技能强化(Lv7 额外效果)', star >= 5], ['★6', '同职责光环 +3% ATK', star >= 6], ['★7', '开局 SP +2(PvP +1)', star >= 7]];
-      const eh = eff.map(e => `<div class="e ${e[2] ? 'on' : ''}"><span class="k">${e[0]}</span>${e[1]}</div>`).join('');
-      const thresholds = typeof STAR_THRESHOLDS !== 'undefined' ? STAR_THRESHOLDS : [];
-      const nextStar = star < 7 && thresholds[star] != null ? thresholds[star] : null;
-      h = `<div class="sec"><h4><svg class="icon"><use href="#i-star"/></svg>星级特效 ★${star}/7</h4><div class="stareff">${eh}</div>${nextStar != null ? `<p class="srcnote" style="text-align:left;margin-top:8px">累计碎片 ${shards}/${nextStar} 升下一星</p>` : ''}</div>`;
+      const maxLv = typeof HERO_MAX !== 'undefined' ? HERO_MAX : 20;
+      const lad = [1, 2, 3, 4, 5, 6, 7].map(l => `<div class="lv ${l === 1 ? 'cur' : ''} ${LV_KEY[l] ? 'key' : ''}"><b>Lv${l}</b><small>×${LEVEL_MUL[l]}${LV_KEY[l] ? '<br>' + LV_KEY[l] : ''}</small></div>`).join('');
+      const heroPctNext = lv < maxLv ? Math.round((heroMul(lv + 1) - 1) * 100) : 0;
+      const starEff = [['★3', '技能 CD -0.5s', starTier >= 3], ['★5', '技能强化', starTier >= 5], ['★6', '同职责光环 +3% ATK', starTier >= 6], ['★7', '开局 SP +2(PvP +1)', starTier >= 7]];
+      const eh = starEff.map(e => `<div class="e ${e[2] ? 'on' : ''}"><span class="k">${e[0]}</span>${e[1]}</div>`).join('');
+      h = `<div class="sec"><h4><svg class="icon"><use href="#i-cards"/></svg>局内合成 Lv1-7</h4><div class="ladder">${lad}</div><p class="srcnote" style="text-align:left;margin-top:8px">开局 Lv1 · 同名合成升级 · Lv4 技能 · Lv5 强化 · Lv6-7 质变</p></div>`
+        + `<div class="sec"><h4><svg class="icon"><use href="#i-star"/></svg>英雄等级 Lv${lv}/${maxLv}</h4><div class="cbar"><span style="width:${(lv - 1) / (maxLv - 1) * 100}%"></span></div><div class="cnote"><span>攻血 +${heroPct}%</span><span>${lv < maxLv ? `升Lv${lv+1} → +${heroPctNext}%` : '已满级'}</span></div></div>`
+        + `<div class="sec"><h4><svg class="icon"><use href="#i-flame"/></svg>星级特效</h4><div class="stareff">${eh}</div><p class="srcnote" style="text-align:left;margin-top:6px">英雄等级达到档位解锁对应星级的局内特效</p></div>`;
     }
     const el = document.getElementById('hifiCardTabBody');
     if (el) el.innerHTML = h;
@@ -616,15 +594,16 @@
     const inDeck = d.includes(id);
     const unlocked = isUnlocked(id);
     const cost = initUpgradeCost(id);
-    const goldCost = initUpgradeGoldCost(id);
     const frags = (shell.fragments && shell.fragments[id]) || 0;
-    const canUp = unlocked && lv < INIT_MAX && frags >= cost && (meta.gold || 0) >= goldCost;
+    const maxLv = typeof HERO_MAX !== 'undefined' ? HERO_MAX : 20;
+    const canUp = unlocked && lv < maxLv && frags >= cost;
     const canDeck = unlocked && (inDeck || d.length < DECK_SIZE);
     actions.innerHTML = '';
-    const upBtn = makeButton('gbtn blk', lv >= INIT_MAX ? '已满级' : `升级 ${cost}碎片+${goldCost}🪙`, () => {
+    const heroNextPct = lv < maxLv ? Math.round((heroMul(lv + 1) - 1) * 100) : 0;
+    const heroCurPct = Math.round((heroMul(lv) - 1) * 100);
+    const upBtn = makeButton('gbtn blk', lv >= maxLv ? `Lv${maxLv} (+${heroCurPct}%攻血) · 已满级` : `升Lv${lv+1} +${heroNextPct}% 消耗${cost}/${frags}`, () => {
       shell.fragments[id] -= cost;
-      meta.gold = (meta.gold || 0) - goldCost;
-      shell.fruitLv[id] = Math.min(INIT_MAX, lv + 1);
+      shell.fruitLv[id] = Math.min(maxLv, lv + 1);
       saveAll();
       renderCardDetail(id);
       renderSquad();
@@ -851,7 +830,7 @@
   let authMode = 'login';
   let tutStep = 0;
   const TUT_STEPS = [
-    { ic: 'i-leaf', t: '出球召唤', p: '点底部「出球」消耗果汁 SP,在你的棋盘上召唤水果。' },
+    { ic: 'i-leaf', t: '出战召唤', p: '点底部「出战」消耗果汁 SP,在你的棋盘上召唤水果。' },
     { ic: 'i-cards', t: '拖拽合成', p: '把两个相同水果拖到一起合成升级(上限 Lv7),越高越强。' },
     { ic: 'i-vs', t: '职责克制', p: '坦克/远程/突击/攻城/控制 相互克制(7×7 矩阵),搭配阵容更稳。' },
     { ic: 'i-shield', t: '拆敌堡', p: '水果变士兵冲向 5 条兵线,打空敌方城墙即胜利!同时守住我堡别被破。' },
@@ -1075,17 +1054,17 @@
   }
 
   const GACHA_TIERS = [
-    { key: '普', label: '普通', weight: 65, frag: 5, color: '#8FE0A0', rarities: ['normal'] },
-    { key: '稀', label: '稀有', weight: 25, frag: 10, color: '#5B9FE0', rarities: ['rare'] },
-    { key: '史', label: '史诗', weight: 10, frag: 20, color: '#FF6B35', rarities: ['epic'] },
+    { key: 'T2', label: 'T2·普通', weight: 65, frag: 20, color: '#8FE0A0', rarities: ['normal'] },
+    { key: 'T1', label: 'T1·稀有', weight: 25, frag: 10, color: '#5B9FE0', rarities: ['rare'] },
+    { key: 'T0', label: 'T0·史诗', weight: 10, frag: 5, color: '#FF6B35', rarities: ['epic'] },
   ];
   // T0-T2卡池:单抽100钻/十连1000钻
   const T0T2_COST_1 = 100;
   const T0T2_COST_10 = 1000;
   const T0T2_TIERS = [
-    { key: 'T2', label: 'T2·普通', weight: 55, frag: 25, color: '#8FE0A0', rarities: ['normal'] },
+    { key: 'T2', label: 'T2·普通', weight: 55, frag: 100, color: '#8FE0A0', rarities: ['normal'] },
     { key: 'T1', label: 'T1·稀有', weight: 30, frag: 50, color: '#5B9FE0', rarities: ['rare'] },
-    { key: 'T0', label: 'T0·史诗', weight: 15, frag: 100, color: '#FF6B35', rarities: ['epic'] },
+    { key: 'T0', label: 'T0·史诗', weight: 15, frag: 25, color: '#FF6B35', rarities: ['epic'] },
   ];
 
   function gachaPool(tier, tiers) {
@@ -1098,11 +1077,14 @@
     return GACHA_TIERS.find(t => t.key === k);
   }
 
-  function rollTier(tiers) {
+  function rollTier(tiers, poolKey) {
     tiers = tiers || GACHA_TIERS;
-    const hasE = tiers.some(t => t.key === '史');
-    if (hasE && (shell.pityE || 0) >= 29) return tiers.find(t => t.key === '史');
-    if (hasE && (shell.pityR || 0) >= 9) return Math.random() < 0.15 ? tiers.find(t => t.key === '史') : tiers.find(t => t.key === '稀');
+    const epic = tiers[2];
+    const rare = tiers[1];
+    const pe = poolKey === 't' ? 'pityE_t' : 'pityE';
+    const pr = poolKey === 't' ? 'pityR_t' : 'pityR';
+    if (epic && (shell[pe] || 0) >= 29) return epic;
+    if (rare && epic && (shell[pr] || 0) >= 9) return Math.random() < 0.15 ? epic : rare;
     const total = tiers.reduce((s, t) => s + t.weight, 0);
     let r = Math.random() * total;
     for (const t of tiers) {
@@ -1112,16 +1094,15 @@
     return tiers[0];
   }
 
-  function bumpPity(key) {
-    if (key === '史' || key === 'T0') {
-      shell.pityE = 0;
-      shell.pityR = 0;
-    } else if (key === '稀' || key === 'T1') {
-      shell.pityR = 0;
-      shell.pityE = (shell.pityE || 0) + 1;
+  function bumpPity(key, poolKey) {
+    const pe = poolKey === 't' ? 'pityE_t' : 'pityE';
+    const pr = poolKey === 't' ? 'pityR_t' : 'pityR';
+    if (key === 'T0') {
+      shell[pe] = 0; shell[pr] = 0;
+    } else if (key === 'T1') {
+      shell[pr] = 0; shell[pe] = (shell[pe] || 0) + 1;
     } else {
-      shell.pityR = (shell.pityR || 0) + 1;
-      shell.pityE = (shell.pityE || 0) + 1;
+      shell[pr] = (shell[pr] || 0) + 1; shell[pe] = (shell[pe] || 0) + 1;
     }
   }
 
@@ -1135,22 +1116,27 @@
     const results = [];
     meta.unlocked = Array.isArray(meta.unlocked) ? meta.unlocked : [];
     let gotRplus = false;
-    const lowestKey = tiers[tiers.length - 1] ? tiers[tiers.length - 1].key : '普';
-    const midKey = tiers.length >= 2 ? tiers[1].key : '稀';
+    const poolKey = tiers === T0T2_TIERS ? 't' : '';
+    const lowestKey = tiers[0] ? tiers[0].key : 'T2';
+    const midKey = tiers.length >= 2 ? tiers[1].key : 'T1';
     for (let i = 0; i < count; i++) {
-      let tier = rollTier(tiers);
+      let tier = rollTier(tiers, poolKey);
       if (count === 10 && i === 9 && !gotRplus && tier.key === lowestKey) tier = tiers.find(t => t.key === midKey) || tier;
       if (tier.key !== lowestKey) gotRplus = true;
-      bumpPity(tier.key);
+      bumpPity(tier.key, poolKey);
       const pool = gachaPool(tier, tiers);
       const id = pool[Math.floor(Math.random() * pool.length)] || UNIT_POOL[0];
       const t = fruit(id);
       const isNew = !meta.unlocked.includes(id);
-      if (isNew) meta.unlocked.push(id);
-      shell.fragments[id] = (shell.fragments[id] || 0) + tier.frag;
+      if (isNew) {
+        meta.unlocked.push(id);
+        // 首次抽到=解锁角色,不给碎片
+      } else {
+        shell.fragments[id] = (shell.fragments[id] || 0) + tier.frag;
+      }
       meta.shardsTotal = meta.shardsTotal || {};
-      meta.shardsTotal[id] = (meta.shardsTotal[id] || 0) + tier.frag;
-      results.push({ id, icon: t.icon || '?', name: t.name || id, tier, isNew, total: shell.fragments[id] });
+      meta.shardsTotal[id] = (meta.shardsTotal[id] || 0) + (isNew ? 0 : tier.frag);
+      results.push({ id, icon: t.icon || '?', name: t.name || id, tier, isNew, total: shell.fragments[id] || 0, fragGained: isNew ? 0 : tier.frag });
     }
     saveAll();
     renderShop('gacha');
@@ -1158,16 +1144,35 @@
   }
 
   function showGachaResults(results) {
+    const isMulti = results.length >= 10;
     const overlay = document.createElement('div');
     overlay.className = 'gacha-overlay hifi';
-    overlay.innerHTML = `<div class="gacha-box"><h2>🎉 抽卡结果</h2><div id="gachaResults"></div><button class="btn-primary" id="closeGacha">确认</button></div>`;
+    const html = `<div class="gacha-box${isMulti ? ' multi' : ''}"><h2>🎉 抽卡结果</h2>${isMulti ? '<div class="gacha-summary"></div>' : ''}<div id="gachaResults"${isMulti ? ' class="gacha-grid"' : ''}></div><button class="btn-primary" id="closeGacha">确认</button></div>`;
+    overlay.innerHTML = html;
     document.body.appendChild(overlay);
+    if (isMulti) {
+      const counts = {};
+      for (const r of results) counts[r.tier.label] = (counts[r.tier.label] || 0) + 1;
+      const tiers = results.reduce((acc, r) => { if (!acc.find(t => t.key === r.tier.key)) acc.push(r.tier); return acc; }, []);
+      tiers.sort((a, b) => b.frag - a.frag);
+      overlay.querySelector('.gacha-summary').innerHTML = tiers.map(t => `<span style="color:${t.color};font-weight:900;font-size:15px;">${t.label}×${counts[t.label]}</span>`).join(' &nbsp;');
+    }
+    const sorted = [...results].sort((a, b) => {
+      if (a.isNew !== b.isNew) return a.isNew ? -1 : 1;
+      return b.tier.frag - a.tier.frag || a.name.localeCompare(b.name);
+    });
     const box = overlay.querySelector('#gachaResults');
-    for (const r of results) {
+    for (let i = 0; i < sorted.length; i++) {
+      const r = sorted[i];
       const item = document.createElement('div');
-      item.className = 'gacha-result';
+      item.className = 'gacha-result' + (r.isNew && isMulti ? ' gacha-new' : '');
       item.style.border = `2px solid ${r.tier.color}`;
-      item.innerHTML = `<span class="ico">${r.icon}</span><div><b>${r.name}</b><small style="color:${r.tier.color};display:block;font-weight:900;">${r.tier.label}${r.isNew ? ' · 新解锁' : ''}</small><small style="display:block;color:#7d9b5d;">累计 ${r.total} 碎片</small></div><span class="frag">+${r.tier.frag}</span>`;
+      if (isMulti) item.style.animationDelay = `${i * 0.06}s`;
+      if (r.isNew) {
+        item.innerHTML = `<span class="ico" style="font-size:40px">${r.icon}</span><div><b style="font-size:18px">${r.name}</b><small style="color:${r.tier.color};display:block;font-weight:900;">${r.tier.label} · ✨新解锁</small></div>`;
+      } else {
+        item.innerHTML = `<span class="ico">${r.icon}</span><div><b>${r.name}</b><small style="color:${r.tier.color};display:block;font-weight:900;">${r.tier.label}</small><small style="display:block;color:#7d9b5d;">${r.total}碎片</small></div><span class="frag">+${r.fragGained}</span>`;
+      }
       box.appendChild(item);
     }
     overlay.querySelector('#closeGacha').addEventListener('click', () => overlay.remove());
@@ -1318,7 +1323,7 @@
       Object.keys(meta).forEach(k => { delete meta[k]; });
       Object.assign(meta, d);
     }
-    const fresh = { gems: 0, fragments: {}, fruitLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0 };
+    const fresh = { gems: 0, fragments: {}, fruitLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0, pityR_t: 0, pityE_t: 0 };
     Object.keys(shell).forEach(k => { delete shell[k]; });
     Object.assign(shell, fresh);
   }
@@ -1378,8 +1383,16 @@
   async function bootAuth() {
     try {
       const s = (window.account && account.restoreSession) ? await account.restoreSession() : { ok: false };
-      if (s && s.ok) { resetLocalProgress(); applyCloudSave(s); hideLoginGate(); ensureShellData(); refreshResourceNumbers(); renderHome(); }
-      else { showLoginGate(); }
+      if (s && s.ok) {
+        // 读本地最新数据(清空前保留,清空+云端覆盖后再恢复——本地同步写始终比异步云存档新)
+        let localMeta, localShell;
+        try { const r = localStorage.getItem('merge_td_meta_v1'); if (r) localMeta = JSON.parse(r); } catch(e) {}
+        try { const r = localStorage.getItem(SHELL_KEY); if (r) localShell = JSON.parse(r); } catch(e) {}
+        resetLocalProgress(); applyCloudSave(s);
+        if (localMeta) Object.assign(meta, localMeta);
+        if (localShell) Object.assign(shell, localShell);
+        hideLoginGate(); ensureShellData(); refreshResourceNumbers(); renderHome();
+      } else { showLoginGate(); }
     } catch (e) { showLoginGate(); }
   }
 

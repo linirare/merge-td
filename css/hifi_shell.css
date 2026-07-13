@@ -250,6 +250,19 @@ body.shell-v65::after{
 .gacha-overlay.hifi .gacha-result .frag{margin-left:auto;font-family:'Fredoka';font-weight:700;color:#F5C242;}
 .gacha-overlay.hifi .btn-primary{margin-top:12px;background:linear-gradient(180deg,#FFE9A8,#F5C242 45%,#E8A317 62%,#D18A0E);border:2px solid #7A4E08;color:#5A0E0E;font-family:'ZCOOL KuaiLe';font-weight:800;padding:12px 20px;border-radius:14px;box-shadow:0 4px 0 #7A4E08;width:auto;}
 
+/* 十连专属:网格布局+逐卡弹出 */
+.gacha-overlay.hifi .gacha-box.multi{max-width:420px;max-height:85vh;overflow-y:auto;}
+.gacha-overlay.hifi .gacha-box.multi .gacha-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:4px 0;}
+.gacha-overlay.hifi .gacha-box.multi .gacha-result{flex-direction:column;text-align:center;padding:10px 4px;position:relative;animation:gachaPop .35s both ease-out;}
+.gacha-overlay.hifi .gacha-box.multi .gacha-result .ico{font-size:32px;margin-bottom:2px;}
+.gacha-overlay.hifi .gacha-box.multi .gacha-result .frag{position:absolute;top:4px;right:6px;margin:0;}
+.gacha-overlay.hifi .gacha-box.multi .gacha-result>div{width:100%;}
+.gacha-overlay.hifi .gacha-box.multi .gacha-result>div small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gacha-overlay.hifi .gacha-summary{text-align:center;margin-bottom:8px;padding:4px 0;}
+.gacha-overlay.hifi .gacha-box.multi .gacha-new{grid-column:1/-1;flex-direction:row;text-align:left;padding:16px;background:rgba(245,194,66,.1);box-shadow:inset 0 0 20px rgba(245,194,66,.12);gap:16px;margin-bottom:4px;}
+.gacha-overlay.hifi .gacha-box.multi .gacha-new .ico{font-size:48px!important;}
+@keyframes gachaPop{0%{opacity:0;transform:scale(.6) translateY(12px);}100%{opacity:1;transform:scale(1) translateY(0);}}
+
 /* ============================================================
    M3 卡牌/阵容屏 + 英雄详情弹层
    ============================================================ */

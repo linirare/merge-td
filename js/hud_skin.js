@@ -142,7 +142,7 @@ function drawOperationResourceStripV61() {
   ctx.textBaseline = 'middle';
   ctx.font = '950 17px sans-serif';
   ctx.fillStyle = canAct ? '#6a320c' : '#8c5950';
-  ctx.fillText('\u51fa\u7403', btn.x + btn.w * 0.44, btn.y + btn.h / 2 + 1);
+  ctx.fillText('\u51fa\u6218', btn.x + btn.w * 0.44, btn.y + btn.h / 2 + 1);
 
   const badgeW = 44;
   const badgeH = 22;

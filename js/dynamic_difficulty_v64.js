@@ -16,8 +16,8 @@
     const oldSpawn = spawnSoldierFromBall;
     spawnSoldierFromBall = function spawnSoldierWithScalingV64(ball, r, c, side, forced) {
       const soldier = oldSpawn(ball, r, c, side, forced);
-      if (soldier && side === 'enemy' && typeof avgPlayerCultivateLv === 'function') {
-        const lv = avgPlayerCultivateLv(meta);
+      if (soldier && side === 'enemy' && typeof avgPlayerHeroLv === 'function') {
+        const lv = avgPlayerHeroLv(meta);
         const mul = 1 + lv * WALL_DIFFICULTY;
         if (mul > 1) {
           soldier.atk = Math.round(soldier.atk * mul);

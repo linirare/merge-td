@@ -172,6 +172,7 @@ db.exec(`
 // 平滑迁移:给旧DB补缺失列(SQLite无 ALTER TABLE ADD COLUMN IF NOT EXISTS,用 try/catch)
 try { db.exec('ALTER TABLE announcements ADD COLUMN start_time TEXT DEFAULT ""'); } catch(e) {}
 try { db.exec('ALTER TABLE announcements ADD COLUMN end_time TEXT DEFAULT ""'); } catch(e) {}
+try { db.exec('ALTER TABLE announcements ADD COLUMN rewards_json TEXT DEFAULT "{}"'); } catch(e) {}
 try { db.exec('ALTER TABLE chat_logs ADD COLUMN source TEXT DEFAULT "rest"'); } catch(e) {}
 try { db.exec('ALTER TABLE users ADD COLUMN ladder_rank TEXT DEFAULT "新手"'); } catch(e) {}
 try { db.exec('ALTER TABLE users ADD COLUMN ladder_score INTEGER DEFAULT 0'); } catch(e) {}

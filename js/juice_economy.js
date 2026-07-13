@@ -81,9 +81,11 @@
   }
 
   function resetJuiceEconomyForLevel() {
-    // 星级特效:★7 开局 SP+2
-    const maxStar = Math.max(...((meta && meta.shardsTotal) ? Object.values(meta.shardsTotal).map(s => typeof starLevelFromShards === 'function' ? starLevelFromShards(s) : 1) : [1]), 1);
-    const starSp = (typeof starStartSpBonusPvp === 'function' && typeof window !== 'undefined' && window.__pvpMode ? starStartSpBonusPvp(maxStar) : (typeof starStartSpBonus === 'function' ? starStartSpBonus(maxStar) : 0));
+    // 英雄等级→星级特效:★7 开局 SP+2
+    const s = typeof window !== 'undefined' ? window.shell : null;
+    const maxHeroLv = Math.max(...UNIT_POOL.map(id => s?.fruitLv?.[id] || 1), 1);
+    const starTier = typeof heroStarTier === 'function' ? heroStarTier(maxHeroLv) : 1;
+    const starSp = (typeof starStartSpBonusPvp === 'function' && typeof window !== 'undefined' && window.__pvpMode ? starStartSpBonusPvp(starTier) : (typeof starStartSpBonus === 'function' ? starStartSpBonus(starTier) : 0));
     state.sp = (typeof getSpStart === 'function' ? getSpStart(meta) : 10) + starSp;
     state.enemySp = juiceNumber('enemyStart', 8);
     state.summonCostCounter = 1;

@@ -11,6 +11,7 @@ const { clampInt, safeText, safeJsonText } = require('./util');
 const { handlePvpUpgrade } = require('./pvp-server');
 
 const app = express();
+app.set('trust proxy', 1); // Railway 反代需要,否则 express-rate-limit 报错
 const PUBLIC_ROOT = path.join(__dirname, '..');
 // 开发期前端资源禁缓存:每次都按 etag 重校验,改了 JS 刷新即生效
 // (原来 maxAge:'1h' 会让浏览器缓存旧 JS 1 小时,改动刷新不生效——坑过整轮联调)
@@ -107,7 +108,14 @@ app.post('/api/mail/read', authMiddleware, (req, res) => {
       const rewards = JSON.parse(mail.rewards_json);
       const g = clampInt(rewards.gold || 0, 0, 50000, 0);     // 运营邮件上限(审计C10)
       const d = clampInt(rewards.diamonds || 0, 0, 10000, 0);
+      const f = clampInt(rewards.fragments || 0, 0, 5000, 0);
       if (g || d) { db.prepare('UPDATE users SET gold=gold+?, diamonds=diamonds+? WHERE uid=?').run(g, d, req.uid); granted = { gold: g, diamonds: d }; }
+      if (f) {
+        const save = db.prepare('SELECT shell_json FROM user_saves WHERE uid=?').get(req.uid);
+        if (save && save.shell_json) {
+          try { const s = JSON.parse(save.shell_json); if (!s.fragments || typeof s.fragments !== 'object') s.fragments = {}; const ids = Object.keys(s.fragments); if (ids.length) { const per = Math.floor(f / ids.length); const rem = f - per * ids.length; ids.forEach((id, i) => { s.fragments[id] = (s.fragments[id] || 0) + per + (i < rem ? 1 : 0); }); db.prepare("UPDATE user_saves SET shell_json=?, updated_at=CURRENT_TIMESTAMP WHERE uid=?").run(JSON.stringify(s), req.uid); if (!granted) granted = {}; granted.fragments = f; } } catch(e) {}
+        }
+      }
     } catch(e) {}
   }
   db.prepare('UPDATE mail SET is_read=1 WHERE id=? AND uid=?').run(b.id, req.uid);

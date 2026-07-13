@@ -219,28 +219,38 @@ function bestCounterForEnemy(enemyType, pool = null) {
 const LEVEL_MUL = [0, 1.0, 1.4, 1.9, 2.5, 3.2, 4.0, 5.0];
 const MAX_LEVEL = 7;
 
-/* ——— 局外养成:碎片指数消耗 Lv1-20 + ★1-7 星级(设计档 §7)——— */
-const CULTIVATE_MAX = 20;
-function cultivateShardCost(lv) { return 10 * Math.pow(2, lv - 1); }        // 升到 Lv 的单级消耗
-function cultivateCumCost(lv) { return 10 * (Math.pow(2, lv) - 1); }        // 升满 Lv 的累计消耗
-function cultivateBonusAt(lv) {                                            // ATK/HP 加成(§7.2)
-  if (lv <= 0) return 0;
-  if (lv <= 10) return lv * 0.05;                                          // Lv1-10:+5%/级 → +50%
-  return [0.54, 0.58, 0.62, 0.66, 0.70, 0.73, 0.76, 0.79, 0.82, 0.85][Math.min(lv, 20) - 11]; // Lv11-20
+/* ——— 局外养成:英雄等级 Lv1-20 (设计档 §7) ——— */
+const HERO_MAX = 20;
+function heroFragCost(lv) {                                    // 单级碎片消耗,lv=当前等级,升到 lv+1
+  if (lv < 1 || lv >= HERO_MAX) return Infinity;
+  return Math.round(10 * Math.pow(2, lv));
 }
-function cultivateLevelFromShards(shards) {                                // 累计碎片自动投资到最高可达级
-  let lv = 0;
-  while (lv < CULTIVATE_MAX && (shards || 0) >= cultivateCumCost(lv + 1)) lv++;
-  return lv;
+function heroGoldCost(lv) {                                    // 单级金币消耗
+  if (lv < 1 || lv >= HERO_MAX) return Infinity;
+  return heroFragCost(lv) * 10;
 }
-const STAR_THRESHOLDS = [0, 20, 60, 140, 290, 540, 940];                    // ★1..★7 累计碎片门槛(§7.3)
-function starLevelFromShards(shards) {
-  let st = 1;
-  for (let i = 1; i < STAR_THRESHOLDS.length; i++) if ((shards || 0) >= STAR_THRESHOLDS[i]) st = i + 1;
-  return st;
+function heroMul(lv) {                                         // 攻血倍率 Lv1=1.0x Lv20=8.6x
+  return 1 + (Math.min(Math.max(lv, 1), HERO_MAX) - 1) * 0.40;
 }
-function starAtkBonus(star) { return [0, 0, 0.05, 0.10, 0.16, 0.23, 0.30, 0.38][Math.min(Math.max(star, 1), 7)]; }
-function starHpBonus(star)  { return [0, 0, 0.03, 0.06, 0.10, 0.15, 0.20, 0.26][Math.min(Math.max(star, 1), 7)]; }
+// 英雄等级→星级特效档位(用于开局SP/技能CD等全局判定)
+function heroStarTier(heroLv) {
+  if (heroLv >= 20) return 7;
+  if (heroLv >= 16) return 6;
+  if (heroLv >= 12) return 5;
+  if (heroLv >= 8) return 4;
+  if (heroLv >= 5) return 3;
+  return 1;
+}
+// 玩家平均英雄等级(用于动态难度)
+function avgPlayerHeroLv(meta) {
+  const s = typeof window !== 'undefined' ? window.shell : null;
+  const vals = UNIT_POOL.filter(id => TYPES[id]).map(id => s?.fruitLv?.[id] || 1);
+  if (!vals.length) return 0;
+  vals.sort((a, b) => b - a);
+  const n = Math.max(1, Math.floor(vals.length / 2));
+  let sum = 0; for (let i = 0; i < n; i++) sum += vals[i];
+  return Math.round(sum / n);
+}
 
 /* 星级特效(设计档 §7.3) */
 function starSkillCdReduce(star) { return star >= 3 ? 0.5 : 0; }      // ★3: 技能 CD -0.5s
@@ -252,31 +262,16 @@ function starStartSpBonusPvp(star) { return star >= 7 ? 1 : 0; }
 
 /* 战力统一值 */
 function computePower() {
-  const shards = (meta && meta.shardsTotal) ? meta.shardsTotal : {};
+  const s = typeof window !== 'undefined' ? window.shell : null;
   let sum = 0, n = 0;
   for (const id of UNIT_POOL) {
     if (!TYPES[id]) continue;
-    const s = shards[id] || 0;
-    const atkMul = typeof getAtkMul === 'function' ? getAtkMul(meta, id) : 1;
-    const hpMul = typeof getHpMul === 'function' ? getHpMul(meta, id) : 1;
-    sum += Math.round((TYPES[id].atk * atkMul + TYPES[id].hp * hpMul) * fragmentAtkMul(s));
+    const lv = s?.fruitLv?.[id] || 1;
+    const mul = heroMul(lv);
+    sum += Math.round((TYPES[id].atk + TYPES[id].hp) * mul);
     n++;
   }
   return n > 0 ? Math.round(sum / n) : 0;
-}
-// 碎片 → 最终 ATK/HP 乘子:(1+养成加成)×(1+星级加成)
-function fragmentAtkMul(shards) { return (1 + cultivateBonusAt(cultivateLevelFromShards(shards))) * (1 + starAtkBonus(starLevelFromShards(shards))); }
-function fragmentHpMul(shards)  { return (1 + cultivateBonusAt(cultivateLevelFromShards(shards))) * (1 + starHpBonus(starLevelFromShards(shards))); }
-// 玩家平均养成级(用于动态难度,设计 §9.3):取前一半水果的养成级平均,
-// 避免中位数被大量零养成果拖成 0(玩家专精一两果时也会随投入产生难度)。
-function avgPlayerCultivateLv(meta) {
-  const shards = (meta && meta.shardsTotal) ? meta.shardsTotal : {};
-  const vals = UNIT_POOL.filter(id => TYPES[id]).map(id => cultivateLevelFromShards(shards[id] || 0));
-  if (!vals.length) return 0;
-  vals.sort((a, b) => b - a); // 降序
-  const n = Math.max(1, Math.floor(vals.length / 2));
-  let sum = 0; for (let i = 0; i < n; i++) sum += vals[i];
-  return Math.round(sum / n);
 }
 const BASE_WALL_HP = 72;
 const SIEGE_SLOTS_PER_LANE = 3;
