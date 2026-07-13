@@ -358,7 +358,7 @@
 
         <div class="side-l">
           <button class="ring daily-float" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">${dailyReady ? '🎁 补给' : '✅ 已领'}</span>${dailyReady ? '<span class="badge pulse">+' + DAILY_GOLD + '🪙 +' + DAILY_GEMS + '💎</span>' : ''}</button>
-          <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg></span><span class="lbl">邮件</span></button>
+          <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg><span class="mail-dot-ring" id="mailUnreadDot"></span></span><span class="lbl">邮件</span></button>
           <button class="ring" data-chat><span class="inner" style="background:radial-gradient(circle at 40% 34%,#8FE0A0,#2E9A56)"><svg class="icon"><use href="#i-chat"/></svg></span><span class="lbl">聊天</span></button>
         </div>
         <div class="side"></div>
@@ -381,6 +381,7 @@
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
     root.querySelectorAll('[data-toast]').forEach(btn => btn.addEventListener('click', () => hifiToast(btn.dataset.toast)));
     refreshResourceNumbers();
+    updateMailBadge();
   }
 
   function renderCampaign() {
@@ -449,7 +450,11 @@
 
   function renderSquad() {
     ensureShellData();
-    console.log('[renderSquad] meta.unlocked:', JSON.stringify(meta.unlocked));
+    if (!document.getElementById('hifiSquadStyle')) {
+      const s = document.createElement('style');
+      s.id = 'hifiSquadStyle'; s.textContent = `.slot-undeck{position:relative;cursor:pointer}.slot-undeck:hover .slot-x{opacity:1}.slot-x{position:absolute;top:-4px;right:-4px;width:18px;height:18px;background:#ff6078;color:#fff;border-radius:50%;font-size:11px;line-height:18px;text-align:center;font-weight:900;opacity:0;transition:opacity .15s;pointer-events:none}`;
+      document.head.appendChild(s);
+    }
     document.getElementById('shellLabPanel')?.classList.add('hifi');
     const root = shellPage('shellLabPanel', 'shell-squad-page');
     const d = deck();
@@ -460,13 +465,13 @@
         ${hifiTopBarHtml()}
         <div class="hifi-scroll">
           <div class="shead"><h2 class="display">卡牌图鉴</h2><span class="line"></span><span class="r">上阵 ${d.length}/${DECK_SIZE}</span></div>
-          <div class="team">
+          <div class="team" id="squadDeckTeam">
             ${Array.from({ length: DECK_SIZE }, (_, i) => {
               const id = d[i];
               if (id) {
                 const st = fruit(id);
                 const src = RAR_COLOR[st.rarity] || '#8FE0A0';
-                return `<div class="slot f" data-detail="${id}" style="background:${src}33;border:2px solid ${src}">${hifiDisc(id, 40)}<span class="slot-rc" style="background:${src}">${RAR_KEY[st.rarity]||'T2'}</span></div>`;
+                return `<div class="slot f slot-undeck" data-undeck="${id}" style="background:${src}33;border:2px solid ${src}" title="点击下阵">${hifiDisc(id, 40)}<span class="slot-rc" style="background:${src}">${RAR_KEY[st.rarity]||'T2'}</span><span class="slot-x">✕</span></div>`;
               }
               return `<div class="slot"><svg class="icon plus2"><use href="#i-plus"/></svg></div>`;
             }).join('')}
@@ -510,6 +515,7 @@
 
     root.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => { squadFilter = btn.dataset.filter; renderSquad(); }));
     root.querySelectorAll('.card:not(.lock)[data-detail]').forEach(el => el.addEventListener('click', () => openCardDetail(el.dataset.detail)));
+    root.querySelectorAll('[data-undeck]').forEach(el => el.addEventListener('click', (e) => { e.stopPropagation(); const a = deck(); const id = el.dataset.undeck; if (a.includes(id)) { meta.deck = a.filter(x => x !== id); if (meta.deck.length === 0) meta.deck = DEFAULT_DECK.slice(0, 1); saveMeta(); renderSquad(); } }));
     root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => { hidePanels(); document.getElementById('helpPanel')?.classList.remove('hide'); }));
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
     refreshResourceNumbers();
@@ -918,12 +924,24 @@
     body.querySelector('#pfLogout')?.addEventListener('click', () => { if (window.account && account.logout) account.logout(); else { account.token = null; account.user = null; } hifiToast('已退出登录'); closeSheet(); showLoginGate(); });
   }
 
+  function updateMailBadge() {
+    const dot = document.getElementById('mailUnreadDot');
+    if (!dot) return;
+    if (!(loggedIn() && account.getMail)) { dot.classList.remove('on'); return; }
+    account.getMail().then(mails => {
+      dot.classList.toggle('on', Array.isArray(mails) && mails.some(m => !m.is_read));
+    }).catch(() => dot.classList.remove('on'));
+  }
+
   function openMail() {
     const body = openSheet('邮件', '<div id="hifiMailPanel"><div class="mail-status">加载中…</div></div>');
     const panel = body.querySelector('#hifiMailPanel');
     if (!document.getElementById('hifiMailStyle')) {
       const s = document.createElement('style');
       s.id = 'hifiMailStyle'; s.textContent = `
+.mail-dot-ring{position:absolute;top:-2px;right:-4px;width:10px;height:10px;border-radius:50%;background:#ff3b30;display:none;z-index:2;box-shadow:0 0 4px rgba(255,59,48,.6)}
+.mail-dot-ring.on{display:block;animation:mailPulse 1.2s ease-in-out infinite}
+@keyframes mailPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
 .mail-entry{display:flex;align-items:center;gap:10px;padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer}
 .mail-entry:hover{background:rgba(255,255,255,.04)}
 .mail-dot{width:8px;height:8px;border-radius:50%;background:#ffc93c;flex-shrink:0}
@@ -993,11 +1011,9 @@
           this.disabled = true; this.textContent = '…';
           account.readMail(mail.id).then(r => {
             if (r && r.granted) {
-              if (r.granted.diamonds) shell.gems = (shell.gems || 0) + r.granted.diamonds;
-              if (r.granted.gold) meta.gold = (meta.gold || 0) + r.granted.gold;
               if (r.server_diamonds != null) try { localStorage.setItem('fa_srv_gems', String(r.server_diamonds)); } catch(e) {}
               if (r.server_gold != null) try { localStorage.setItem('fa_srv_gold', String(r.server_gold)); } catch(e) {}
-              saveAll(); refreshResourceNumbers();
+              refreshResourceNumbers();
               mail.is_read = 1;
               // 即时弹出到账提示
               const items = [];
@@ -1010,7 +1026,7 @@
             this.textContent = '✅ 已领取'; this.classList.add('gray');
             // 更新缓存,方便返回列表时刷新
             // 后台拉新邮件列表,不阻塞UI
-            account.getMail().then(newMails => { if (Array.isArray(newMails)) mailsCache = newMails; }).catch(() => {});
+            account.getMail().then(newMails => { if (Array.isArray(newMails)) mailsCache = newMails; updateMailBadge(); }).catch(() => {});
           }).catch(() => { this.disabled = false; this.textContent = '🎁 领取奖励'; });
         });
       }
@@ -1018,6 +1034,7 @@
     account.getMail().then(mails => {
       if (!Array.isArray(mails) || !mails.length) { panel.innerHTML = '<div class="mail-status">暂无邮件</div>'; return; }
       mailsCache = mails; renderList();
+      updateMailBadge();
     }).catch(() => { panel.innerHTML = '<div class="mail-status">邮件加载失败</div>'; });
   }
 
