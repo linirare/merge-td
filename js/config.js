@@ -112,8 +112,8 @@ function syncProgressUnlocks(m = null) {
   // 合并抽卡已解锁但进度未到的水果,不丢失 gacha 成果
   m.unlocked = [...new Set([...list, ...(Array.isArray(m.unlocked) ? m.unlocked : [])])].filter(id => TYPES[id]);
   if (!Array.isArray(m.deck) || m.deck.length === 0) m.deck = DEFAULT_DECK.slice();
-  m.deck = normalizeDeck(m.deck).filter(id => list.includes(id));
-  for (const id of DEFAULT_DECK) if (m.deck.length < DECK_SIZE && list.includes(id) && !m.deck.includes(id)) m.deck.push(id);
+  m.deck = normalizeDeck(m.deck).filter(id => (Array.isArray(m.unlocked) ? m.unlocked : list).includes(id));
+  for (const id of DEFAULT_DECK) if (m.deck.length < DECK_SIZE && (Array.isArray(m.unlocked) ? m.unlocked : list).includes(id) && !m.deck.includes(id)) m.deck.push(id);
   return list;
 }
 
