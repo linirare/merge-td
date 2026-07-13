@@ -1174,7 +1174,7 @@
       }
       box.appendChild(item);
     }
-    overlay.querySelector('#closeGacha').addEventListener('click', () => { overlay.remove(); if (typeof loadMeta === 'function') loadMeta(); renderSquad(); });
+    overlay.querySelector('#closeGacha').addEventListener('click', () => { overlay.remove(); if (typeof saveMeta === 'function') saveMeta(); renderSquad(); });
   }
 
   function startLadder() {
@@ -1390,7 +1390,17 @@
         resetLocalProgress(); applyCloudSave(s);
         if (localMeta) Object.assign(meta, localMeta);
         if (localShell) Object.assign(shell, localShell);
-        hideLoginGate(); ensureShellData(); refreshResourceNumbers(); renderHome();
+        hideLoginGate(); ensureShellData();
+        // 服务端增量同步钻石/金币(与管理后台/邮件发放一致)
+        if (account.user) {
+          const prevSrvGold = parseInt(localStorage.getItem('fa_srv_gold') || '0');
+          const prevSrvGems = parseInt(localStorage.getItem('fa_srv_gems') || '0');
+          if (account.user.gold !== undefined && account.user.gold > prevSrvGold) { meta.gold = (meta.gold || 0) + (account.user.gold - prevSrvGold); }
+          if (account.user.diamonds !== undefined && account.user.diamonds > prevSrvGems) { shell.gems = (shell.gems || 0) + (account.user.diamonds - prevSrvGems); }
+          try { localStorage.setItem('fa_srv_gold', String(account.user.gold || 0)); } catch (e) {}
+          try { localStorage.setItem('fa_srv_gems', String(account.user.diamonds || 0)); } catch (e) {}
+        }
+        refreshResourceNumbers(); renderHome();
       } else { showLoginGate(); }
     } catch (e) { showLoginGate(); }
   }
