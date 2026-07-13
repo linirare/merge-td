@@ -20,13 +20,18 @@ function drawPanel(x, y, w, h, r, fill = 'rgba(255,255,255,0.54)', stroke = 'rgb
   ctx.restore();
 }
 
+let _bgGrad = null, _bgWH = 0;
 function drawBackground() {
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#FBF1D2');
-  sky.addColorStop(0.28, '#F6E6B8');
-  sky.addColorStop(0.60, '#F0D492');
-  sky.addColorStop(1, '#E7C070');
-  ctx.fillStyle = sky;
+  const wh = W * H;
+  if (!_bgGrad || _bgWH !== wh) {
+    _bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    _bgGrad.addColorStop(0, '#FBF1D2');
+    _bgGrad.addColorStop(0.28, '#F6E6B8');
+    _bgGrad.addColorStop(0.60, '#F0D492');
+    _bgGrad.addColorStop(1, '#E7C070');
+    _bgWH = wh;
+  }
+  ctx.fillStyle = _bgGrad;
   ctx.fillRect(0, 0, W, H);
 
   ctx.save();

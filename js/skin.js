@@ -412,9 +412,14 @@ function drawHUD() {
   ctx.fillText(`${eCount} 敌方`, bx + barW, by - 4);
 }
 
+let _frameCount = 0;
 function draw() {
   ctx.save();
-  if (!window.REDUCE_MOTION && state.shake > 0.05) ctx.translate((Math.random() - 0.5) * state.shake * 10, (Math.random() - 0.5) * state.shake * 10);
+  _frameCount++;
+  if (!window.REDUCE_MOTION && state.shake > 0.05) ctx.translate(
+    (_frameCount % 2 === 0 ? 1 : -1) * state.shake * 6,
+    (_frameCount % 3 === 0 ? 1 : -1) * state.shake * 4
+  );
 
   drawBackground();
   drawInfo();

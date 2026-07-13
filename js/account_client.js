@@ -79,13 +79,8 @@
       await this.api('POST', '/api/save', data);
     },
 
-    async checkin() {
-      return this.api('POST', '/api/checkin', {});
-    },
-
     async getMail() { return this.api('GET', '/api/mail'); },
     async readMail(id) { const r = await this.api('POST', '/api/mail/read', { id }); if (r.ok && this.user) { try { const prof = await this.api('GET', '/api/user/profile'); if (prof && !prof.error) { this.user.diamonds = prof.diamonds; this.user.gold = prof.gold; if (r.granted) { if (typeof meta !== 'undefined' && r.granted.gold) meta.gold = (meta.gold||0) + r.granted.gold; if (typeof shell !== 'undefined' && r.granted.diamonds) shell.gems = (shell.gems||0) + r.granted.diamonds; if (typeof shell !== 'undefined' && r.granted.fragments) { const _ids = Object.keys(shell.fragments || {}); if (_ids.length) { const _per = Math.floor(r.granted.fragments / _ids.length); const _rem = r.granted.fragments - _per * _ids.length; _ids.forEach((_id, _i) => { shell.fragments[_id] = (shell.fragments[_id] || 0) + _per + (_i < _rem ? 1 : 0); }); } } if (typeof saveAll === 'function') saveAll(); } } } catch(e) {} } return r; },
-    async announcements() { return this.api('GET', '/api/announcements'); },
     async leaderboard(type) { return this.api('GET', '/api/leaderboard/' + (type || 'power')); },
     async chatMessages() { return this.api('GET', '/api/chat'); },
     async addExp(amount) { const r = await this.api('POST', '/api/user/exp', { exp: amount }); if (r.level && this.user) { this.user.level = r.level; this.user.exp = r.exp; } return r; },
@@ -97,29 +92,7 @@
     async acceptFriend(uid) { return this.api('POST', '/api/friends/accept', { uid }); },
     async rejectFriend(uid) { return this.api('POST', '/api/friends/reject', { uid }); },
     async removeFriend(uid) { return this.api('DELETE', '/api/friends', { uid }); },
-    async guildMembers() { return this.api('GET', '/api/guild/members'); },
-    async createGuild(name) { return this.api('POST', '/api/guild/create', { name }); },
-    async joinGuild(code) { return this.api('POST', '/api/guild/join', { code }); },
-    // 任务
-    async tasks() { return this.api('GET', '/api/tasks'); },
-    async taskProgress(task_id, delta=1) { return this.api('POST', '/api/tasks/progress', { task_id, delta }); },
-    // 成就
     async achievements() { return this.api('GET', '/api/achievements'); },
-    async unlockAchievement(achv_id) { return this.api('POST', '/api/achievements/unlock', { achv_id }); },
-    // 通行证
-    async battlepass() { return this.api('GET', '/api/battlepass'); },
-    async bpExp(exp) { return this.api('POST', '/api/battlepass/exp', { exp }); },
-    // 皮肤
-    async skins() { return this.api('GET', '/api/skins'); },
-    async mySkins() { return this.api('GET', '/api/skins/my'); },
-    async buySkin(skin_id) { return this.api('POST', '/api/skins/buy', { skin_id }); },
-    async equipSkin(skin_id) { return this.api('POST', '/api/skins/equip', { skin_id }); },
-    // 活动
-    async events() { return this.api('GET', '/api/events'); },
-    async eventScore(event_id, score) { return this.api('POST', '/api/events/score', { event_id, score }); },
-    // 回放
-    async saveReplay(uid2, actions_json, result) { return this.api('POST', '/api/replay/save', { uid2, actions_json, result }); },
-    async myReplays() { return this.api('GET', '/api/replays'); },
   };
 
   // 过关自动加经验(挂到 onGameOver 上)

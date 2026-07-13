@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="css/hifi_shell.css?v=20260713r5">
 </head>
 <body class="shell-v65">
-<script>fetch('/art/icons.svg').then(r=>r.text()).then(svg=>{const d=document.createElement('div');d.innerHTML=svg;const e=d.querySelector('svg');if(e){e.style.position='absolute';document.body.prepend(e)}}).catch(()=>{})</script>
+<script>fetch('/art/icons.svg').then(r=>r.text()).then(svg=>{const d=document.createElement('div');d.innerHTML=svg;const e=d.querySelector('svg');if(e){e.style.position='absolute';document.body.prepend(e)}}).catch(()=>console.warn('icons.svg 加载失败'))</script>
 <div id="rotate-hint">
   <div class="phone-rotate">📱</div>
   <p>请切换到竖屏体验</p>

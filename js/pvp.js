@@ -662,6 +662,7 @@
       menu.parentNode.replaceChild(newBtn3, menu);
     }
     panel.classList.remove('hide');
+    document.querySelector('#resultPanel .result-card')?.classList.toggle('win-card', win);
   }
 
   installBattleHooks();

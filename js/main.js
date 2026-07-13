@@ -40,6 +40,7 @@ function ensureBattleShellHud() {
     state.mode = 'pve';
     state.phase = 'menu';
     document.getElementById('resultPanel')?.classList.add('hide');
+    window._skipNavSync = true;
     if (window.productShellShowTab) window.productShellShowTab(wasPvp ? 'arena' : 'home');
     else document.getElementById('menuPanel')?.classList.remove('hide');
     syncBattleShellVisibility();
@@ -332,13 +333,16 @@ function onGameOver(win) {
   refreshGold();
 }
 
+let _lastFrame = 0;
 function loop(t) {
+  requestAnimationFrame(loop);
+  if (t - _lastFrame < 16) return; // 帧率上限 ~60fps
+  _lastFrame = t;
   const dt = Math.min((t - last) / 1000, 0.05);
   last = t;
   update(dt * state.speed);
   syncBattleShellVisibility();
   draw();
-  requestAnimationFrame(loop);
 }
 
 loadMeta();

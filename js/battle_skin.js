@@ -39,17 +39,21 @@
 
 function battleClampV59(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
+let _fieldGrad = null, _fieldFY = -1, _fieldFH = -1;
 function drawField() {
   const fy = LAYOUT.fieldY;
   const fh = LAYOUT.fieldH;
   const x = 24;
   const w = W - 48;
 
-  const g = ctx.createLinearGradient(0, fy, 0, fy + fh);
-  g.addColorStop(0, 'rgba(248,234,195,0.94)');
-  g.addColorStop(0.50, 'rgba(244,230,185,0.88)');
-  g.addColorStop(1, 'rgba(237,222,174,0.90)');
-  drawPanel(x, fy, w, fh, 18, g, 'rgba(221,200,147,0.72)');
+  if (!_fieldGrad || _fieldFY !== fy || _fieldFH !== fh) {
+    _fieldGrad = ctx.createLinearGradient(0, fy, 0, fy + fh);
+    _fieldGrad.addColorStop(0, 'rgba(248,234,195,0.94)');
+    _fieldGrad.addColorStop(0.50, 'rgba(244,230,185,0.88)');
+    _fieldGrad.addColorStop(1, 'rgba(237,222,174,0.90)');
+    _fieldFY = fy; _fieldFH = fh;
+  }
+  drawPanel(x, fy, w, fh, 18, _fieldGrad, 'rgba(221,200,147,0.72)');
 
   // 上下墙前安全带，只做空间暗示，不放文字、不做大提示。
   ctx.save();

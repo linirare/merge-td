@@ -328,7 +328,7 @@
   function hidePanels() {
     [
       'menuPanel', 'campaignPanel', 'upgradePanel', 'shopPanel', 'arenaPanel',
-      'ladderPanel', 'resultPanel', 'overflowPopup', 'helpPanel', 'simPanel',
+      'ladderPanel', 'overflowPopup', 'helpPanel', 'simPanel',
       'fruitLabPanel', 'shellLabPanel', 'deckPanel', 'flowGuidePanel', 'rankPanel',
     ].forEach(id => document.getElementById(id)?.classList.add('hide'));
   }
@@ -576,15 +576,15 @@
         + `<div class="s"><svg class="icon" style="color:#EF4444"><use href="#i-sword"/></svg>攻击<b>${Math.round(t.atk * atkMul)}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#2FBF71"><use href="#i-heart"/></svg>血量<b>${Math.round(t.hp * hpMul)}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#9AA6B2"><use href="#i-shield"/></svg>护甲<b>${t.armor || 0}</b></div>`
-        + `<div class="s"><svg class="icon" style="color:#38C6E8"><use href="#i-refresh"/></svg>攻速<b>${t.speed}s</b></div>`
-        + `<div class="s"><svg class="icon" style="color:#F5C242"><use href="#i-flame"/></svg>攻城<b>×${t.siege}</b></div>`
-        + `<div class="s"><svg class="icon" style="color:#FF8C00"><use href="#i-flame"/></svg>战力<b>${Math.round((t.atk + t.hp) * heroMul(lv))}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#38C6E8"><use href="#i-refresh"/></svg>间隔<b>${t.speed}s</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#F5C242"><use href="#i-flame"/></svg>攻城<b>×${t.siege.toFixed(2)}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#FF8C00"><use href="#i-star"/></svg>战力<b>${Math.round((t.atk + t.hp) * heroMul(lv))}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#C77BE8"><use href="#i-vs"/></svg>职责<b style="font-size:13px">${roleZh(t.role)}</b></div></div>`
         + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 攻${t.atk}/血${t.hp} × ${heroPct}% 英雄等级加成</p></div>`
         + `<div class="sec"><h4><svg class="icon"><use href="#i-flame"/></svg>专属技能 · ${skillZh(t)}</h4><div class="skillbox"><div class="nm">${skillZh(t)}</div><p>${t.desc || ''}</p></div></div>`;
     } else if (tab === 'grow') {
       const maxLv = typeof HERO_MAX !== 'undefined' ? HERO_MAX : 20;
-      const lad = [1, 2, 3, 4, 5, 6, 7].map(l => `<div class="lv ${l === 1 ? 'cur' : ''} ${LV_KEY[l] ? 'key' : ''}"><b>Lv${l}</b><small>×${LEVEL_MUL[l]}${LV_KEY[l] ? '<br>' + LV_KEY[l] : ''}</small></div>`).join('');
+      const lad = [1, 2, 3, 4, 5, 6, 7].map(l => `<div class="lv ${LV_KEY[l] ? 'key' : ''}"><b>Lv${l}</b><small>×${LEVEL_MUL[l]}${LV_KEY[l] ? '<br>' + LV_KEY[l] : ''}</small></div>`).join('');
       const heroPctNext = lv < maxLv ? Math.round((heroMul(lv + 1) - 1) * 100) : 0;
       const starEff = [['★3', '技能 CD -0.5s', starTier >= 3], ['★5', '技能强化', starTier >= 5], ['★6', '同职责光环 +3% ATK', starTier >= 6], ['★7', '开局 SP +2(PvP +1)', starTier >= 7]];
       const eh = starEff.map(e => `<div class="e ${e[2] ? 'on' : ''}"><span class="k">${e[0]}</span>${e[1]}</div>`).join('');
@@ -1331,6 +1331,11 @@
     cost10 = cost10 || GACHA_COST_10;
     const cost = count === 10 ? cost10 : cost1;
     if ((shell.gems || 0) < cost) return;
+
+    // 禁用按钮防重复点击
+    document.querySelectorAll('#shopPanel [data-gacha]').forEach(b => b.disabled = true);
+    document.body.classList.add('gacha-loading');
+
     shell.gems -= cost;
     const results = [];
     meta.unlocked = Array.isArray(meta.unlocked) ? meta.unlocked : [];
@@ -1360,6 +1365,8 @@
     }
     saveAll();
     renderShop('gacha');
+    document.querySelectorAll('#shopPanel [data-gacha]').forEach(b => b.disabled = false);
+    document.body.classList.remove('gacha-loading');
     showGachaResults(results);
   }
 
@@ -1395,7 +1402,7 @@
       }
       box.appendChild(item);
     }
-    overlay.querySelector('#closeGacha').addEventListener('click', () => { overlay.remove(); if (typeof saveMeta === 'function') saveMeta(); console.log('[gacha] meta.unlocked after saveMeta:', JSON.stringify(meta.unlocked)); renderSquad(); });
+    overlay.querySelector('#closeGacha').addEventListener('click', () => { overlay.remove(); if (typeof saveMeta === 'function') saveMeta(); console.log('[gacha] meta.unlocked after saveMeta:', JSON.stringify(meta.unlocked)); renderSquad(); if (typeof hifiToast === 'function') hifiToast('新单位已加入阵容'); });
   }
 
   function startLadder() {
@@ -1458,6 +1465,7 @@
       syncNavVisibility();
     });
     panelEl.classList.remove('hide');
+    document.querySelector('#resultPanel .result-card')?.classList.remove('win-card'); // 天梯结束时不算胜
   }
 
   function hookGameOver() {
@@ -1527,6 +1535,7 @@
   }
 
   function syncNavVisibility() {
+    if (window._skipNavSync) { window._skipNavSync = false; return; }
     const nav = document.getElementById('bottomNav');
     if (!nav) return;
     const show = state.phase === 'menu';
@@ -1661,6 +1670,7 @@
     // 公告/帮助的"知道了":关掉后回到当前 tab(原来只 hide,导致 hidePanels 后全空白)
     document.getElementById('btnHelpClose')?.addEventListener('click', () => {
       document.getElementById('helpPanel')?.classList.add('hide');
+      if (state?.phase === 'playing' || state?.phase === 'paused') return; // 战斗中只关面板不切 tab
       showTab(activeTab || 'home');
     });
     showTab('home');

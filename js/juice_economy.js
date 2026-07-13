@@ -275,21 +275,7 @@
     ev.preventDefault();
     const p = eventPoint(ev);
 
-    if (p.x >= PAUSE_RECT.x && p.x <= PAUSE_RECT.x + PAUSE_RECT.w && p.y >= PAUSE_RECT.y && p.y <= PAUSE_RECT.y + PAUSE_RECT.h) {
-      state.phase = state.phase === 'paused' ? 'playing' : 'paused';
-      return;
-    }
     if (state.phase === 'paused') return;
-
-    if (p.x >= HELP_RECT.x && p.x <= HELP_RECT.x + HELP_RECT.w && p.y >= HELP_RECT.y && p.y <= HELP_RECT.y + HELP_RECT.h) {
-      document.getElementById('helpPanel').classList.remove('hide');
-      return;
-    }
-    if (p.x >= SPEED_RECT.x && p.x <= SPEED_RECT.x + SPEED_RECT.w && p.y >= SPEED_RECT.y && p.y <= SPEED_RECT.y + SPEED_RECT.h) {
-      state.speed = state.speed >= 3 ? 1 : state.speed + 1;
-      addFx(SPEED_RECT.x + SPEED_RECT.w / 2, SPEED_RECT.y + 42, `速度 ×${state.speed}`, THEME.gold, 12);
-      return;
-    }
     if (state.overflowQueue.length > 0 && p.x >= OVERFLOW_RECT.x && p.x <= OVERFLOW_RECT.x + OVERFLOW_RECT.w && p.y >= OVERFLOW_RECT.y && p.y <= OVERFLOW_RECT.y + OVERFLOW_RECT.h) {
       showOverflowPopup();
       return;

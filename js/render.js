@@ -273,6 +273,7 @@ function drawField() {
 
 /* ——— 兵 ——— */
 function drawSoldier(s) {
+  if (s.y < LAYOUT.fieldY - 20 || s.y > LAYOUT.fieldY + LAYOUT.fieldH + 20) return;
   const t = TYPES[s.type];
   const fy = LAYOUT.fieldY, fh = LAYOUT.fieldH;
   const depthFactor = 0.7 + 0.3 * ((s.y - fy) / fh);
@@ -580,8 +581,8 @@ function draw() {
   }
 
   // 兵（画在棋盘之后，避免被格子遮盖）；Z 排序：Y 越小越靠上
-  for (const s of [...state.playerSoldiers].filter(s => s.alive).sort((a,b) => a.y - b.y)) drawSoldier(s);
-  for (const s of [...state.enemySoldiers].filter(s => s.alive).sort((a,b) => a.y - b.y)) drawSoldier(s);
+  for (const s of state.playerSoldiers.filter(s => s.alive).sort((a,b) => a.y - b.y)) drawSoldier(s);
+  for (const s of state.enemySoldiers.filter(s => s.alive).sort((a,b) => a.y - b.y)) drawSoldier(s);
 
   // 拖拽中的球
   if (state.drag) {
