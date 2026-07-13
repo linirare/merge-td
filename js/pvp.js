@@ -427,6 +427,13 @@
     for (const s of state.enemySoldiers) { oldState[s.id] = s.hp; oldPos[s.id] = { x: s.x, y: s.y }; }
     const oldIds = new Set(Object.keys(oldState));
 
+    // 预建本帧快照位置索引(攻击线用,避免从旧数组取坐标)
+    const snapPos = {};
+    for (const su of (snap.soldiers || [])) {
+      const ty = flip ? fieldMirrorY(su.y) : su.y;
+      (snapPos[su.side] = snapPos[su.side] || []).push({ x: su.x, y: ty, id: su.id });
+    }
+
     // 士兵:按 side 映射 player/enemy;side1 翻 y;插值保留旧对象平滑移动
     const prev = {};
     for (const s of state.playerSoldiers) prev[s.id] = s;
@@ -451,17 +458,18 @@
       const oldHp = oldState[su.id];
       if (su.hit) {
         // 受击位置:扩散环
-        state.rings.push({ x: tx, y: ty, r: 3, life: 0.45, maxLife: 0.45, color: isMine ? '#ff6b4a' : '#4aff6b' });
-        // 从最近的敌人画一条攻击线
-        const enemies = isMine ? state.enemySoldiers : state.playerSoldiers;
+        state.rings.push({ x: tx, y: ty, r: 7, life: 0.45, maxLife: 0.45, color: isMine ? '#ff6b4a' : '#4aff6b' });
+        // 从最近的敌方画一条攻击线(使用同一快照的位置,起点终点一致)
+        const enemySide = isMine ? 1 - mySide : mySide;
+        const enemies = snapPos[enemySide] || [];
         let near = null, nearD = 9999;
         for (const e of enemies) { const d = Math.abs(e.x - tx) + Math.abs(e.y - ty); if (d < nearD) { nearD = d; near = e; } }
-        if (near && nearD < 300) state.attackFx.push({ x1: near.x, y1: near.y, x2: tx, y2: ty, life: 0.22, maxLife: 0.22 });
+        if (near && nearD < 300) state.attackFx.push({ x1: near.x, y1: near.y, x2: tx, y2: ty, life: 0.22, maxLife: 0.22, attackerSide: isMine ? 'player' : 'enemy' });
       }
       // 扣血数字
       if (oldHp != null && su.hp < oldHp && su.hp > 0) {
         const dmg = Math.min(oldHp - su.hp, 9999);
-        if (dmg > 0) state.fx.push({ x: tx, y: ty - 14, text: '-' + dmg, color: isMine ? '#ff6b4a' : '#4aff6b', size: 11, life: 0.85, maxLife: 0.85, vx: 0, vy: -24 });
+        if (dmg > 0) addFx(tx, ty - 14, '-' + dmg, isMine ? '#ff6b4a' : '#4aff6b', 11);
       }
     }
 
@@ -469,7 +477,7 @@
     for (const id of oldIds) {
       if (!newIds.has(id)) {
         const pos = oldPos[id];
-        if (pos) state.rings.push({ x: pos.x, y: pos.y, r: 2, life: 0.55, maxLife: 0.55, color: '#ff8866' });
+        if (pos) state.rings.push({ x: pos.x, y: pos.y, r: 5, life: 0.55, maxLife: 0.55, color: '#ff8866' });
       }
     }
     // 出兵特效:本帧新增的士兵
@@ -477,7 +485,7 @@
       if (!oldIds.has(String(su.id))) {
         const isMine = su.side === mySide;
         const ty2 = flip ? fieldMirrorY(su.y) : su.y;
-        state.rings.push({ x: su.x, y: ty2, r: 1, life: 0.45, maxLife: 0.45, color: isMine ? '#ffd700' : '#ff8c00' });
+        state.rings.push({ x: su.x, y: ty2, r: 4, life: 0.45, maxLife: 0.45, color: isMine ? '#ffd700' : '#ff8c00' });
       }
     }
 
@@ -488,8 +496,11 @@
   // PvP 客户端逐帧:不驱动战斗,只把士兵插值到快照目标 + 视觉衰减
   function pvpClientUpdate(dt) {
     state.time = (state.time || 0) + dt;
-    if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 4); // 修:PvP 下也要衰减震动,否则一直震
-    const k = Math.min(1, dt * 14);
+    if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 4);
+    // 自适应插值:快照刚到→快速追;快照久未到→减速防抖
+    const snapAge = (performance.now() - pvp._lastSnapTs) / 1000;
+    const rate = Math.max(3, 14 - snapAge * 25);
+    const k = Math.min(1, dt * rate);
     const lerp = (s) => { if (s.tx != null) s.x += (s.tx - s.x) * k; if (s.ty != null) s.y += (s.ty - s.y) * k; if (s.hitFlash > 0) s.hitFlash = Math.max(0, s.hitFlash - dt * 1.2); };
     for (const s of state.playerSoldiers) lerp(s);
     for (const s of state.enemySoldiers) lerp(s);
