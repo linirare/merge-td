@@ -579,6 +579,8 @@
         + `<div class="s"><svg class="icon" style="color:#38C6E8"><use href="#i-refresh"/></svg>间隔<b>${t.speed}s</b></div>`
         + `<div class="s"><svg class="icon" style="color:#F5C242"><use href="#i-flame"/></svg>攻城<b>×${t.siege.toFixed(2)}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#FF8C00"><use href="#i-star"/></svg>战力<b>${Math.round((t.atk + t.hp) * heroMul(lv))}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#7AC7E3"><use href="#i-search"/></svg>射程<b>${({melee:'近战',mid:'中程',far:'远程',long:'超远程',support:'支援'})[t.range] || t.range}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#E8B84B"><use href="#i-speed"/></svg>移速<b>${t.move || '-'}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#C77BE8"><use href="#i-vs"/></svg>职责<b style="font-size:13px">${roleZh(t.role)}</b></div></div>`
         + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 攻${t.atk}/血${t.hp} × ${heroPct}% 英雄等级加成</p></div>`
         + `<div class="sec"><h4><svg class="icon"><use href="#i-flame"/></svg>专属技能 · ${skillZh(t)}</h4><div class="skillbox"><div class="nm">${skillZh(t)}</div><p>${t.desc || ''}</p></div></div>`;
@@ -1646,7 +1648,6 @@
 
   function init() {
     ensureShellData();
-    document.body.classList.add('shell-v65');
     installSystemHooks();
     ensureStaticPanels();
     ensureBottomNav();

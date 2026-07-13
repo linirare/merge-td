@@ -122,12 +122,10 @@ button:disabled{opacity:0.40;cursor:default}
 /* ============================================================
    共享底部导航(覆盖 shell-v65 的 #bottomNav 容器规则)
    ============================================================ */
-body.shell-v65 #bottomNav.hifi,
 #bottomNav.hifi{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:100;height:calc(70px + env(safe-area-inset-bottom));
   padding:0 4px env(safe-area-inset-bottom);display:flex;align-items:center;justify-content:space-around;
   background:linear-gradient(180deg,#3E2716,#22110A);border-top:3px solid #F5C242;box-shadow:0 -4px 16px rgba(0,0,0,.55),inset 0 2px 0 rgba(255,233,168,.35);
   backdrop-filter:none;-webkit-backdrop-filter:none;overflow:visible;}
-body.shell-v65 #bottomNav.hifi.shell-hidden,
 #bottomNav.hifi.shell-hidden{display:none;}
 #bottomNav.hifi .navtab{flex:1;max-width:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:5px;color:#B99A6E;font-family:'ZCOOL KuaiLe';font-size:12px;transition:color .15s;background:none;border:0;}
 #bottomNav.hifi .navtab .ic{position:relative;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
@@ -153,7 +151,7 @@ body.shell-v65 #bottomNav.hifi.shell-hidden,
 /* 桌面下给壳屏加个手机边框(与原型一致) */
 /* 桌面 app 收成居中 550px 列(手机<430不受影响;桌面放大占更多屏幕,减少空白) */
 /* ---- 金色手机框:常驻 body::after(壳+战斗统一视觉边界) ---- */
-body.shell-v65::after{
+body::after{
   content:"";position:fixed;z-index:500;pointer-events:none;
   top:var(--phone-top,0);left:var(--phone-left,0);
   width:var(--phone-w,100vw);height:var(--phone-h,100vh);
@@ -161,7 +159,7 @@ body.shell-v65::after{
   box-shadow:inset 0 1px 0 rgba(255,233,168,.22),0 0 24px rgba(245,194,66,.15),0 12px 40px rgba(0,0,0,.55);
 }
 @media(max-width:469px){
-  body.shell-v65::after{top:4px;left:4px;width:calc(100vw - 8px);height:calc(100vh - 8px);}
+  body::after{top:4px;left:4px;width:calc(100vw - 8px);height:calc(100vh - 8px);}
 }
 
 /* ---- 宽屏:壳面板/wrap/底栏 统一用手机框坐标 ---- */
@@ -172,7 +170,7 @@ body.shell-v65::after{
     transform:none;box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);
     border-radius:22px;overflow:hidden;
   }
-  body.shell-v65 #bottomNav.hifi,#bottomNav.hifi{
+  #bottomNav.hifi{
     left:var(--phone-left,0);right:auto;bottom:var(--phone-top,0);transform:none;
     width:var(--phone-w,100vw);
   }
@@ -423,10 +421,7 @@ body.gacha-loading #shopPanel [data-gacha]::after{content:'抽取中...';display
 
 /* 菜单态藏底层游戏画布;壳屏与战斗共用同一暖深底(避免进战斗四周变绿、与壳屏不协调) */
 body.hifi-menu #wrap{display:none;}
-body.shell-v65{background:#201510;}
-body.shell-v65::before{display:none;}
-/* canvas:暗底无绿框,消除刷新时绿色闪现(原 style.css #game 无条件亮绿) */
-body.shell-v65 #game{background:#14100b;border-radius:0;box-shadow:none;}
+/* canvas暗底已在文件顶部 #game 规则中 */
 
 /* ---- 统一收尾:关卡选择节点 + 结算/帮助金皮 ---- */
 .hifi .lvmap{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
@@ -528,12 +523,12 @@ body.shell-v65 #game{background:#14100b;border-radius:0;box-shadow:none;}
 #overflowPopup.hifi .btn-secondary{background:linear-gradient(180deg,#8f897c,#6b665b);color:#e8e4d8;border:2px solid #4c483f;box-shadow:0 4px 0 #4c483f;font-weight:900;}
 
 /* ---- Battle shell: keep canvas battle inside the same hifi phone frame ---- */
-body.shell-v65.battle-shell-active{
+body.battle-shell-active{
   background:
     radial-gradient(120% 80% at 50% 0%,rgba(245,194,66,.18),transparent 42%),
     linear-gradient(180deg,#201510,#100a06);
 }
-body.shell-v65.battle-shell-active #wrap{
+body.battle-shell-active #wrap{
   position:fixed;
   top:var(--phone-top,0);left:var(--phone-left,0);
   width:var(--phone-w,100vw);height:var(--phone-h,100vh);
@@ -545,7 +540,7 @@ body.shell-v65.battle-shell-active #wrap{
     #14100b;
 }
 /* 金色手机框已移至 body::after(常驻壳+战斗) */
-body.shell-v65.battle-shell-active #game{
+body.battle-shell-active #game{
   position:absolute;
   z-index:2;
   background:#14100b;
@@ -609,7 +604,7 @@ body.shell-v65.battle-shell-active #game{
   color:#C9B48A;
 }
 @media(min-width:470px){
-  body.shell-v65.battle-shell-active #wrap{
+  body.battle-shell-active #wrap{
     /* 位置已由 #wrap 基础规则 + phone-* 变量统一控制,仅补阴影 */
     box-shadow:0 0 0 1px #000,0 24px 80px rgba(0,0,0,.6);
   }

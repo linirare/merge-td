@@ -181,14 +181,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btnUpClose').addEventListener('click', () => document.getElementById('upgradePanel').classList.add('hide'));
   document.getElementById('btnHelpClose').addEventListener('click', () => document.getElementById('helpPanel').classList.add('hide'));
-  document.getElementById('btnRetry').addEventListener('click', () => { document.getElementById('resultPanel').classList.add('hide'); initLevel(state.currentLevel); });
-  document.getElementById('btnMenu').addEventListener('click', () => {
-    document.getElementById('resultPanel').classList.add('hide');
-    document.getElementById('menuPanel').classList.remove('hide');
-    state.phase = 'menu';
-    refreshGold();
+  /* 结算按钮用事件代理防 cloneNode 引用失效(F6) */
+  document.getElementById('resultPanel')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('#btnRetry, #btnMenu, #btnNext');
+    if (!btn || state.mode === 'pvp') return;
+    if (btn.id === 'btnRetry') { document.getElementById('resultPanel').classList.add('hide'); initLevel(state.currentLevel); }
+    else if (btn.id === 'btnMenu') { document.getElementById('resultPanel').classList.add('hide'); document.getElementById('menuPanel').classList.remove('hide'); state.phase = 'menu'; refreshGold(); }
+    else if (btn.id === 'btnNext') { document.getElementById('resultPanel').classList.add('hide'); initLevel(state.currentLevel + 1); }
   });
-  document.getElementById('btnNext').addEventListener('click', () => { document.getElementById('resultPanel').classList.add('hide'); initLevel(state.currentLevel + 1); });
 
   const simBtn = document.getElementById('btnSim');
   if (simBtn) {
