@@ -15,7 +15,7 @@ app.set('trust proxy', 1); // Railway 反代需要,否则 express-rate-limit 报
 const PUBLIC_ROOT = path.join(__dirname, '..');
 // 开发期前端资源禁缓存:每次都按 etag 重校验,改了 JS 刷新即生效
 // (原来 maxAge:'1h' 会让浏览器缓存旧 JS 1 小时,改动刷新不生效——坑过整轮联调)
-const FRONTEND_STATIC = { dotfiles: 'deny', index: false, etag: true, maxAge: 0, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
+const FRONTEND_STATIC = { dotfiles: 'deny', index: false, etag: true, maxAge: 0, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate') };
 
 // 排行榜战力反作弊:computePower 是 UNIT_POOL 平均(atk·养成星级乘子),
 // 全员满养成(Lv20)满星(★7)的理论最大约 280。上限设 300(留极小余量),
