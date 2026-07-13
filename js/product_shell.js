@@ -1174,7 +1174,7 @@
       }
       box.appendChild(item);
     }
-    overlay.querySelector('#closeGacha').addEventListener('click', () => { overlay.remove(); renderSquad(); });
+    overlay.querySelector('#closeGacha').addEventListener('click', () => { overlay.remove(); if (typeof loadMeta === 'function') loadMeta(); renderSquad(); });
   }
 
   function startLadder() {
