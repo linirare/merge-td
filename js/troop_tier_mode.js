@@ -89,9 +89,21 @@ function applyTroopTierStats(s) {
   const stacks = Math.min(2, s.reinforceStacks || 0);
   const hpReinforce = 1 + stacks * (role === 'tank' || role === 'front' ? 0.08 : 0.06);
   const atkReinforce = 1 + stacks * (role === 'siege' || role === 'back' || role === 'rush' ? 0.06 : 0.05);
-  s.maxHp = Math.round(base.hp * levelMul * (TIER_HP_MUL[tier] || 1) * hpReinforce * (role === 'tank' ? 1.10 : 1));
+  // 英雄等级 + 科技倍率（玩家方有效，PvP 沙箱自动跳过）
+  let hpMul = 1, atkMul = 1;
+  if (s.side === 'player' && typeof meta !== 'undefined') {
+    const win = typeof window !== 'undefined' ? window : null;
+    const lv = Math.max(1, win?.shell?.fruitLv?.[type] || 1);
+    hpMul = heroMul(lv);
+    atkMul = heroMul(lv);
+    const techAtk = 1 + (getUpgradeLv?.(meta, type, 'atk') || 0) * UPGRADE_PER_LV;
+    const techHp = 1 + (getUpgradeLv?.(meta, type, 'hp') || 0) * UPGRADE_PER_LV;
+    atkMul *= techAtk;
+    hpMul *= techHp;
+  }
+  s.maxHp = Math.round(base.hp * levelMul * (TIER_HP_MUL[tier] || 1) * hpReinforce * (role === 'tank' ? 1.10 : 1) * hpMul);
   s.hp = Math.max(1, Math.round(s.maxHp * oldRatio));
-  s.atk = Math.round(base.atk * levelMul * (TIER_ATK_MUL[tier] || 1) * atkReinforce);
+  s.atk = Math.round(base.atk * levelMul * (TIER_ATK_MUL[tier] || 1) * atkReinforce * atkMul);
   s.siege = base.siege || 1;
   s.armor = base.armor || 0;
   s.troopTier = tier;

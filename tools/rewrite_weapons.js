@@ -1,8 +1,21 @@
+const fs = require('fs');
+const path = 'js/stickman_render_v61.js';
+
+// Idempotency: skip if already rewritten (chunk helper is unique to chibi version)
+const existing = fs.readFileSync(path, 'utf8');
+if (existing.includes('function chunk(fill, lw)')) {
+  console.log('stickman_render_v61.js already rewritten, skipping');
+  process.exit(0);
+}
+// Also refuse if file is in unexpected state (original headR=1.7 line missing)
+if (!existing.includes('headR = headR * 1.7')) {
+  console.error('stickman_render_v61.js is in unexpected state — cannot safely apply rewrite');
+  process.exit(1);
+}
+
 // Rewrite drawStickWeaponV61 with chibi proportions
 // Weapons sized relative to headR (head radius) for "big head, big weapon, tiny body" chibi look
 // At L1 headR≈10: sword~18px, shield~14px, bow~18px, spear~30px, cannon~18px
-const fs = require('fs');
-const path = 'js/stickman_render_v61.js';
 let content = fs.readFileSync(path, 'utf8');
 
 // First, remove the 1.7x hack

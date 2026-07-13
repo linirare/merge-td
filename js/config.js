@@ -373,6 +373,7 @@ for (const id of UNIT_POOL) {
 TECH_MILESTONES.wall = { title: '果堡加固', at: 5, desc: '降低被偷家失败概率。' };
 TECH_MILESTONES.sp = { title: '果汁号角', at: 5, desc: '开局果汁能量和上限提升。' };
 
+function roleOf(type) { return TYPES[type]?.role || ''; }
 function generateLevel(k) {
   const stageId = Math.max(1, Math.floor(Number(k) || 1));
   const def = getStageDefinition(stageId);

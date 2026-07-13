@@ -5,6 +5,10 @@ const { PvpBattle } = require('./pvp-sim');
 const rooms = new Map();
 const allClients = new Set();
 const onlineUsers = new Map(); // uid→{ws,nickname,level,lastHeartbeat} 在线追踪(审计C2)
+const ipConnections = new Map(); // ip→count 审计:per-IP 连接限流
+const MAX_CONNECTIONS_PER_IP = 5;
+const MAX_ROOMS = 200;
+const MAX_ROOM_ID_RETRIES = 100;
 // 僵尸连接清理:每60s扫描,90s无心跳→关闭(审计P0-6)
 setInterval(() => {
   const now = Date.now();
@@ -17,8 +21,9 @@ setInterval(() => {
 }, 60000);
 
 function makeRoomId() {
-  let id = '';
+  let id = '', tries = 0;
   do {
+    if (tries++ > MAX_ROOM_ID_RETRIES) return ''; // 审计:防极端死循环
     id = Math.floor(1000 + Math.random() * 9000).toString();
   } while (rooms.has(id));
   return id;
@@ -88,6 +93,7 @@ function decodeFrames(buffer) {
     pos += len;
     offset = pos;
 
+    if (opcode === 0x0) { console.warn('[pvp] unexpected continuation frame'); messages.push({ protocol_error: true }); break; }
     if (opcode === 0x8) messages.push({ close: true });
     else if (opcode === 0x1) messages.push({ text: body.toString('utf8') });
     else if (opcode === 0x9) messages.push({ ping: body });
@@ -276,16 +282,46 @@ function leaveRoom(client, notify = true) {
 
 function disconnectClient(client) {
   leaveObserve(client);
-  leaveRoom(client, true);
-  if (client._uid) onlineUsers.delete(client._uid); // 离线追踪清理(审计C2)
+  const room = rooms.get(client.roomId);
+  const wasPlaying = room && room.battle && !room._finished && (client.index === 0 || client.index === 1) && room.players[client.index] === client;
+
+  if (wasPlaying) {
+    // 对局中断线:保留房间 30s 等待重连
+    broadcast(room, { type: 'peer_disconnected', roomId: room.id }, client);
+    if (room.observers) for (const obs of room.observers) send(obs, { type: 'peer_disconnected', roomId: room.id });
+    room.players[client.index] = null;
+    client.roomId = 'reconnect:' + room.id;
+    room._reconnectTimer = setTimeout(() => {
+      // 超时未重连,清理房间
+      broadcast(room, { type: 'peer_left', roomId: room.id });
+      if (room.observers) for (const obs of room.observers) send(obs, { type: 'peer_left', roomId: room.id });
+      const remaining = room.players[0] || room.players[1];
+      if (remaining) {
+        let t = 0; try { t = Math.floor((room.battle.snapshot().t) || 0); } catch (e) {}
+        finishMatch(room, { seed: room.seed, winner: remaining.index, duration: t, reason: 'disconnect_timeout' });
+      } else { stopBattleLoop(room); }
+      if (!room.players[0] && !room.players[1]) rooms.delete(room.id);
+    }, 30000);
+  } else {
+    leaveRoom(client, true);
+  }
+
+  if (client._uid) onlineUsers.delete(client._uid);
   allClients.delete(client);
+  if (client._ip) {
+    const c = ipConnections.get(client._ip) || 0;
+    if (c <= 1) ipConnections.delete(client._ip);
+    else ipConnections.set(client._ip, c - 1);
+  }
 }
 
 function createRoom(client) {
   leaveObserve(client);
   leaveRoom(client, false);
 
+  if (rooms.size >= MAX_ROOMS) return sendError(client, 'room_limit'); // 审计:全局房间上限
   const id = makeRoomId();
+  if (!id) return sendError(client, 'room_create_failed'); // 审计:房间码生成失败(重试耗尽)
   const room = { id, seed: 0, players: [null, null], observers: [], result: null };
   client.roomId = id;
   client.index = 0;
@@ -295,6 +331,24 @@ function createRoom(client) {
   room.players[0] = client;
   rooms.set(id, room);
   send(client, { type: 'room_created', ...roomState(room), playerIndex: 0 });
+}
+
+function reconnectRoom(client, roomId) {
+  const room = rooms.get(String(roomId || '').trim());
+  if (!room) return sendError(client, 'room_not_found');
+  if (!room._reconnectTimer) return sendError(client, 'reconnect_expired');
+  // 找到断线玩家的空位
+  const slot = room.players[0] === null ? 0 : room.players[1] === null ? 1 : -1;
+  if (slot < 0) return sendError(client, 'room_full');
+  clearTimeout(room._reconnectTimer);
+  room._reconnectTimer = null;
+  client.roomId = room.id;
+  client.index = slot;
+  client.deck = room.players[slot] ? room.players[slot].deck || [] : [];
+  client.ready = true;
+  room.players[slot] = client;
+  send(client, { type: 'reconnected', ...roomState(room), playerIndex: slot });
+  broadcast(room, { type: 'peer_reconnected', roomId: room.id });
 }
 
 function joinRoom(client, roomId) {
@@ -414,14 +468,7 @@ function reportResult(client, result) {
 }
 
 function observeRoom(client, roomId) {
-  const room = rooms.get(String(roomId || '').trim());
-  if (!room) return sendError(client, 'room_not_found');
-  if ((room.observers || []).length >= 20) return sendError(client, 'observers_full');
-  leaveObserve(client);
-  leaveRoom(client, false);
-  room.observers.push(client);
-  client._observer = room.id;
-  send(client, { type: 'room_joined', ...roomState(room), playerIndex: -1 });
+  sendError(client, 'observers_disabled');
 }
 
 function pushChat(client, message) {
@@ -439,8 +486,7 @@ function pushChat(client, message) {
   };
   chat.push(msg);
   if (chat.length > 200) chat.splice(0, chat.length - 200); // 统一上限200(审计D1)
-  // DB 持久化(审计C1):WS 聊天写入 chat_logs,服务重启不丢
-  try { const db = require('./db'); db.prepare('INSERT INTO chat_logs (uid, nickname, text, source) VALUES (?,?,?,?)').run(uid, nick, text, 'ws'); } catch(e) {}
+  // WS 聊天只需内存缓存,DB 持久化由 REST 聊天负责
   broadcastAll(client, { type: 'chat', message: msg });
 }
 
@@ -454,6 +500,7 @@ function handleMessage(client, raw) {
 
   if (message.type === 'create_room') createRoom(client);
   else if (message.type === 'join_room') joinRoom(client, message.roomId);
+  else if (message.type === 'reconnect_room') reconnectRoom(client, message.roomId);
   else if (message.type === 'ready') setReady(client, message.ready, message.deck);
   else if (message.type === 'action') forwardAction(client, message.action);
   else if (message.type === 'result') { /* 服务器权威:结果由服务端模拟决定,忽略客户端自报(杜绝作弊) */ }
@@ -467,16 +514,16 @@ function flushClientBuffer(client) {
   const decoded = decodeFrames(client.buffer);
   client.buffer = decoded.rest;
   for (const message of decoded.messages) {
-    if (message.close) return client.socket.end();
+    if (message.protocol_error || message.close) return client.socket.end();
     if (message.ping) { sendPong(client, message.ping); if (client._uid && onlineUsers.has(client._uid)) onlineUsers.get(client._uid).lastHeartbeat = Date.now(); continue; }
     if (message.text) handleMessage(client, message.text);
   }
 }
 
-function attachSocket(socket, head = null, auth = null) {
+function attachSocket(socket, head = null, auth = null, clientIp = '') {
   const client = {
     socket, buffer: Buffer.alloc(0), roomId: '', index: -1, ready: false, deck: [], _observer: '',
-    _uid: (auth && auth.uid) || '', _nick: (auth && auth.nick) || '',
+    _uid: (auth && auth.uid) || '', _nick: (auth && auth.nick) || '', _ip: clientIp,
   };
   if (client._uid) onlineUsers.set(client._uid, { ws: socket, nickname: client._nick, level: 1, lastHeartbeat: Date.now() }); // 在线追踪(审计C2)
   allClients.add(client);
@@ -532,6 +579,15 @@ function handlePvpUpgrade(req, socket, head) {
     return;
   }
 
+  // 审计:per-IP 连接限流
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const ipCount = ipConnections.get(ip) || 0;
+  if (ipCount >= MAX_CONNECTIONS_PER_IP) {
+    socket.write('HTTP/1.1 429 Too Many Requests\r\nConnection: close\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
   const key = req.headers['sec-websocket-key'];
   if (!key) return socket.destroy();
 
@@ -544,7 +600,8 @@ function handlePvpUpgrade(req, socket, head) {
     '',
     '',
   ].join('\r\n'));
-  attachSocket(socket, head, auth);
+  ipConnections.set(ip, ipCount + 1);
+  attachSocket(socket, head, auth, ip);
 }
 
 function attachPvp(httpServer) {

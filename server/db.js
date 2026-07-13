@@ -193,4 +193,22 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_replays_uid2 ON replays(uid2);
 `);
 
+// Seed achievements
+const ACHV_SEED = [
+  ['first_win', '首战告捷', '通关第1关', '{"gems":5}'],
+  ['stage_5', '初露锋芒', '通关第5关', '{"gems":10}'],
+  ['stage_10', '渐入佳境', '通关第10关', '{"gems":20}'],
+  ['stage_20', '百战老兵', '通关第20关', '{"gems":50}'],
+  ['collect_5', '小有收获', '收集5种水果', '{"gems":5}'],
+  ['collect_10', '水果猎人', '收集10种水果', '{"gems":15}'],
+  ['collect_all', '水果大师', '收集全部水果', '{"gems":100}'],
+  ['pvp_first', '竞技初体验', '完成一场PvP对局', '{"gems":10}'],
+  ['pvp_win', '竞技首胜', '赢得一场PvP胜利', '{"gems":20}'],
+  ['hero_10', '成长之路', '任一英雄达到Lv10', '{"gems":25}'],
+  ['hero_20', '巅峰强者', '任一英雄达到Lv20', '{"gems":100}'],
+  ['deck_full', '满员出征', '编队满员上场', '{"gems":10}'],
+];
+const insAch = db.prepare('INSERT OR IGNORE INTO achievements (id,title,desc,reward_json) VALUES (?,?,?,?)');
+for (const row of ACHV_SEED) insAch.run(...row);
+
 module.exports = db;

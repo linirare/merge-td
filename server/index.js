@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -23,13 +24,18 @@ const FRONTEND_STATIC = { dotfiles: 'deny', index: false, etag: true, maxAge: 0,
 const POWER_MAX = 300;
 
 app.use(express.json({ limit: '128kb' }));
-app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, message: { error: 'rate_limit' } });
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false, crossOriginResourcePolicy: false }));
+// 审计:分拆 rate limiter,登录注册与游戏 API 隔离
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'rate_limit' } });
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 500, message: { error: 'rate_limit' } });
+app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
 app.use('/css', express.static(path.join(PUBLIC_ROOT, 'css'), FRONTEND_STATIC));
 app.use('/js', express.static(path.join(PUBLIC_ROOT, 'js'), FRONTEND_STATIC));
 app.use('/art', express.static(path.join(PUBLIC_ROOT, 'art'), FRONTEND_STATIC));
+app.use('/fonts', express.static(path.join(PUBLIC_ROOT, 'fonts'), { dotfiles: 'deny', index: false, maxAge: '7d' }));
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'index.html')));
+app.get('/admin.html', (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'admin.html')));
 
 function publicUser(row = {}) {
   return {
@@ -150,6 +156,12 @@ app.get('/api/leaderboard/:type', (req, res) => {
 });
 
 const chatMessages = [];
+try {
+  const recent = db.prepare('SELECT uid, nickname, text, created_at FROM chat_logs ORDER BY created_at DESC LIMIT 200').all();
+  for (const row of recent.reverse()) {
+    chatMessages.push({ uid: row.uid, nickname: row.nickname, text: row.text, ts: new Date(row.created_at + 'Z').getTime() });
+  }
+} catch(e) { console.warn('chat log restore failed', e); }
 app.get('/api/chat', (req, res) => res.json(chatMessages.slice(-50)));
 // 世界聊天发送:登录态,昵称一律取服务端 DB 真昵称(杜绝冒充),消息净化+限长,数组封顶
 app.post('/api/chat', authMiddleware, (req, res) => {
@@ -231,8 +243,10 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// 优雅关闭(审计P2-15):SIGTERM时关闭HTTP/WS,清理pending连接
-process.on('SIGTERM', () => { console.log('SIGTERM — shutting down'); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000); });
+// 优雅关闭(审计P2-15):SIGTERM/SIGINT时关闭HTTP/WS,清理pending连接
+function gracefulShutdown(signal) { console.log(`${signal} — shutting down`); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000); }
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT')); // 审计:Windows Ctrl+C 走 SIGINT
 // 未捕获异步异常不崩进程(审计P2-16)
 process.on('unhandledRejection', (reason) => console.error('unhandledRejection:', reason));
 

@@ -58,7 +58,6 @@ function tutorialResetEnemyOpening(k) {
 function applyTutorialLevelTuning(k) {
   if (k > 3) return;
 
-  meta.deck = TUTORIAL_DECK.slice();
   state.sp = Math.max(state.sp, k === 1 ? 16 : k === 2 ? 14 : 12);
   state.enemySp = Math.max(state.enemySp || 0, k === 1 ? 6 : k === 2 ? 8 : 10);
   state.playerWallMax = k === 1 ? 180 : k === 2 ? 150 : 130;

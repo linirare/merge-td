@@ -139,7 +139,7 @@ const DRIVER = `
           const b = createBall(p.type, p.level || 1);
           b.spawnTimer = (p.spawnTimer == null ? 2.2 : Number(p.spawnTimer || 0));
           slots[p.r][p.c] = b;
-          spendJuice(sideName, Number(p.cost || actionCost(sideName)));
+          spendJuice(sideName, actionCost(sideName)); // 审计:忽略客户端 p.cost,防止免费出兵漏洞
         } else if (action.type === 'move_cell') {
           const r = tryMove(slots, p.fromR, p.fromC, p.toR, p.toC);
           if (!r || !r.moved) return { ok: false, err: 'move_fail' };
@@ -149,7 +149,7 @@ const DRIVER = `
         } else if (action.type === 'urgent_dispatch') {
           const ball = slots[p.r] && slots[p.r][p.c];
           if (!ball) return { ok: false, err: 'empty_cell' };
-          spendJuice(sideName, Number(p.cost || actionCost(sideName)));
+          spendJuice(sideName, actionCost(sideName)); // 审计:忽略客户端 p.cost,防止免费出兵漏洞
           spawnFromBall(ball, p.r, p.c, sideName, true);
           ball.spawnTimer = Math.max(ball.spawnTimer || 0, 1.2);
         } else return { ok: false, err: 'unknown_action' };
@@ -232,7 +232,7 @@ function buildSandbox(seed) {
     Date: { now: () => 0 },
     performance: { now: () => 0 },
     requestAnimationFrame: () => 0, cancelAnimationFrame: () => {},
-    setTimeout: () => 0, clearTimeout: () => {}, setInterval: () => 0, clearInterval: () => {},
+    setTimeout: () => { console.warn('[pvp-sim] setTimeout called in sandbox — async not supported'); return 0; }, clearTimeout: () => {}, setInterval: () => { console.warn('[pvp-sim] setInterval called in sandbox — async not supported'); return 0; }, clearInterval: () => {},
     localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
     document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], addEventListener: () => {}, createElement: () => ({ getContext: () => ({}), style: {}, classList: { add() {}, remove() {}, toggle() {} } }) },
     addFx: () => {}, playSfx: () => {}, onGameOver: () => {},

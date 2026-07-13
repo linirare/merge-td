@@ -1,4 +1,11 @@
 const fs = require('fs');
+
+// Idempotency: skip if addSmokePuff already present (patch already applied)
+if (fs.readFileSync('js/juice.js', 'utf8').includes('function addSmokePuff')) {
+  console.log('juice.js already patched, skipping');
+  process.exit(0);
+}
+
 let j = fs.readFileSync('js/juice.js', 'utf8');
 
 // 1. smokePuffs in state

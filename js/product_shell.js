@@ -362,7 +362,10 @@
           <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg><span class="mail-dot-ring" id="mailUnreadDot"></span></span><span class="lbl">邮件</span></button>
           <button class="ring" data-chat><span class="inner" style="background:radial-gradient(circle at 40% 34%,#8FE0A0,#2E9A56)"><svg class="icon"><use href="#i-chat"/></svg></span><span class="lbl">聊天</span></button>
         </div>
-        <div class="side"></div>
+        <div class="side">
+          <button class="ring" data-achievements><span class="inner" style="background:radial-gradient(circle at 40% 34%,#FFD700,#DAA520)"><svg class="icon"><use href="#i-trophy"/></svg></span><span class="lbl">成就</span></button>
+          <button class="ring" data-friends><span class="inner" style="background:radial-gradient(circle at 40% 34%,#FF69B4,#C71585)"><svg class="icon"><use href="#i-user"/></svg></span><span class="lbl">好友</span></button>
+        </div>
 
         <button class="hifi-levelsel" id="hifiLevelSel">☰ 选关 · 第${lv}关</button>
         <div class="homecta">
@@ -381,6 +384,8 @@
     }));
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
     root.querySelectorAll('[data-toast]').forEach(btn => btn.addEventListener('click', () => hifiToast(btn.dataset.toast)));
+    root.querySelectorAll('[data-achievements]').forEach(btn => btn.addEventListener('click', openAchievements));
+    root.querySelectorAll('[data-friends]').forEach(btn => btn.addEventListener('click', openFriends));
     refreshResourceNumbers();
     updateMailBadge();
   }
@@ -1062,6 +1067,105 @@
     });
   }
 
+  function openAchievements() {
+    if (!(loggedIn() && account.achievements)) { hifiToast('请先登录'); return; }
+    const body = openSheet('🏆 成就', '<div class="achv-status">加载中…</div>');
+    if (!document.getElementById('hifiAchvStyle')) {
+      const s = document.createElement('style'); s.id = 'hifiAchvStyle'; s.textContent = `
+.achv-item{display:flex;align-items:center;gap:12px;padding:14px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.achv-ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex-shrink:0}
+.achv-ico.locked{background:rgba(255,255,255,.06);color:#666}
+.achv-ico.unlocked{background:rgba(47,191,113,.15);color:#2FBF71}
+.achv-info{flex:1;min-width:0}
+.achv-info h4{margin:0;font-size:14px;color:#eadbc0;font-weight:800}
+.achv-info p{margin:2px 0 0;font-size:11px;color:#8a7a5a;font-weight:700}
+.achv-reward{font-size:11px;color:#FFD700;font-weight:800}
+.achv-badge{padding:4px 10px;border-radius:8px;font-size:11px;font-weight:800;flex-shrink:0}
+.achv-badge.done{background:rgba(47,191,113,.15);color:#2FBF71}
+.achv-badge.lock{background:rgba(255,255,255,.06);color:#666}
+.achv-status{text-align:center;color:#8a7a5a;padding:32px 12px;font-weight:800}`;
+      document.head.appendChild(s);
+    }
+    account.achievements().then(list => {
+      if (!Array.isArray(list) || !list.length) { body.innerHTML = '<div class="achv-status">暂无成就</div>'; return; }
+      const uc = list.filter(a => a.unlocked).length;
+      body.innerHTML = `
+        <div style="text-align:center;padding:8px 0 14px;border-bottom:1px solid rgba(255,255,255,.06)">
+          <div style="font-family:Fredoka;font-weight:900;font-size:28px;color:#FFD700">${uc}/${list.length}</div>
+          <div style="font-size:11px;color:#8a7a5a;font-weight:800">成就解锁</div>
+        </div>
+        ${list.map(a => {
+          let rew = '';
+          try { const r = JSON.parse(a.reward_json || '{}'); if (r.gems) rew = '💎' + r.gems; if (r.gold) rew += (rew ? ' ' : '') + '🪙' + r.gold; } catch(e) {}
+          return `<div class="achv-item"><div class="achv-ico ${a.unlocked ? 'unlocked' : 'locked'}">${a.unlocked ? '🏆' : '🔒'}</div><div class="achv-info"><h4>${escapeHtml(a.title)}</h4><p>${escapeHtml(a.desc || '')}</p>${rew ? '<span class="achv-reward">' + rew + '</span>' : ''}</div><span class="achv-badge ${a.unlocked ? 'done' : 'lock'}">${a.unlocked ? '✅ 已达成' : '未达成'}</span></div>`;
+        }).join('')}`;
+    }).catch(() => { body.innerHTML = '<div class="achv-status">加载失败</div>'; });
+  }
+
+  function openFriends() {
+    if (!(loggedIn() && account.friends)) { hifiToast('请先登录'); return; }
+    const body = openSheet('👥 好友', '<div id="hifiFriendPanel"><div class="mail-status">加载中…</div></div>');
+    const panel = body.querySelector('#hifiFriendPanel');
+    if (!document.getElementById('hifiFriendStyle')) {
+      const s = document.createElement('style'); s.id = 'hifiFriendStyle'; s.textContent = `
+.friend-item{display:flex;align-items:center;gap:10px;padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.06)}
+.friend-av{width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 40% 34%,#8B6CC0,#4A2D7A);display:grid;place-items:center;flex-shrink:0}
+.friend-av .icon{width:18px;height:18px;color:#fff}
+.friend-info{flex:1;min-width:0}
+.friend-info .nm{font-size:13px;color:#eadbc0;font-weight:800}
+.friend-info .sub{font-size:11px;color:#8a7a5a;font-weight:700}
+.friend-empty{text-align:center;color:#8a7a5a;padding:32px 12px;font-weight:800}
+.friend-add-row{display:flex;gap:8px;padding:12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.friend-add-row input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#eadbc0;font-weight:700;font-family:inherit;outline:none}
+.friend-add-row input:focus{border-color:var(--gold,#F5C242)}`;
+      document.head.appendChild(s);
+    }
+    let ftab = 'list';
+    function render(t) { ftab = t || 'list';
+      panel.innerHTML = `<div class="ltabs" style="margin-bottom:8px"><button class="ltab ${ftab==='list'?'on':''}" data-ftab="list">好友</button><button class="ltab ${ftab==='requests'?'on':''}" data-ftab="requests">申请</button><button class="ltab ${ftab==='add'?'on':''}" data-ftab="add">添加</button></div><div id="hifiFriendTab"></div>`;
+      panel.querySelectorAll('[data-ftab]').forEach(b => b.addEventListener('click', () => render(b.dataset.ftab)));
+      if (ftab === 'list') renderFriendList();
+      else if (ftab === 'requests') renderFriendRequests();
+      else renderAddFriend();
+    }
+    async function renderFriendList() {
+      const tab = panel.querySelector('#hifiFriendTab');
+      try {
+        const list = await account.friends();
+        if (!Array.isArray(list) || !list.length) { tab.innerHTML = '<div class="friend-empty">暂无好友<br><small style="font-weight:700;margin-top:6px;display:block">去"添加"页搜索添加吧</small></div>'; return; }
+        tab.innerHTML = list.map(f => `<div class="friend-item"><div class="friend-av"><svg class="icon"><use href="#i-user"/></svg></div><div class="friend-info"><div class="nm">${escapeHtml(f.nickname||'玩家')}</div><div class="sub">Lv.${f.level||1} · 战力 ${f.power||0}</div></div><button class="gbtn" data-frm="${escapeHtml(f.uid)}" style="padding:4px 10px;font-size:11px;background:rgba(255,255,255,.06);color:#888;border:1px solid rgba(255,255,255,.1)">移除</button></div>`).join('');
+        tab.querySelectorAll('[data-frm]').forEach(btn => btn.addEventListener('click', async () => { if (confirm('确定移除？')) { await account.removeFriend(btn.dataset.frm); renderFriendList(); } }));
+      } catch(e) { tab.innerHTML = '<div class="friend-empty">加载失败</div>'; }
+    }
+    async function renderFriendRequests() {
+      const tab = panel.querySelector('#hifiFriendTab');
+      try {
+        const list = await account.friendRequests();
+        if (!Array.isArray(list) || !list.length) { tab.innerHTML = '<div class="friend-empty">暂无好友申请</div>'; return; }
+        tab.innerHTML = list.map(f => `<div class="friend-item"><div class="friend-av"><svg class="icon"><use href="#i-user"/></svg></div><div class="friend-info"><div class="nm">${escapeHtml(f.nickname||'玩家')}</div><div class="sub">UID ${escapeHtml(f.uid||'')}</div></div><div style="display:flex;gap:6px"><button class="gbtn" data-fac="${escapeHtml(f.uid)}" style="padding:4px 10px;font-size:11px;background:rgba(47,191,113,.15);color:#2FBF71;border:1px solid rgba(47,191,113,.3)">接受</button><button class="gbtn" data-frej="${escapeHtml(f.uid)}" style="padding:4px 10px;font-size:11px;background:rgba(226,59,78,.1);color:#E23B4E;border:1px solid rgba(226,59,78,.2)">拒绝</button></div></div>`).join('');
+        tab.querySelectorAll('[data-fac]').forEach(btn => btn.addEventListener('click', async () => { await account.acceptFriend(btn.dataset.fac); renderFriendRequests(); }));
+        tab.querySelectorAll('[data-frej]').forEach(btn => btn.addEventListener('click', async () => { if (account.rejectFriend) await account.rejectFriend(btn.dataset.frej); renderFriendRequests(); }));
+      } catch(e) { tab.innerHTML = '<div class="friend-empty">加载失败</div>'; }
+    }
+    function renderAddFriend() {
+      const tab = panel.querySelector('#hifiFriendTab');
+      tab.innerHTML = `<div class="friend-add-row"><input id="hifiFriendUid" placeholder="输入对方UID" maxlength="20"><button class="gbtn" id="hifiFriendAddBtn" style="padding:10px 16px">添加</button></div><div id="hifiFriendAddResult" class="friend-empty">输入UID后点击添加</div>`;
+      tab.querySelector('#hifiFriendAddBtn')?.addEventListener('click', async () => {
+        const uid = (tab.querySelector('#hifiFriendUid').value || '').trim();
+        if (!uid) { tab.querySelector('#hifiFriendAddResult').textContent = '请输入UID'; return; }
+        const btn = tab.querySelector('#hifiFriendAddBtn'); btn.disabled = true;
+        try {
+          const r = await account.addFriend(uid);
+          const el = tab.querySelector('#hifiFriendAddResult');
+          if (r && r.ok) { el.textContent = '✅ 好友申请已发送'; tab.querySelector('#hifiFriendUid').value = ''; }
+          else el.textContent = '❌ ' + (r && r.msg ? r.msg : '添加失败');
+        } catch(e) { tab.querySelector('#hifiFriendAddResult').textContent = '❌ 网络错误'; }
+        finally { btn.disabled = false; }
+      });
+    }
+    render('list');
+  }
+
   function openTutorial() { tutStep = 0; renderTut(); }
   function renderTut() {
     const s = TUT_STEPS[tutStep];
@@ -1497,11 +1601,12 @@
     try {
       const s = (window.account && account.restoreSession) ? await account.restoreSession() : { ok: false };
       if (s && s.ok) {
-        // 读本地最新数据(清空前保留,清空+云端覆盖后再恢复——本地同步写始终比异步云存档新)
+        resetLocalProgress(); applyCloudSave(s);
+        // 重新读 localStorage(防异步期间用户已操作改阵容→saveMeta 写入)
+        // 本地同步写始终比异步云存档新,因此本地覆盖云端
         let localMeta, localShell;
         try { const r = localStorage.getItem('merge_td_meta_v1'); if (r) localMeta = JSON.parse(r); } catch(e) {}
         try { const r = localStorage.getItem(SHELL_KEY); if (r) localShell = JSON.parse(r); } catch(e) {}
-        resetLocalProgress(); applyCloudSave(s);
         if (localMeta) {
           Object.assign(meta, localMeta);
           // 审计修复:确保 unlocked 包含编队全部卡(旧版存档缺抽卡记录,导致下次 saveMeta 过滤掉抽卡卡牌)
@@ -1538,11 +1643,13 @@
     window.pvpClient?.onStatus(renderPvpStatus);
     if (!document._hifiAccountBound) {
       document.addEventListener('click', (e) => {
-        const t = e.target.closest && e.target.closest('[data-account],[data-mail],[data-chat],[data-tut]');
+        const t = e.target.closest && e.target.closest('[data-account],[data-mail],[data-chat],[data-tut],[data-achievements],[data-friends]');
         if (!t) return;
         if (t.hasAttribute('data-account')) openAccount();
         else if (t.hasAttribute('data-mail')) openMail();
         else if (t.hasAttribute('data-chat')) openChat();
+        else if (t.hasAttribute('data-achievements')) openAchievements();
+        else if (t.hasAttribute('data-friends')) openFriends();
         else if (t.hasAttribute('data-tut')) openTutorial();
       });
       document._hifiAccountBound = true;

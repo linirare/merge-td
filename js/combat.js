@@ -45,8 +45,7 @@ function combatIsBackline(s) {
 }
 
 /* 同路/邻路阻塞清理(原 lane_block_fix.js,已合并) */
-function roleOfLB(type) { return (typeof TYPES === 'object' && TYPES[type] && TYPES[type].role) || ''; }
-function isMeleeRoleLB(type) { return ['tank', 'front', 'rush'].includes(roleOfLB(type)); }
+function isMeleeRoleLB(type) { return ['tank', 'front', 'rush'].includes(roleOf(type)); }
 function convergeLaneLB(s, targetLane) {
   targetLane = clamp(targetLane, 0, COLS - 1);
   if (targetLane === s.laneIndex) return;

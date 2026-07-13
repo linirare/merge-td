@@ -14,6 +14,8 @@ jobs:
         run: npm ci
 
       - name: Run tests
+        env:
+          JWT_SECRET: test-only
         run: npm test
 
       - name: Deploy via Railway API

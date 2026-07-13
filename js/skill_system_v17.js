@@ -40,8 +40,7 @@ function skillRankV17(level) {
 function hasSkillV17(s) {
   return !!(s && SKILL_IDS_V17.includes(s.type) && skillRankV17(s.level) > 0);
 }
-function roleOfV17(type) { return TYPES[type]?.role || ''; }
-function unitRoleV17(s) { return roleOfV17(s?.type); }
+function unitRoleV17(s) { return roleOf(s?.type); }
 function isRoleV17(s, roles) { return roles.includes(unitRoleV17(s)); }
 function enemyGroupV17(side) { return side === 'player' ? state.enemySoldiers : state.playerSoldiers; }
 function allyGroupV17(side) { return side === 'player' ? state.playerSoldiers : state.enemySoldiers; }

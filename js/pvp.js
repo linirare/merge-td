@@ -22,6 +22,9 @@
     spawnCounters: { player: 0, enemy: 0 },
     onStatus: null,
     resultReported: false,
+    _reconnectAttempts: 0,
+    _reconnectTimer: null,
+    _savedRoomId: '',
   };
 
   function notify() {
@@ -42,7 +45,48 @@
     return true;
   }
 
+  function cancelReconnect() {
+    if (pvp._reconnectTimer) { clearTimeout(pvp._reconnectTimer); pvp._reconnectTimer = null; }
+    pvp._reconnectAttempts = 0;
+    pvp._savedRoomId = '';
+  }
+
+  function startReconnect() {
+    if (pvp._reconnectTimer) return;
+    if (!pvp._savedRoomId) return;
+    const delay = Math.min(1000 * Math.pow(2, pvp._reconnectAttempts), 10000);
+    pvp._reconnectAttempts++;
+    setStatus('重连中(' + pvp._reconnectAttempts + ')...');
+    pvp._reconnectTimer = setTimeout(() => {
+      pvp._reconnectTimer = null;
+      const rid = pvp._savedRoomId;
+      if (!rid) return;
+      if (pvp.ws) { try { pvp.ws.onclose = null; pvp.ws.close(); } catch(e) {} pvp.ws = null; }
+      const token = (window.account && window.account.token) || '';
+      const url = PVP_SERVER_URL + (token ? '?token=' + encodeURIComponent(token) : '');
+      const ws = new WebSocket(url);
+      ws.addEventListener('open', () => {
+        if (pvp._savedRoomId !== rid) { try { ws.close(); } catch(e) {} return; }
+        pvp.ws = ws;
+        setStatus('已连接');
+        if (rid) send({ type: 'reconnect_room', roomId: rid });
+        pvp._reconnectAttempts = 0;
+      });
+      ws.addEventListener('close', () => {
+        if (pvp.ws === ws) { setStatus('连接已断开'); startReconnect(); }
+      });
+      ws.addEventListener('error', () => { if (pvp.ws === ws) setStatus('连接失败'); });
+      ws.addEventListener('message', event => {
+        let message;
+        try { message = JSON.parse(event.data); }
+        catch (err) { return setStatus('收到异常消息'); }
+        handleServerMessage(message);
+      });
+    }, delay);
+  }
+
   function connect() {
+    cancelReconnect();
     if (pvp.ws && (pvp.ws.readyState === WebSocket.OPEN || pvp.ws.readyState === WebSocket.CONNECTING)) return;
     setStatus('连接中...');
     // 带上登录 token(若已登录):服务端据此认证身份、决定聊天昵称,杜绝冒充
@@ -50,7 +94,10 @@
     const url = PVP_SERVER_URL + (token ? '?token=' + encodeURIComponent(token) : '');
     pvp.ws = new WebSocket(url);
     pvp.ws.addEventListener('open', () => setStatus('已连接'));
-    pvp.ws.addEventListener('close', () => setStatus('连接已断开'));
+    pvp.ws.addEventListener('close', () => {
+      setStatus('连接已断开');
+      if (pvp.roomId) { pvp._savedRoomId = pvp.roomId; startReconnect(); }
+    });
     pvp.ws.addEventListener('error', () => setStatus('连接失败，请确认 PVP 服务已启动'));
     pvp.ws.addEventListener('message', event => {
       let message;
@@ -94,6 +141,7 @@
   }
 
   function leaveRoom() {
+    cancelReconnect();
     send({ type: 'leave_room' });
     pvp.roomId = '';
     pvp.playerIndex = -1;
@@ -128,6 +176,14 @@
       pvp.ready = false;
       pvp.peerReady = false;
       setStatus(message.type === 'room_created' ? '房间已创建' : '已加入房间');
+    } else if (message.type === 'reconnected') {
+      pvp.roomId = message.roomId;
+      pvp.playerIndex = message.playerIndex;
+      pvp.players = message.players || [];
+      pvp.ready = false;
+      pvp.peerReady = false;
+      setStatus('已重连');
+      pvp._savedRoomId = '';
     } else if (message.type === 'peer_joined' || message.type === 'ready_state') {
       pvp.players = message.players || [];
       const me = pvp.players[pvp.playerIndex];
@@ -232,10 +288,10 @@
     state.enemySlots = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
     state.overflowQueue = [];
     state.enemyOverflow = 0;
-    state.playerWallHp = BASE_WALL_HP + getWallBonus(meta);
-    state.playerWallMax = state.playerWallHp;
-    state.enemyWallHp = BASE_WALL_HP + getWallBonus(meta);
-    state.enemyWallMax = state.enemyWallHp;
+    state.playerWallHp = BASE_WALL_HP;
+    state.playerWallMax = BASE_WALL_HP;
+    state.enemyWallHp = BASE_WALL_HP;
+    state.enemyWallMax = BASE_WALL_HP;
     state.playerSoldiers = [];
     state.enemySoldiers = [];
     state.laneStats = emptyLaneStats();
@@ -416,36 +472,8 @@
   }
 
   function applyRemoteAction(action) {
+    // 服务器权威模式下已不再使用此路径,保留签名作为未来扩展点
     if (!action || state.mode !== 'pvp') return;
-    if (Number(action.seq) !== pvp.expectedSeq) {
-      return pvpSyncError('同步异常：操作顺序不一致');
-    }
-    pvp.expectedSeq++;
-    pvp.suppress = true;
-    try {
-      const payload = action.payload || {};
-      if (action.type === 'summon_cell') {
-        const { r, c, type, level, spawnTimer, cost } = payload;
-        if (!state.enemySlots[r] || state.enemySlots[r][c]) return pvpSyncError('同步异常：远端召唤位置非法');
-        state.enemySlots[r][c] = pvpCreateBall(type, level || 1, spawnTimer);
-        spendJuice('enemy', Number(cost || actionCostFor('enemy')));
-      } else if (action.type === 'move_cell') {
-        const result = tryMove(state.enemySlots, payload.fromR, payload.fromC, payload.toR, payload.toC);
-        if (!result?.moved) return pvpSyncError('同步异常：远端移动失败');
-      } else if (action.type === 'merge_or_swap_cell') {
-        const result = tryMerge(state.enemySlots, payload.fromR, payload.fromC, payload.toR, payload.toC);
-        if (!result) return pvpSyncError('同步异常：远端合成失败');
-      } else if (action.type === 'urgent_dispatch') {
-        const { r, c, cost } = payload;
-        const ball = state.enemySlots[r]?.[c];
-        if (!ball) return pvpSyncError('同步异常：远端急派位置为空');
-        spendJuice('enemy', Number(cost || actionCostFor('enemy')));
-        spawnSoldierFromBall(ball, r, c, 'enemy', true);
-        ball.spawnTimer = Math.max(ball.spawnTimer || 0, 1.2);
-      }
-    } finally {
-      pvp.suppress = false;
-    }
   }
 
   function sendLocalAction(type, payload) {
@@ -508,17 +536,19 @@
     title.textContent = '对手离线';
     detail.innerHTML = `房间 ${state.pvpRoomId || pvp.roomId || '-'}<br>对手断线，本局按胜利上报。<br>${pvp.resultReported ? '结果已提交服务器' : '结果等待上报'}`;
     if (retry) {
-      const clone = retry.cloneNode(true);
-      retry.parentNode.replaceChild(clone, retry);
-      clone.textContent = '返回竞技';
-      clone.classList.remove('hide');
-      clone.addEventListener('click', () => returnToArenaFromPvp(panel));
+      const newBtn = document.createElement("button");
+      newBtn.textContent = "返回竞技";
+      newBtn.className = retry.className;
+      newBtn.classList.remove("hide");
+      newBtn.addEventListener("click", () => returnToArenaFromPvp(panel));
+      retry.parentNode.replaceChild(newBtn, retry);
     }
     if (menu) {
-      const clone = menu.cloneNode(true);
-      menu.parentNode.replaceChild(clone, menu);
-      clone.textContent = '返回竞技';
-      clone.addEventListener('click', () => returnToArenaFromPvp(panel));
+      const newBtn = document.createElement("button");
+      newBtn.textContent = "返回竞技";
+      newBtn.className = menu.className;
+      newBtn.addEventListener("click", () => returnToArenaFromPvp(panel));
+      menu.parentNode.replaceChild(newBtn, menu);
     }
     panel.classList.remove('hide');
   }
@@ -615,19 +645,21 @@
     if (!panel || !title || !detail) return;
     nextBtn?.classList.add('hide');
     if (retry) {
-      const retryClone = retry.cloneNode(true);
-      retry.parentNode.replaceChild(retryClone, retry);
-      retryClone.textContent = '再来一局';
-      retryClone.classList.remove('hide');
-      retryClone.addEventListener('click', () => returnToArenaFromPvp(panel));
+      const newBtn2 = document.createElement("button");
+      newBtn2.textContent = "再来一局";
+      newBtn2.className = retry.className;
+      newBtn2.classList.remove("hide");
+      newBtn2.addEventListener("click", () => returnToArenaFromPvp(panel));
+      retry.parentNode.replaceChild(newBtn2, retry);
     }
     title.textContent = win ? 'PVP 胜利' : 'PVP 失败';
     detail.innerHTML = `房间 ${state.pvpRoomId || pvp.roomId}<br>用时 ${Math.floor(state.time || 0)} 秒<br>击破 ${state.kills || 0}<br>${pvp.resultReported ? '结果已提交服务器' : '结果等待上报'}`;
     if (menu) {
-      const clone = menu.cloneNode(true);
-      menu.parentNode.replaceChild(clone, menu);
-      clone.textContent = '返回竞技';
-      clone.addEventListener('click', () => returnToArenaFromPvp(panel));
+      const newBtn3 = document.createElement("button");
+      newBtn3.textContent = "返回竞技";
+      newBtn3.className = menu.className;
+      newBtn3.addEventListener("click", () => returnToArenaFromPvp(panel));
+      menu.parentNode.replaceChild(newBtn3, menu);
     }
     panel.classList.remove('hide');
   }

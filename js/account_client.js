@@ -90,11 +90,12 @@
     async chatMessages() { return this.api('GET', '/api/chat'); },
     async addExp(amount) { const r = await this.api('POST', '/api/user/exp', { exp: amount }); if (r.level && this.user) { this.user.level = r.level; this.user.exp = r.exp; } return r; },
     async reportLadder(score) { const r = await this.api('POST', '/api/ladder/report', { score }); if (r.rank && this.user) { this.user.ladder_rank = r.rank; this.user.ladder_score = r.score; } return r; },
-    // 社交
+    // 社交(以下函数暂无前端UI,后端API已就绪)
     async friends() { return this.api('GET', '/api/friends'); },
     async friendRequests() { return this.api('GET', '/api/friends/pending'); },
     async addFriend(uid) { return this.api('POST', '/api/friends/add', { uid }); },
     async acceptFriend(uid) { return this.api('POST', '/api/friends/accept', { uid }); },
+    async rejectFriend(uid) { return this.api('POST', '/api/friends/reject', { uid }); },
     async removeFriend(uid) { return this.api('DELETE', '/api/friends', { uid }); },
     async guildMembers() { return this.api('GET', '/api/guild/members'); },
     async createGuild(name) { return this.api('POST', '/api/guild/create', { name }); },

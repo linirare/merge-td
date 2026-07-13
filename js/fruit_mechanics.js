@@ -1,6 +1,6 @@
 /* ============================================================
    水果突击 · Fruit Assault —— 12水果球战斗机制覆盖层
-   Loaded after main.js / gameplay_assist.js and before juice.js.
+   Loaded after main.js and before juice.js.
    ============================================================ */
 
 (function installFruitMechanics() {
