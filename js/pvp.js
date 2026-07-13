@@ -402,7 +402,6 @@
   }
   function applySnapshot(snap) {
     if (state.mode !== 'pvp' || !snap || !snap.walls) return;
-    pvp._lastSnapTs = performance.now();
     if (!pvp._gotSnap) { pvp._gotSnap = true; console.log('[PVP] 收到首个 snapshot → 服务端权威生效(兵=' + (snap.soldiers ? snap.soldiers.length : 0) + ')'); }
     const mySide = pvp.playerIndex === 1 ? 1 : 0;
     const flip = mySide === 1;
@@ -439,18 +438,24 @@
       (snapPos[su.side] = snapPos[su.side] || []).push({ x: su.x, y: ty, id: su.id });
     }
 
-    // 士兵:按 side 映射 player/enemy;side1 翻 y;插值保留旧对象平滑移动
+    // 士兵:按 side 映射 player/enemy;side1 翻 y;双帧线性混合平滑移动
     const prev = {};
     for (const s of state.playerSoldiers) prev[s.id] = s;
     for (const s of state.enemySoldiers) prev[s.id] = s;
     const mine = [], theirs = [];
     const newIds = new Set();
+    const snapInterval = Math.max(0.033, (performance.now() - pvp._lastSnapTs) / 1000);
     for (const su of (snap.soldiers || [])) {
       newIds.add(String(su.id));
       const isMine = su.side === mySide;
       const tx = su.x;
       const ty = flip ? fieldMirrorY(su.y) : su.y;
-      const o = prev[su.id] || { id: su.id, x: tx, y: ty, hitFlash: 0 };
+      const o = prev[su.id] ? prev[su.id] : { id: su.id, x: tx, y: ty, hitFlash: 0, _fromX: null };
+      if (prev[su.id]) {
+        // 已有士兵:从当前视觉位置向新目标线性混合
+        o._fromX = o.x; o._fromY = o.y;
+        o._blendT = 0; o._blendDur = snapInterval;
+      } else { o._fromX = null; o.x = tx; o.y = ty; }
       o.type = su.type; o.level = su.level; o.hp = su.hp; o.maxHp = su.maxHp;
       o.mode = su.mode; o.shield = su.shield; o.alive = true;
       o.side = isMine ? 'player' : 'enemy';
@@ -496,19 +501,23 @@
 
     state.playerSoldiers = mine;
     state.enemySoldiers = theirs;
+    pvp._lastSnapTs = performance.now();
   }
 
-  // PvP 客户端逐帧:不驱动战斗,只把士兵插值到快照目标 + 视觉衰减
+  // PvP 客户端逐帧:双帧线性混合插值(applySnapshot 设好 _blendT/_blendDur) + 视觉衰减
   function pvpClientUpdate(dt) {
     state.time = (state.time || 0) + dt;
     if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 4);
-    // 自适应插值:快照刚到→快速追;快照久未到→减速防抖
-    const snapAge = (performance.now() - pvp._lastSnapTs) / 1000;
-    const rate = Math.max(3, 14 - snapAge * 25);
-    const k = Math.min(1, dt * rate);
-    const lerp = (s) => { if (s.tx != null) s.x += (s.tx - s.x) * k; if (s.ty != null) s.y += (s.ty - s.y) * k; if (s.hitFlash > 0) s.hitFlash = Math.max(0, s.hitFlash - dt * 1.2); };
-    for (const s of state.playerSoldiers) lerp(s);
-    for (const s of state.enemySoldiers) lerp(s);
+    for (const arr of [state.playerSoldiers, state.enemySoldiers]) {
+      for (const s of arr) {
+        if (s._fromX != null && s._blendDur > 0) {
+          s._blendT = Math.min(1, s._blendT + dt / s._blendDur);
+          s.x = s._fromX + (s.tx - s._fromX) * s._blendT;
+          s.y = s._fromY + (s.ty - s._fromY) * s._blendT;
+        }
+        if (s.hitFlash > 0) s.hitFlash = Math.max(0, s.hitFlash - dt * 1.2);
+      }
+    }
     for (let i = state.rings.length - 1; i >= 0; i--) { const r = state.rings[i]; r.life -= dt; r.r += 64 * dt; if (r.life <= 0) state.rings.splice(i, 1); }
     for (let i = state.fx.length - 1; i >= 0; i--) { const f = state.fx[i]; if (f.vx) { f.x += f.vx * dt; f.y += f.vy * dt; } f.life -= dt; if (f.life <= 0) state.fx.splice(i, 1); }
     for (let i = state.attackFx.length - 1; i >= 0; i--) { state.attackFx[i].life -= dt; if (state.attackFx[i].life <= 0) state.attackFx.splice(i, 1); }

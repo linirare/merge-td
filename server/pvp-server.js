@@ -134,7 +134,7 @@ function broadcastRoom(room, message) {
 }
 
 const PVP_TICK_MS = 1000 / 30;   // 权威步长 30fps
-const PVP_SNAPSHOT_EVERY = 2;    // 每 2 帧发一次快照(~15/s)
+const PVP_SNAPSHOT_EVERY = 1;    // 每帧发快照(~30fps),客户端双帧线性混合保证平滑
 const PVP_MATCH_MAX_S = 180;     // 单局硬上限,防僵持不散
 
 function stopBattleLoop(room) {
