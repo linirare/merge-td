@@ -125,8 +125,17 @@ function patchProgressUnlocksV15() {
   const oldSaveMeta = typeof saveMeta === 'function' ? saveMeta : null;
   if (oldSaveMeta && !saveMeta._balanceV15Patched) {
     saveMeta = function saveMetaV15() {
+      // 审计:确保 deck 卡都在 unlocked 中(旧版存档或抽卡后 unlocked 可能缺卡)
+      if (Array.isArray(meta.deck) && Array.isArray(meta.unlocked)) {
+        for (const id of meta.deck) {
+          if (TYPES[id] && !meta.unlocked.includes(id)) meta.unlocked.push(id);
+        }
+      }
       syncProgressUnlocks(meta);
-      return oldSaveMeta();
+      const before = JSON.stringify(meta.deck);
+      const r = oldSaveMeta();
+      console.log('[deck] saveMeta deck:', before, '->', JSON.stringify(meta.deck));
+      return r;
     };
     saveMeta._balanceV15Patched = true;
   }

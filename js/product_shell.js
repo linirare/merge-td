@@ -165,6 +165,7 @@
     const fallback = UNIT_POOL.slice(0, Math.min(DECK_SIZE || 5, UNIT_POOL.length));
     const next = typeof normalizeDeck === 'function' ? normalizeDeck(meta.deck || fallback) : (meta.deck || fallback);
     meta.deck = next.slice();
+    console.log('[deck] deck() returns:', JSON.stringify(meta.deck), 'unlocked:', JSON.stringify(meta.unlocked));
     return next;
   }
 
@@ -1121,13 +1122,16 @@
   }
 
   function startCampaign(level) {
+    console.log('[deck] startCampaign entry meta.deck:', JSON.stringify(meta.deck), 'meta.unlocked:', JSON.stringify(meta.unlocked));
     const raw = typeof normalizeDeckNoFill === 'function' ? normalizeDeckNoFill(meta.deck) : (meta.deck || []);
     if (raw.length < DECK_SIZE) {
       hifiToast(`需要上阵全部${DECK_SIZE}个水果（当前${raw.length}个）`);
       return;
     }
+    if (typeof syncProgressUnlocks === 'function') syncProgressUnlocks(meta);
     meta.deck = typeof normalizeDeck === 'function' ? normalizeDeck(meta.deck) : meta.deck;
     if (typeof saveMeta === 'function') saveMeta();
+    console.log('[deck] startCampaign after normalize+save meta.deck:', JSON.stringify(meta.deck));
     hidePanels();
     state.endless = false;
     state.endlessWave = 0;
@@ -1498,7 +1502,15 @@
         try { const r = localStorage.getItem('merge_td_meta_v1'); if (r) localMeta = JSON.parse(r); } catch(e) {}
         try { const r = localStorage.getItem(SHELL_KEY); if (r) localShell = JSON.parse(r); } catch(e) {}
         resetLocalProgress(); applyCloudSave(s);
-        if (localMeta) Object.assign(meta, localMeta);
+        if (localMeta) {
+          Object.assign(meta, localMeta);
+          // 审计修复:确保 unlocked 包含编队全部卡(旧版存档缺抽卡记录,导致下次 saveMeta 过滤掉抽卡卡牌)
+          if (Array.isArray(meta.deck) && Array.isArray(meta.unlocked)) {
+            for (const id of meta.deck) {
+              if (TYPES[id] && !meta.unlocked.includes(id)) meta.unlocked.push(id);
+            }
+          }
+        }
         if (localShell) Object.assign(shell, localShell);
         hideLoginGate(); ensureShellData();
         // 服务端增量同步钻石/金币(与管理后台/邮件发放一致)

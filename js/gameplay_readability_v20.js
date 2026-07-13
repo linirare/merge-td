@@ -35,7 +35,13 @@ function sanitizeDeckLooseV20(deck, allowEmpty = false) {
   const result = [];
   for (const raw of (deck || [])) {
     const id = normalizeTypeId(raw);
-    if (TYPES[id] && unlocked.includes(id) && !result.includes(id)) result.push(id);
+    if (TYPES[id] && !result.includes(id)) {
+      if (!unlocked.includes(id) && !allowEmpty) {
+        // 审计:deck 有 valid 卡但不在 unlocked 中,自动补入 unlocked 防丢
+        if (meta && Array.isArray(meta.unlocked)) meta.unlocked.push(id);
+      }
+      if (unlocked.includes(id) || !allowEmpty) result.push(id);
+    }
   }
   if (!allowEmpty && result.length === 0) result.push(DEFAULT_DECK[0]);
   return result.slice(0, DECK_SIZE);
