@@ -80,6 +80,8 @@
         <span class="cchip"><svg class="icon"><use href="#i-coin"/></svg><b data-shell-gold>${meta.gold || 0}</b><span class="plus"><svg class="icon"><use href="#i-plus"/></svg></span></span>
         <span class="cchip"><svg class="icon"><use href="#i-gem"/></svg><b data-shell-gems>${shell.gems || 0}</b><span class="plus"><svg class="icon"><use href="#i-plus"/></svg></span></span>
         <span class="sp"></span>
+        <button class="ring" data-tut><span class="inner"><svg class="icon"><use href="#i-help"/></svg></span></button>
+        <button class="ring" data-go="shop"><span class="inner"><svg class="icon"><use href="#i-bag"/></svg></span></button>
       </header>`;
   }
 
@@ -359,10 +361,7 @@
           <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg></span><span class="lbl">邮件</span></button>
           <button class="ring" data-chat><span class="inner" style="background:radial-gradient(circle at 40% 34%,#8FE0A0,#2E9A56)"><svg class="icon"><use href="#i-chat"/></svg></span><span class="lbl">聊天</span></button>
         </div>
-        <div class="side">
-          <button class="ring" data-go="shop"><span class="inner" style="background:radial-gradient(circle at 40% 34%,#FFB05A,#D9600E)"><svg class="icon"><use href="#i-flame"/></svg></span><span class="lbl">商城</span></button>
-          <button class="ring" data-help><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-help"/></svg></span><span class="lbl">帮助</span></button>
-        </div>
+        <div class="side"></div>
 
         <button class="hifi-levelsel" id="hifiLevelSel">☰ 选关 · 第${lv}关</button>
         <div class="homecta">
