@@ -16,7 +16,7 @@
     },
     "lemon_vs_pineapple": {
       "engage": 26,
-      "frames": 85,
+      "frames": 86,
       "winner": "player",
       "pHp": 36,
       "eHp": 0
@@ -30,21 +30,21 @@
     },
     "frost_vs_coconut": {
       "engage": 21,
-      "frames": 382,
+      "frames": 384,
       "winner": "enemy",
       "pHp": 0,
       "eHp": 167
     }
   },
   "wallDps": {
-    "orange_cannon_600f": 170,
+    "orange_cannon_600f": 84,
     "watermelon_600f": 50,
-    "pumpkin_600f": 100
+    "pumpkin_600f": 64
   },
   "skirmish_900f": {
     "pAlive": 0,
     "eAlive": 3,
-    "pWall": 494,
+    "pWall": 488,
     "eWall": 600,
     "phase": "playing"
   },

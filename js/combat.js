@@ -105,9 +105,35 @@ function ensureLane(s) {
   if (!s.mode) s.mode = 'deploy';
 }
 
+/* 间距分组（近程/远程/AOE/辅助），用于分离力 + 攻城行为区分 */
+function spacingGroup(type) {
+  const t = TYPES[type];
+  const r = t?.role || '';
+  if (t?.tags?.includes('aoe') || t?.skill === 'aoe' || t?.skill === 'death_roll') return 'aoe';
+  if (r === 'front' || r === 'rush' || r === 'tank') return 'melee';
+  if (r === 'support' || r === 'control') return 'support';
+  if (t?.range === 'far' || t?.range === 'long') return 'ranged';
+  return 'melee';
+}
+function sepWeight(a, b) {
+  const ga = spacingGroup(a.type);
+  const gb = spacingGroup(b.type);
+  if (ga === gb) {
+    if (ga === 'support') return 0.4;
+    if (ga === 'ranged') return 0.6;
+    if (ga === 'aoe') return 1.2;
+    return 0.9;
+  }
+  if ((ga === 'melee' && gb === 'ranged') || (ga === 'ranged' && gb === 'melee')) return 1.6;
+  if (ga === 'support' || gb === 'support') return 1.4;
+  if (ga === 'aoe' || gb === 'aoe') return 1.2;
+  return 1.0;
+}
+
 function steerToLane(s, ratio = 0.65) {
   ensureLane(s);
-  const dx = s.laneX - s.x;
+  const targetX = s.laneX + (s._subLane ?? 0) * 18;
+  const dx = targetX - s.x;
   const speed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, SOLDIER_SPEED) : SOLDIER_SPEED;
   const max = speed * ratio * dt_global;
   if (Math.abs(dx) > 1) s.x += Math.sign(dx) * Math.min(Math.abs(dx), max);
@@ -258,8 +284,11 @@ function findTarget(s, enemies) {
 
 function moveTowardEnemy(s, target) {
   s.mode = 'fight';
+  if (s._targetOffX === undefined) s._targetOffX = (Math.random() - 0.5) * 36;
+  if (s._subLane === undefined) s._subLane = (s.id.charCodeAt(s.id.length - 1) % 3) - 1;
   const leash = FIGHT_X_LEASH * 1.8;
-  const desiredX = clamp(target.x, s.laneX - leash, s.laneX + leash);
+  const laneAnchor = s.laneX + s._subLane * 18;
+  const desiredX = clamp(target.x + s._targetOffX, laneAnchor - leash, laneAnchor + leash);
   const dx = desiredX - s.x;
   const dy = target.y - s.y;
   const cspeed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : CHASE_SPEED;
@@ -338,6 +367,36 @@ function reachedWall(s) {
   return s.side === 'player' ? s.y <= wall.attackY : s.y >= wall.attackY;
 }
 
+/* 远程攻城：判断远程兵是否在攻击范围内够得到城墙 */
+function canRangedSiege(s) {
+  if (spacingGroup(s.type) === 'melee') return false;
+  const wall = wallDataFor(s);
+  const range = typeof fruitRange === 'function' ? fruitRange(s) : 24;
+  const distToWall = s.side === 'player' ? s.y - wall.attackY : wall.attackY - s.y;
+  return distToWall <= range * 1.2;
+}
+/* 远程射弹射物打墙，不移动位置 */
+function rangedAttackWall(s) {
+  if (!isCombatant(s)) return;
+  s.mode = 'backline';
+  s.atkTimer -= dt_global;
+  if (s.atkTimer > 0) return;
+  s.atkTimer = s.speed;
+  const wall = wallDataFor(s);
+  const siegeMul = Math.max(0.2, s.siege || TYPES[s.type]?.siege || 1);
+  const base = Math.round((s.level * 1.25 + s.atk * 0.085) * siegeMul);
+  const dmg = Math.max(1, base);
+  state.projectiles.push({
+    x: s.x, y: s.y,
+    targetX: s.laneX,
+    targetY: wall.wallY + wall.wallH / 2,
+    dmg, speed: 245,
+    color: TYPES[s.type]?.color || '#ff6b4a',
+    life: 1.0, side: s.side,
+    wallHit: true,
+  });
+}
+
 function siegeListFor(s) {
   const group = s.side === 'player' ? state.playerSoldiers : state.enemySoldiers;
   return group
@@ -349,8 +408,9 @@ function moveToSiegeQueue(s, idx, wall) {
   s.mode = 'siege_queue';
   s.siegeSlot = idx;
   const row = Math.floor((idx - laneSlotCount()) / laneSlotCount()) + 1;
-  const offset = ((idx % laneSlotCount()) - (laneSlotCount() - 1) / 2) * 11;
-  const queueY = s.side === 'player' ? wall.attackY + 16 + row * 10 : wall.attackY - 16 - row * 10;
+  const QSPREAD = 22, QROW = 18;
+  const offset = ((idx % laneSlotCount()) - (laneSlotCount() - 1) / 2) * QSPREAD;
+  const queueY = s.side === 'player' ? wall.attackY + 16 + row * QROW : wall.attackY - 16 - row * QROW;
   s.x += ((s.laneX + offset) - s.x) * Math.min(1, dt_global * 7);
   s.y += (queueY - s.y) * Math.min(1, dt_global * 7);
 }
@@ -372,12 +432,13 @@ function attackWall(s) {
   const slotCount = laneSlotCount();
   s.siegeSlot = idx;
 
-  // 前排攻城位:完整上游链
+  // 前排攻城位:完整上游链；间距加宽至 28px + Y 错位
   if (idx < slotCount) {
     s.mode = 'siege';
-    const offset = (idx - (slotCount - 1) / 2) * 13;
+    const WSPREAD = 28;
+    const offset = (idx - (slotCount - 1) / 2) * WSPREAD;
     s.x += ((s.laneX + offset) - s.x) * Math.min(1, dt_global * 8);
-    s.y = wall.attackY;
+    s.y = wall.attackY + (idx % 2 === 0 ? 0 : 6);
     s.atkTimer -= dt_global;
     if (s.atkTimer > 0) return;
     const siegeMul = Math.max(0.2, s.siege || TYPES[s.type]?.siege || 1);
@@ -525,8 +586,8 @@ function updateSoldier(s, enemies) {
     return;
   }
 
-  // 已到敌方城墙:优先攻城,不清完面前 blocker 不离开
-  if (reachedWall(s)) {
+  // 已到敌方城墙:优先攻城,不清完面前 blocker 不离开；远程兵可在攻击范围内射墙
+  if (reachedWall(s) || canRangedSiege(s)) {
     const blocker = sameLaneBlocker(s, enemies);
     if (blocker) {
       s.target = blocker.id;
@@ -534,7 +595,11 @@ function updateSoldier(s, enemies) {
       attackTarget(s, blocker);
       return;
     }
-    attackWall(s);
+    if (spacingGroup(s.type) === 'melee') {
+      attackWall(s);
+    } else {
+      rangedAttackWall(s);
+    }
     return;
   }
 
@@ -559,6 +624,8 @@ function updateSoldier(s, enemies) {
     if (typeof isMeleeRoleLB === 'function' && isMeleeRoleLB(s.type) && target.laneIndex !== s.laneIndex) {
       if (Math.abs(s.laneX - laneXByIndex(clamp(target.laneIndex, 0, COLS - 1))) < 20) {
         s.laneIndex = clamp(target.laneIndex, 0, COLS - 1);
+        delete s._subLane;
+        delete s._targetOffX;
       }
     }
     s.target = target.id;
@@ -568,29 +635,39 @@ function updateSoldier(s, enemies) {
   advanceTowardWall(s);
 }
 
+/* V3: 角色感知分离力 — 加大检测半径 + 按间距分组加权 + 硬间距阶段 */
 function applySeparation(soldiers) {
-  const sepDist = 38; // 分离距离,防士兵视觉堆叠
+  const SEP_DIST = 50;
+  const MIN_SPACING = 28;
   for (let i = 0; i < soldiers.length; i++) {
     const a = soldiers[i];
     if (!isCombatant(a)) continue;
-    let fx = 0;
-    let fy = 0;
+    let fx = 0, fy = 0;
     for (let j = 0; j < soldiers.length; j++) {
       if (i === j) continue;
       const b = soldiers[j];
       if (!isCombatant(b)) continue;
-      // 用 X 距离代替 laneIndex:平滑切路后 laneIndex 可能未同步,物理接近就该分离
       if (Math.abs(a.x - b.x) > (CELL + GAP) * 1.2) continue;
       const dx = a.x - b.x;
       const dy = a.y - b.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < sepDist && dist > 0.1) {
-        const force = (sepDist - dist) / sepDist;
+      // 软分离
+      if (dist < SEP_DIST && dist > 0.1) {
+        const w = sepWeight(a, b);
+        const force = (SEP_DIST - dist) / SEP_DIST * w;
         fx += (dx / dist) * force;
         fy += (dy / dist) * force * 0.80;
       } else if (dist <= 0.1) {
         fx += (i % 2 === 0 ? 1 : -1) * 0.45;
         fy += (i % 3 - 1) * 0.12;
+      }
+      // 硬间距
+      if (dist < MIN_SPACING && dist > 0.1) {
+        const w = sepWeight(a, b);
+        const push = (MIN_SPACING - dist) / 2 * w * 0.6;
+        fx += (dx / dist) * push;
+        const sieging = b.mode === 'siege' || b.mode === 'siege_queue' || b.mode === 'siege_support';
+        if (!sieging) fy += (dy / dist) * push * 0.5;
       }
     }
     if (fx || fy) {
@@ -598,8 +675,6 @@ function applySeparation(soldiers) {
       const leash = FIGHT_X_LEASH * 1.8;
       const nextX = a.x + fx * speed;
       a.x = clamp(nextX, a.laneX - leash, a.laneX + leash);
-      // 修#4:攻城单位只做水平分散,Y 完全不碰。否则 y(城墙≈278) 被 clamp 到 fieldTop(296),
-      //       每帧被弹离城墙 ~18px,attackWall 又把它拉回 → 墙边上下抖动。
       const sieging = a.mode === 'siege' || a.mode === 'siege_queue' || a.mode === 'siege_support';
       if (sieging) {
         const w = wallDataFor(a);
@@ -615,6 +690,20 @@ function updateProjectiles() {
   for (let i = state.projectiles.length - 1; i >= 0; i--) {
     const p = state.projectiles[i];
     p.life -= dt_global;
+    // wallHit 弹射物:到期直接扣墙
+    if (p.wallHit) {
+      if (p.life <= 0) {
+        if (p.side === 'player') {
+          state.enemyWallHp = Math.max(0, state.enemyWallHp - p.dmg);
+          state.enemyWallDamageDealt += p.dmg;
+        } else {
+          state.playerWallHp = Math.max(0, state.playerWallHp - p.dmg);
+        }
+        state.attackFx.push({ x1: p.x, y1: p.y, x2: p.targetX, y2: p.targetY, life: 0.22, maxLife: 0.22 });
+        state.projectiles.splice(i, 1);
+      }
+      continue;
+    }
     if (p.life <= 0) { state.projectiles.splice(i, 1); continue; }
 
     const enemies = p.side === 'player' ? state.enemySoldiers : state.playerSoldiers;

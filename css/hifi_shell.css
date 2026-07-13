@@ -276,10 +276,11 @@ body.shell-v65::after{
 .hifi .card{position:relative;aspect-ratio:.78;border-radius:12px;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
   background:linear-gradient(160deg,var(--rc,#4a6a30),color-mix(in srgb,var(--rc,#4a6a30) 60%,#1a1008));border:2px solid var(--rc,#4a6a30);box-shadow:0 3px 8px rgba(0,0,0,.4),0 0 12px -2px var(--rc);cursor:pointer;transition:transform .12s;}
 .hifi .card:hover{transform:translateY(-2px);}
-.hifi .card .rc{position:absolute;top:3px;left:3px;font-size:9px;font-weight:900;padding:0 4px;border-radius:5px;background:var(--rc);color:#20140a;font-family:'Nunito';z-index:1;}
-.hifi .card .lv{position:absolute;top:3px;right:3px;font-size:9px;font-weight:800;color:#FFE9A8;font-family:'Fredoka';}
-.hifi .card .fdisc{margin:auto 0;}
+.hifi .card .rc{position:absolute;top:3px;left:3px;font-size:12px;font-weight:900;padding:1px 5px;border-radius:5px;background:var(--rc);color:#20140a;font-family:'Nunito';z-index:1;}
+.hifi .card .lv{position:absolute;top:3px;right:3px;font-size:12px;font-weight:800;color:#FFE9A8;font-family:'Fredoka';}
+.hifi .card .fdisc{margin:auto;display:flex;align-items:center;justify-content:center;transform:translateX(-1px);margin-top:14px;}
 .hifi .card .nm{font-size:13px;font-weight:800;color:#F3E3C0;font-family:'ZCOOL KuaiLe';text-align:center;line-height:1.1;margin-top:auto;}
+.hifi .card .pwr{font-size:13px;font-weight:800;color:#FFB347;font-family:'Fredoka';text-shadow:0 0 8px rgba(255,179,71,.5);margin-top:2px;}
 .hifi .card .stars{display:flex;gap:2px;margin-bottom:2px;} .hifi .card .stars .icon{width:11px;height:11px;color:var(--gold);}
 .hifi .card.lock{filter:grayscale(.75);opacity:.85;cursor:default;}
 .hifi .card .lk{position:absolute;inset:0;display:grid;place-items:center;color:#fff;}

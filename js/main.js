@@ -124,8 +124,8 @@ function spawnSoldierFromBall(ball, r, c, side, forced = false) {
     ? createSoldier(ball.type, ball.level, getAtkMul(meta, ball.type), getHpMul(meta, ball.type))
     : createSoldier(ball.type, ball.level);
 
-  soldier.x = center.x + (Math.random() - 0.5) * 8;
-  soldier.y = center.y;
+  soldier.x = center.x + (Math.random() - 0.5) * 24;
+  soldier.y = center.y + (Math.random() - 0.5) * 12 + (c % 2 === 0 ? 4 : -4);
   soldier.side = side;
   soldier.laneIndex = c;
   soldier.laneX = BOARD_X + c * (CELL + GAP) + CELL / 2 + (Math.random() - 0.5) * 10;

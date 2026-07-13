@@ -18,10 +18,9 @@ const PUBLIC_ROOT = path.join(__dirname, '..');
 // (原来 maxAge:'1h' 会让浏览器缓存旧 JS 1 小时,改动刷新不生效——坑过整轮联调)
 const FRONTEND_STATIC = { dotfiles: 'deny', index: false, etag: true, maxAge: 0, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate') };
 
-// 排行榜战力反作弊:computePower 是 UNIT_POOL 平均(atk·养成星级乘子),
-// 全员满养成(Lv20)满星(★7)的理论最大约 280。上限设 300(留极小余量),
-// 客户端上报超过即铁定作弊,夹到 300。见 test/power-cap.js(会校验此值 ≥ 实时理论最大值)。
-const POWER_MAX = 300;
+// 排行榜战力反作弊:computePower 是 UNIT_POOL 求和(全员碎片满约1201)。
+// 上限设宽松值,未来加再多英雄也不会撞。纯防 999999 瞎填。
+const POWER_MAX = 99999;
 
 app.use(express.json({ limit: '128kb' }));
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false, crossOriginResourcePolicy: false }));

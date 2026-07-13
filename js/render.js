@@ -579,9 +579,9 @@ function draw() {
     }
   }
 
-  // 兵（画在棋盘之后，避免被格子遮盖）
-  for (const s of state.playerSoldiers) drawSoldier(s);
-  for (const s of state.enemySoldiers) drawSoldier(s);
+  // 兵（画在棋盘之后，避免被格子遮盖）；Z 排序：Y 越小越靠上
+  for (const s of [...state.playerSoldiers].filter(s => s.alive).sort((a,b) => a.y - b.y)) drawSoldier(s);
+  for (const s of [...state.enemySoldiers].filter(s => s.alive).sort((a,b) => a.y - b.y)) drawSoldier(s);
 
   // 拖拽中的球
   if (state.drag) {

@@ -476,8 +476,10 @@
               const id = d[i];
               if (id) {
                 const st = fruit(id);
-                const src = RAR_COLOR[st.rarity] || '#8FE0A0';
-                return `<div class="slot f slot-undeck" data-undeck="${id}" style="background:${src}33;border:2px solid ${src}" title="点击下阵">${hifiDisc(id, 40)}<span class="slot-rc" style="background:${src}">${RAR_KEY[st.rarity]||'T2'}</span><span class="slot-x">✕</span></div>`;
+                const rc = RAR_COLOR[st.rarity] || '#8FE0A0';
+                const rk = RAR_KEY[st.rarity]||'T2';
+                const lv = initLv(id);
+                return `<button class="card" data-undeck="${id}" style="--rc:${rc};flex:1" title="点击下阵"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 34)}<span class="nm">${st.name}</span></button>`;
               }
               return `<div class="slot"><svg class="icon plus2"><use href="#i-plus"/></svg></div>`;
             }).join('')}
@@ -490,7 +492,7 @@
             <div style="text-align:center"><div style="font-family:Fredoka;font-weight:700;font-size:24px;color:#8FE0A0">Lv.${highestLevel()}</div><small style="font-size:11px;color:#C9B48A;font-weight:800">指挥官</small></div>
           </div>
           <div class="ctabs">
-            ${[['all', '全部'], ['tank', '坦克'], ['back', '远程'], ['rush', '突击'], ['siege', '攻城']].map(([k, label]) => `<button class="ctab ${squadFilter === k ? 'on' : ''}" data-filter="${k}">${label}</button>`).join('')}
+            ${[['all', '全部'], ['tank', '坦克'], ['back', '远程'], ['rush', '突击'], ['siege', '攻城'], ['support', '辅助']].map(([k, label]) => `<button class="ctab ${squadFilter === k ? 'on' : ''}" data-filter="${k}">${label}</button>`).join('')}
           </div>
           <div class="roster" id="hifiRoster"></div>
         </div>
@@ -516,7 +518,7 @@
         return `<button class="card lock" style="--rc:#444"><span class="rc" style="background:#555">?</span>${hifiDisc(id, 46)}<span class="nm" style="color:#666">???</span><span class="lk"><svg class="icon"><use href="#i-lock"/></svg><small>抽卡解锁</small></span></button>`;
       }
       const lv = initLv(id);
-      return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 46)}<span class="nm">${t.name}</span></button>`;
+      return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 46)}<span class="nm">${t.name}</span><span class="pwr">${Math.round((t.atk + t.hp) * heroMul(lv))}</span></button>`;
     }).join('') || '<div style="grid-column:1/-1;text-align:center;color:#8a7a5a;font-weight:800;padding:24px">该职责暂无英雄</div>';
 
     root.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => { squadFilter = btn.dataset.filter; renderSquad(); }));
@@ -576,6 +578,7 @@
         + `<div class="s"><svg class="icon" style="color:#9AA6B2"><use href="#i-shield"/></svg>护甲<b>${t.armor || 0}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#38C6E8"><use href="#i-refresh"/></svg>攻速<b>${t.speed}s</b></div>`
         + `<div class="s"><svg class="icon" style="color:#F5C242"><use href="#i-flame"/></svg>攻城<b>×${t.siege}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#FF8C00"><use href="#i-flame"/></svg>战力<b>${Math.round((t.atk + t.hp) * heroMul(lv))}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#C77BE8"><use href="#i-vs"/></svg>职责<b style="font-size:13px">${roleZh(t.role)}</b></div></div>`
         + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 攻${t.atk}/血${t.hp} × ${heroPct}% 英雄等级加成</p></div>`
         + `<div class="sec"><h4><svg class="icon"><use href="#i-flame"/></svg>专属技能 · ${skillZh(t)}</h4><div class="skillbox"><div class="nm">${skillZh(t)}</div><p>${t.desc || ''}</p></div></div>`;

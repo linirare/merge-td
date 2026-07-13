@@ -24,6 +24,20 @@ function patchProjectileV15() {
     for (let i = state.projectiles.length - 1; i >= 0; i--) {
       const p = state.projectiles[i];
       p.life -= dt_global;
+      // 远程攻城弹:悬停 ~1s 后直接伤墙
+      if (p.wallHit) {
+        if (p.life <= 0) {
+          if (p.side === 'player') {
+            state.enemyWallHp = Math.max(0, state.enemyWallHp - p.dmg);
+            state.enemyWallDamageDealt += p.dmg;
+          } else {
+            state.playerWallHp = Math.max(0, state.playerWallHp - p.dmg);
+          }
+          state.attackFx.push({ x1: p.x, y1: p.y, x2: p.targetX, y2: p.targetY, life: 0.22, maxLife: 0.22 });
+          state.projectiles.splice(i, 1);
+        }
+        continue;
+      }
       if (p.life <= 0) { state.projectiles.splice(i, 1); continue; }
 
       const enemies = p.side === 'player' ? state.enemySoldiers : state.playerSoldiers;

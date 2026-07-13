@@ -52,22 +52,22 @@ const TYPES = {
   passion_copy:     { id:'passion_copy',     name:'百香果复制', icon:'🟣', color:'#b85cff', rarity:'epic',   role:'merge',   range:'support', atk:0,  hp:20, speed:1.80, move:62,  siege:0.20, armor:0,  tags:['merge','copy'], desc:'拖到同星目标上复制成目标水果。合成辅助，不派兵。', skill:'copy' },
 
   /* ——— T1 (rare/稀有) ——— */
-  dragonfruit_warrior:{id:'dragonfruit_warrior',name:'火龙果战士',icon:'🐉',color:'#ff3b6e',rarity:'rare', role:'front',   range:'mid',   atk:16, hp:44, speed:1.10, move:88,  siege:0.90, armor:5,  tags:['front','burn'], desc:'Lv4+ 攻击附带点燃(3伤害/s,2s)。', skill:'burn' },
+  dragonfruit_warrior:{id:'dragonfruit_warrior',name:'火龙果战士',icon:'🐉',color:'#ff3b6e',rarity:'rare', role:'tank',    range:'mid',   atk:16, hp:44, speed:1.10, move:88,  siege:0.90, armor:5,  tags:['front','burn'], desc:'Lv4+ 攻击附带点燃(3伤害/s,2s)。', skill:'burn' },
   blueberry_sniper: { id:'blueberry_sniper', name:'蓝莓狙手', icon:'🫐', color:'#4d7dff', rarity:'rare',   role:'back',    range:'long',  atk:15, hp:28, speed:1.75, move:72,  siege:1.05, armor:1,  tags:['back','burst'], desc:'长射程爆发,优先后排,忽略5护甲。怕突击贴脸。', skill:'snipe' },
   banana_raider:    { id:'banana_raider',    name:'香蕉突击', icon:'🍌', color:'#ffd447', rarity:'rare',   role:'rush',    range:'melee', atk:14, hp:32, speed:0.82, move:118, siege:0.95, armor:2,  tags:['rush','assassin'], desc:'快速突击,Lv3+首次攻击眩晕0.5s。怕枪线拦截。', skill:'dash' },
-  pineapple_lancer: { id:'pineapple_lancer', name:'菠萝枪兵', icon:'🍍', color:'#ffb337', rarity:'rare',   role:'front',   range:'mid',   atk:12, hp:48, speed:1.10, move:90,  siege:0.95, armor:7,  tags:['front','anti_rush'], desc:'中线枪兵，职责克制突击单位。', skill:'anti_rush' },
+  pineapple_lancer: { id:'pineapple_lancer', name:'菠萝枪兵', icon:'🍍', color:'#ffb337', rarity:'rare',   role:'tank',    range:'mid',   atk:12, hp:48, speed:1.10, move:90,  siege:0.95, armor:7,  tags:['front','anti_rush'], desc:'中线枪兵，职责克制突击单位。', skill:'anti_rush' },
   orange_cannon:    { id:'orange_cannon',    name:'橙子炮手', icon:'🍊', color:'#ff9838', rarity:'rare',   role:'siege',   range:'far',   atk:12, hp:40, speed:1.65, move:64,  siege:2.45, armor:4,  tags:['siege','range'], desc:'攻城核心,对城墙x1.3。拆果堡极强,打兵偏弱,怕突击。', skill:'siege' },
   strawberry_knight:{ id:'strawberry_knight',name:'草莓骑士', icon:'🍓', color:'#ff4d5a', rarity:'rare',   role:'tank',    range:'melee', atk:11, hp:74, speed:1.40, move:80,  siege:0.85, armor:14, tags:['tank','charge'], desc:'Lv4+ 首次接战冲锋60px+击退。', skill:'charge' },
   pumpkin_roller:   { id:'pumpkin_roller',   name:'南瓜滚轮', icon:'🎃', color:'#ff7d35', rarity:'rare',   role:'siege',   range:'melee', atk:10, hp:36, speed:1.20, move:96,  siege:1.55, armor:4,  tags:['siege','death'], desc:'死亡时爆炸(ATKx2范围伤害+眩晕)。适合制造攻城突破点。', skill:'death_roll' },
   mango_arbalest:   { id:'mango_arbalest',   name:'芒果弩手', icon:'🥭', color:'#ffbd43', rarity:'rare',   role:'back',    range:'long',  atk:11, hp:30, speed:0.55, move:68,  siege:0.92, armor:1,  tags:['back','rapid'], desc:'攻速0.55s，全游戏最快。', skill:'rapid' },
   grape_archer:     { id:'grape_archer',     name:'葡萄射手', icon:'🍇', color:'#9b5cff', rarity:'rare',   role:'back',    range:'far',   atk:10, hp:32, speed:1.00, move:86,  siege:0.90, armor:2,  tags:['back','dps'], desc:'稳定后排输出,连续攻击同目标伤害+10%/次。怕突击切入。', skill:'rapid' },
-  pear_frost:       { id:'pear_frost',       name:'冰梨术士', icon:'🍐', color:'#9be7ff', rarity:'rare',   role:'control', range:'far',   atk:7,  hp:31, speed:1.35, move:70,  siege:0.70, armor:1,  tags:['control','slow'], desc:'攻击附带减速30%1.5s,Lv6减速升级为冰冻。', skill:'slow' },
+  pear_frost:       { id:'pear_frost',       name:'冰梨术士', icon:'🍐', color:'#9be7ff', rarity:'rare',   role:'back',    range:'far',   atk:7,  hp:31, speed:1.35, move:70,  siege:0.70, armor:1,  tags:['control','slow'], desc:'攻击附带减速30%1.5s,Lv6减速升级为冰冻。', skill:'slow' },
 
   /* ——— T2 (normal/普通) ——— */
   watermelon_guard: { id:'watermelon_guard', name:'西瓜盾卫', icon:'🍉', color:'#34c96b', rarity:'normal', role:'tank',    range:'melee', atk:9,  hp:80, speed:1.5,  move:76,  siege:0.75, armor:16, tags:['tank','shield'], desc:'主坦抗线。Lv4+每8s获得20点护盾。', skill:'shield' },
   coconut_guard:    { id:'coconut_guard',    name:'椰子守卫', icon:'🥥', color:'#9f7a4c', rarity:'normal', role:'tank',    range:'melee', atk:8,  hp:88, speed:1.62, move:72,  siege:0.65, armor:14, tags:['tank','shield'], desc:'硬坦。第一次接战获得35临时护盾，适合抗爆发。', skill:'first_shield' },
   avocado_brawler:  { id:'avocado_brawler',  name:'牛油果力士', icon:'🥑', color:'#8fa64a', rarity:'normal', role:'tank',    range:'melee', atk:9,  hp:96, speed:1.65, move:68,  siege:0.70, armor:18, tags:['tank','immune'], desc:'Lv4+ 受击30%概率免疫伤害。', skill:'immune' },
-  melon_shaman:     { id:'melon_shaman',     name:'哈密瓜萨满', icon:'🍈', color:'#c8e670', rarity:'normal', role:'control', range:'far',   atk:7,  hp:29, speed:1.40, move:68,  siege:0.65, armor:1,  tags:['control','weaken'], desc:'攻击概率减敌ATK×0.85,2s。', skill:'weaken' },
+  melon_shaman:     { id:'melon_shaman',     name:'哈密瓜萨满', icon:'🍈', color:'#c8e670', rarity:'normal', role:'back',    range:'far',   atk:7,  hp:29, speed:1.40, move:68,  siege:0.65, armor:1,  tags:['control','weaken'], desc:'攻击概率减敌ATK×0.85,2s。', skill:'weaken' },
   peach_medic:      { id:'peach_medic',      name:'蜜桃医师', icon:'🍑', color:'#ff9fbd', rarity:'normal', role:'support', range:'support', atk:5,  hp:32, speed:1.65, move:70,  siege:0.40, armor:1,  tags:['support','heal'], desc:'周期治疗同路前排。怕突击切入。', skill:'heal' },
   mint_supply:      { id:'mint_supply',      name:'薄荷补给球', icon:'🌿', color:'#7ed6a0', rarity:'normal', role:'support',range:'support',atk:3,  hp:28, speed:1.55, move:60,  siege:0.12, armor:2,  tags:['econ','sp_regen'], desc:'在场时自然回复提速→4s, Lv4→3.5s, Lv7→3s。', skill:'sp_regen' },
   shock_lemon:      { id:'shock_lemon',      name:'电击柠檬球', icon:'⚡', color:'#ffe76a', rarity:'normal', role:'support',range:'support',atk:5,  hp:24, speed:1.45, move:58,  siege:0.10, armor:1,  tags:['econ','kill_sp'], desc:'击杀敌方额外+SP: Lv1+1, Lv4+2, Lv7+3+攻速。', skill:'kill_sp' },
@@ -260,18 +260,18 @@ function starStartSpBonus(star)    { return star >= 7 ? 2 : 0; }       // ★7: 
 // PvP 调整:★7 开局 SP+2 → +1
 function starStartSpBonusPvp(star) { return star >= 7 ? 1 : 0; }
 
-/* 战力统一值 */
+/* 战力统一值:求和,未拥有不计入 */
 function computePower() {
   const s = typeof window !== 'undefined' ? window.shell : null;
-  let sum = 0, n = 0;
+  let sum = 0;
   for (const id of UNIT_POOL) {
     if (!TYPES[id]) continue;
+    // 未拥有(无碎片记录)不计入
+    if (!meta?.shardsTotal?.[id]) continue;
     const lv = s?.fruitLv?.[id] || 1;
-    const mul = heroMul(lv);
-    sum += Math.round((TYPES[id].atk + TYPES[id].hp) * mul);
-    n++;
+    sum += Math.round((TYPES[id].atk + TYPES[id].hp) * heroMul(lv));
   }
-  return n > 0 ? Math.round(sum / n) : 0;
+  return sum;
 }
 const BASE_WALL_HP = 72;
 const SIEGE_SLOTS_PER_LANE = 3;
