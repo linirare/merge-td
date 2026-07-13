@@ -16,10 +16,10 @@
     },
     "lemon_vs_pineapple": {
       "engage": 26,
-      "frames": 86,
-      "winner": "player",
-      "pHp": 36,
-      "eHp": 0
+      "frames": 92,
+      "winner": "enemy",
+      "pHp": 0,
+      "eHp": 5
     },
     "sniper_vs_banana": {
       "engage": 21,
@@ -30,7 +30,7 @@
     },
     "frost_vs_coconut": {
       "engage": 21,
-      "frames": 384,
+      "frames": 482,
       "winner": "enemy",
       "pHp": 0,
       "eHp": 167
@@ -43,8 +43,8 @@
   },
   "skirmish_900f": {
     "pAlive": 0,
-    "eAlive": 3,
-    "pWall": 488,
+    "eAlive": 2,
+    "pWall": 555,
     "eWall": 600,
     "phase": "playing"
   },
