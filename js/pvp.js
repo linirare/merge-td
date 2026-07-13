@@ -373,6 +373,7 @@
     state.levelConfig = { id: 1, isBoss: false, enemyInitLevel: 1, enemyWallHp: state.enemyWallMax, enemySpawnInterval: 9999, reward: 0, desc: '实时 PVP' };
     // 服务器权威:棋盘/士兵/城墙全部由服务端快照驱动,客户端不再本地布局或跑战斗
     state.phase = 'playing';
+    document.body.classList.remove('hifi-menu');
     pvp._gotSnap = false;
     console.log('[PVP] match_start 服务器权威 build-3 · playerIndex=' + playerIndex + ' seed=' + pvp.seed + ' mode=' + state.mode);
     hidePvpPanels();
