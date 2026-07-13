@@ -6,6 +6,7 @@ data/
 # 临时验证截图(根目录),art/ 下的正规美术资源不受影响
 /*.png
 /shot_*.jpg
+/output/playwright/
 
 # 环境变量文件(含JWT_SECRET/ADMIN_PASS等敏感信息,严禁进仓库)
 .env

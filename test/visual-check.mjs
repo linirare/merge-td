@@ -1,5 +1,6 @@
 import { chromium } from 'playwright';
 import { exec } from 'child_process';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -8,6 +9,8 @@ const ROOT = path.join(__dirname, '..');
 const BASE = process.env.VISUAL_URL || 'http://localhost:3000';
 const NO_VISION = process.argv.includes('--no-vision');
 const STRICT = process.argv.includes('--strict');
+const ONLY = (process.argv.find(arg => arg.startsWith('--only=')) || '').slice(7)
+  .split(',').map(name => name.trim()).filter(Boolean);
 const VISUAL_TIMEOUT_MS = Number(process.env.VISUAL_TIMEOUT_MS || 120000);
 
 async function ensureLoggedIn(page) {
@@ -94,7 +97,40 @@ async function startStage(page, level, waitMs = 3000) {
       if (typeof window.syncBattleShellVisibility === 'function') window.syncBattleShellVisibility();
     }, level);
   }
+  await page.waitForFunction(() => typeof state !== 'undefined' && state.phase === 'playing', { timeout: 5000 }).catch(() => {});
+  await page.evaluate(() => {
+    if (typeof window.scheduleBattleResize === 'function') window.scheduleBattleResize();
+    else if (typeof resize === 'function') resize();
+  });
+  await page.waitForFunction(() => {
+    const canvas = document.getElementById('game');
+    const rect = canvas?.getBoundingClientRect();
+    return !!rect && rect.width >= 300 && rect.height >= 600;
+  }, { timeout: 3000 });
+  // 视觉验收必须覆盖真实交战，而不是只截一张空棋盘。
+  await page.evaluate(() => {
+    if (typeof summonFruitAt !== 'function' || typeof state === 'undefined') return;
+    const cells = [[2, 0], [2, 2], [2, 4], [1, 1], [1, 3]];
+    for (const [r, c] of cells) {
+      if (state.sp > 0 && !state.playerSlots?.[r]?.[c]) summonFruitAt(r, c);
+      const ball = state.playerSlots?.[r]?.[c];
+      if (ball) ball.spawnTimer = Math.min(Number(ball.spawnTimer || 0), 0.25);
+    }
+    state.sp = Math.max(Number(state.sp || 0), 3);
+  });
   await page.waitForTimeout(waitMs);
+  const live = await page.evaluate(() => ({
+    phase: typeof state !== 'undefined' ? state.phase : 'missing',
+    level: typeof state !== 'undefined' ? state.currentLevel : null,
+    shellActive: document.body.classList.contains('battle-shell-active'),
+    canvas: (() => {
+      const rect = document.getElementById('game')?.getBoundingClientRect();
+      return rect ? { width: Math.round(rect.width), height: Math.round(rect.height) } : null;
+    })(),
+  }));
+  if (live.phase !== 'playing' || !live.shellActive) {
+    throw new Error(`stage ${level} left live battle before capture: ${JSON.stringify(live)}`);
+  }
 }
 
 async function forceResult(page) {
@@ -164,14 +200,14 @@ const SHOTS = [
   },
   {
     name: 'battle',
-    file: 'shot_battle.jpg',
+    file: 'shot_battle.png',
     setup: async page => startStage(page, 1, 3500),
     prompt: 'Live battle screen. Check player green/gold versus enemy red/purple readability, lane danger, damage noise, and crowded units.',
   },
   {
     name: 'boss',
-    file: 'shot_boss.jpg',
-    setup: async page => startStage(page, 5, 8000),
+    file: 'shot_boss.png',
+    setup: async page => startStage(page, 5, 4200),
     prompt: 'Boss battle screen. Check boss outline, boss HP bar, entrance/readability, and whether it is distinct from normal enemies.',
   },
   {
@@ -191,8 +227,24 @@ const SHOTS = [
 let browser;
 
 async function run() {
-  browser = await chromium.launch({ timeout: 30000 });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, reducedMotion: 'reduce' });
+  browser = await chromium.launch({ timeout: 30000, args: ['--disable-gpu'] });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, reducedMotion: 'reduce' });
+  if (process.env.VISUAL_DEBUG === '1') {
+    await page.addInitScript(() => {
+      const proto = CanvasRenderingContext2D.prototype;
+      const save = proto.save;
+      const restore = proto.restore;
+      proto.save = function visualDebugSave() {
+        this.__visualSaveDepth = (this.__visualSaveDepth || 0) + 1;
+        this.__visualSaveMax = Math.max(this.__visualSaveMax || 0, this.__visualSaveDepth);
+        return save.call(this);
+      };
+      proto.restore = function visualDebugRestore() {
+        this.__visualSaveDepth = Math.max(0, (this.__visualSaveDepth || 0) - 1);
+        return restore.call(this);
+      };
+    });
+  }
   page.setDefaultTimeout(8000);
   const errors = [];
   page.on('console', msg => {
@@ -207,14 +259,69 @@ async function run() {
   }
 
   const results = [];
-  for (const shot of SHOTS) {
+  const selectedShots = ONLY.length ? SHOTS.filter(shot => ONLY.includes(shot.name)) : SHOTS;
+  for (const shot of selectedShots) {
     await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 10000 });
     await page.waitForTimeout(700);
     await ensureLoggedIn(page);
     await shot.setup(page);
     await assertVisiblePage(page, shot.name);
+    if (process.env.VISUAL_DEBUG === '1' && (shot.name === 'battle' || shot.name === 'boss')) {
+      const debug = await page.evaluate(() => {
+        const info = el => {
+          const rect = el?.getBoundingClientRect();
+          const style = el ? getComputedStyle(el) : null;
+          return rect && style ? {
+            className: el.className,
+            display: style.display,
+            zIndex: style.zIndex,
+            rect: [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)],
+          } : null;
+        };
+        return {
+          phase: state?.phase,
+          level: state?.currentLevel,
+          body: document.body.className,
+          wrap: info(document.getElementById('wrap')),
+          canvas: info(document.getElementById('game')),
+          hud: info(document.getElementById('battleShellHud')),
+          back: info(document.querySelector('[data-battle-back]')),
+          title: info(document.querySelector('.battle-title')),
+          context: (() => {
+            const context = document.getElementById('game')?.getContext('2d');
+            const matrix = context?.getTransform();
+            return context && matrix ? {
+              alpha: context.globalAlpha,
+              depth: context.__visualSaveDepth,
+              maxDepth: context.__visualSaveMax,
+              matrix: [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f],
+            } : null;
+          })(),
+        };
+      });
+      console.log(`[visual-debug:${shot.name}] ${JSON.stringify(debug)}`);
+    }
     const abs = path.join(ROOT, shot.file);
-    await page.screenshot({ path: abs, type: 'jpeg', quality: 88, timeout: 20000 });
+    const canvasShot = shot.name === 'battle' || shot.name === 'boss';
+    if (canvasShot) {
+      await page.evaluate(() => {
+        // Cancel pending retry tickets, rebuild the backing store and let the
+        // stable frame settle before reading its pixels.
+        if (typeof _battleResizeRetry !== 'undefined') _battleResizeRetry++;
+        window.__freezeBattleFrame = false;
+        if (typeof resize === 'function') resize();
+        if (typeof draw === 'function') {
+          draw();
+          draw();
+        }
+        window.__freezeBattleFrame = true;
+      });
+      await page.waitForTimeout(120);
+      const dataUrl = await page.evaluate(() => document.getElementById('game').toDataURL('image/png'));
+      fs.writeFileSync(abs, Buffer.from(dataUrl.split(',')[1], 'base64'));
+    } else {
+      await page.screenshot({ path: abs, type: 'jpeg', quality: 88, timeout: 20000 });
+    }
     const vision = NO_VISION ? null : await mmxDescribe(abs, shot.prompt);
     results.push({ name: shot.name, file: shot.file, vision });
     console.log(`\n===== [${shot.name}] ${shot.file} =====`);

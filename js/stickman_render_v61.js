@@ -410,15 +410,15 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
 
   function roleColorV61(role) {
     return ({
-      tank: '#38d878',
-      front: '#7ee0a0',
-      rush: '#ffcf4a',
-      back: '#8bc7ff',
-      siege: '#ff9f43',
-      control: '#b99cff',
-      support: '#63e6be',
-      merge: '#d6b8ff',
-    })[role] || '#f5c242';
+      tank: '#758B78',
+      front: '#81917A',
+      rush: '#A98A58',
+      back: '#718796',
+      siege: '#A07251',
+      control: '#80758E',
+      support: '#6F8B7E',
+      merge: '#89798D',
+    })[role] || '#9A835D';
   }
 
   function drawRoleMarkV61(x, y, r, role, isEnemy) {
@@ -494,9 +494,9 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
   function drawTacticalUnitV61(s, t, tier, st, vis, role, lv, depth) {
     const isEnemy = s.side === 'enemy';
     const tierScale = tier === 'legendary' ? 1.18 : tier === 'advanced' ? 1.10 : tier === 'elite' ? 1.05 : 1;
-    const r = (17 + Math.min(4, Math.max(0, lv - 1)) * 1.35) * depth * tierScale;
-    const side = isEnemy ? '#d94155' : '#28b867';
-    const sideDark = isEnemy ? '#7a1b28' : '#155f38';
+    const r = (19 + Math.min(4, Math.max(0, lv - 1)) * 1.45) * depth * tierScale;
+    const side = isEnemy ? '#98505A' : '#557B66';
+    const sideDark = isEnemy ? '#2C2022' : '#1E2924';
     const face = t.color || st.main || '#f5c242';
     const roleColor = roleColorV61(role);
     const hpRatio = Math.max(0, Math.min(1, (Number(s.hp) || 0) / Math.max(1, Number(s.maxHp) || 1)));
@@ -506,86 +506,65 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
     ctx.save();
     if (typeof isInvisible === 'function' && isInvisible(s)) ctx.globalAlpha = 0.42;
 
-    ctx.fillStyle = 'rgba(48,30,12,0.20)';
+    ctx.fillStyle = 'rgba(0,0,0,0.32)';
     ctx.beginPath();
     ctx.ellipse(vis.x, vis.y + r * 0.68, r * 1.05, r * 0.30, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    if (fighting || (s.hitFlash || 0) > 0.02) {
-      ctx.strokeStyle = (s.hitFlash || 0) > 0.02 ? 'rgba(255,255,255,0.95)' : roleColor;
-      ctx.lineWidth = 2.5;
-      ctx.globalAlpha *= 0.88;
-      ctx.beginPath();
-      ctx.arc(vis.x, vis.y, r + 4, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = typeof isInvisible === 'function' && isInvisible(s) ? 0.42 : 1;
-    }
-
-    ctx.fillStyle = isEnemy ? 'rgba(90,18,30,0.88)' : 'rgba(19,78,47,0.88)';
-    ctx.strokeStyle = side;
-    ctx.lineWidth = 2.6;
+    // 单位是微缩棋子，不再使用霓虹战斗环。
+    ctx.fillStyle = sideDark;
+    ctx.strokeStyle = (s.hitFlash || 0) > 0.02 ? '#F1E8D5' : side;
+    ctx.lineWidth = (s.hitFlash || 0) > 0.02 ? 2.6 : 1.7;
     ctx.beginPath();
     ctx.arc(vis.x, vis.y, r + 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    const grad = ctx.createRadialGradient(vis.x - r * 0.25, vis.y - r * 0.28, r * 0.2, vis.x, vis.y, r);
-    grad.addColorStop(0, 'rgba(255,255,255,0.82)');
-    grad.addColorStop(0.18, face);
-    grad.addColorStop(1, sideDark);
-    ctx.fillStyle = grad;
+    ctx.fillStyle = '#252522';
     ctx.beginPath();
     ctx.arc(vis.x, vis.y, r - 2, 0, Math.PI * 2);
     ctx.fill();
+    if (typeof window.drawFruitGlyphV62 === 'function') {
+      window.drawFruitGlyphV62(ctx, vis.x, vis.y - r * 0.02, r * 0.70, s.type, face, '#E6DDCA');
+    } else {
+      drawRoleMarkV61(vis.x, vis.y, r * 0.72, role, isEnemy);
+    }
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(vis.x, vis.y, r - 2.5, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.beginPath();
-    ctx.ellipse(vis.x - r * 0.22, vis.y - r * 0.35, r * 0.62, r * 0.28, -0.38, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.fillStyle = 'rgba(32,18,8,0.30)';
-    ctx.beginPath();
-    ctx.arc(vis.x, vis.y, r * 0.58, 0, Math.PI * 2);
-    ctx.fill();
-    drawRoleMarkV61(vis.x, vis.y, r, role, isEnemy);
-
-    ctx.fillStyle = face;
-    ctx.strokeStyle = isEnemy ? '#ffd5db' : '#eaffdf';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.arc(vis.x - r * 0.42, vis.y - r * 0.44, r * 0.16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
+    // 职责只保留为底座色签，避免覆盖水果身份。
     ctx.fillStyle = roleColor;
-    roundRect(vis.x - r * 0.68, vis.y + r * 0.68, r * 1.36, 4.5, 2.5);
+    roundRect(vis.x - r * 0.48, vis.y + r * 0.72, r * 0.96, 3.2, 1.4);
     ctx.fill();
+
+    if (fighting) {
+      ctx.fillStyle = isEnemy ? '#98505A' : '#557B66';
+      ctx.beginPath();
+      ctx.moveTo(vis.x - 4, vis.y + r + 4);
+      ctx.lineTo(vis.x + 4, vis.y + r + 4);
+      ctx.lineTo(vis.x, vis.y + r + 9);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     if (lv >= 2) {
-      ctx.fillStyle = '#f6c343';
-      ctx.strokeStyle = 'rgba(87,48,12,0.72)';
-      ctx.lineWidth = 1.2;
-      roundRect(vis.x + r * 0.28, vis.y - r * 0.98, r * 0.88, 15, 6);
+      ctx.fillStyle = '#171717';
+      ctx.strokeStyle = '#9A835D';
+      ctx.lineWidth = 1;
+      roundRect(vis.x + r * 0.22, vis.y - r * 0.96, r * 0.84, 13, 3);
       ctx.fill();
       ctx.stroke();
       ctx.font = '900 10px sans-serif';
-      ctx.fillStyle = '#5a3010';
-      ctx.fillText('L' + lv, vis.x + r * 0.72, vis.y - r * 0.98 + 7.5);
+      ctx.fillStyle = '#D8C7A4';
+      ctx.fillText('L' + lv, vis.x + r * 0.64, vis.y - r * 0.96 + 6.5);
     }
 
     if (showHp) {
       const bw = Math.max(24, r * 1.78);
       const by = vis.y - r - 9;
-      ctx.fillStyle = 'rgba(63,38,18,0.42)';
-      roundRect(vis.x - bw / 2, by, bw, 4.2, 3);
+      ctx.fillStyle = 'rgba(0,0,0,0.66)';
+      roundRect(vis.x - bw / 2, by, bw, 3.6, 1.5);
       ctx.fill();
-      ctx.fillStyle = hpRatio > 0.5 ? '#52d36b' : hpRatio > 0.25 ? '#f7c948' : '#ef4444';
-      roundRect(vis.x - bw / 2, by, Math.max(2, bw * hpRatio), 4.2, 3);
+      ctx.fillStyle = hpRatio > 0.5 ? '#80947C' : hpRatio > 0.25 ? '#AA8B58' : '#98505A';
+      roundRect(vis.x - bw / 2, by, Math.max(2, bw * hpRatio), 3.6, 1.5);
       ctx.fill();
       if ((s.shield || 0) > 0) {
         const sr = Math.max(0, Math.min(1, Number(s.shield || 0) / Math.max(1, Number(s.maxShield || s.maxHp * 0.45))));
@@ -713,4 +692,152 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
     if (window.RenderHooks && window.RenderHooks.afterDrawSoldier) window.RenderHooks.afterDrawSoldier.run(ctx, s);
   };
   drawSoldier._stickmanV61 = true;
+})();
+
+/* ============================================================
+   Commercial chibi fruit heroes v2
+   Replaces abstract tactical tokens with readable characters.
+   ============================================================ */
+(function installCommercialFruitHeroesV2() {
+  if (typeof drawSoldier !== 'function' || window.__commercialFruitHeroesV2) return;
+  window.__commercialFruitHeroesV2 = true;
+
+  function heroWeaponV2(x, y, r, role, enemy, dir) {
+    const metal = '#FFF0A8';
+    const wood = '#8E552D';
+    const accent = enemy ? '#FF6687' : '#55E8C1';
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(dir || 1, 1);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+    if (role === 'tank' || role === 'front') {
+      ctx.fillStyle = accent; ctx.strokeStyle = metal; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(r*.32,-r*.18); ctx.lineTo(r*.72,-r*.05); ctx.lineTo(r*.64,r*.48);
+      ctx.lineTo(r*.32,r*.68); ctx.lineTo(r*.06,r*.48); ctx.lineTo(r*.02,-r*.05); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = metal; ctx.beginPath(); ctx.arc(r*.35,r*.22,r*.09,0,Math.PI*2); ctx.fill();
+    } else if (role === 'rush') {
+      ctx.strokeStyle = wood; ctx.lineWidth = 3.5;
+      ctx.beginPath(); ctx.moveTo(r*.12,r*.54); ctx.lineTo(r*.75,-r*.55); ctx.stroke();
+      ctx.fillStyle = metal;
+      ctx.beginPath(); ctx.moveTo(r*.72,-r*.65); ctx.lineTo(r*.91,-r*.48); ctx.lineTo(r*.64,-r*.42); ctx.closePath(); ctx.fill();
+    } else if (role === 'back') {
+      ctx.strokeStyle = metal; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.arc(r*.30,r*.06,r*.42,-Math.PI*.62,Math.PI*.62); ctx.stroke();
+      ctx.strokeStyle = '#F8F4D7'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(r*.14,-r*.28); ctx.lineTo(r*.14,r*.40); ctx.stroke();
+      ctx.strokeStyle = wood; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-r*.05,r*.15); ctx.lineTo(r*.68,-r*.16); ctx.stroke();
+      ctx.fillStyle = metal; ctx.beginPath(); ctx.moveTo(r*.70,-r*.16); ctx.lineTo(r*.55,-r*.28); ctx.lineTo(r*.57,-r*.07); ctx.closePath(); ctx.fill();
+    } else if (role === 'siege') {
+      ctx.fillStyle = '#274B62'; ctx.strokeStyle = metal; ctx.lineWidth = 2;
+      roundRect(r*.02,-r*.16,r*.74,r*.34,r*.12); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#111D2B'; ctx.beginPath(); ctx.arc(r*.12,r*.28,r*.14,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r*.62,r*.28,r*.14,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(r*.77,0,r*.11,0,Math.PI*2); ctx.fill();
+    } else {
+      ctx.strokeStyle = wood; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(r*.06,r*.56); ctx.lineTo(r*.45,-r*.50); ctx.stroke();
+      ctx.fillStyle = accent; ctx.strokeStyle = metal; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(r*.48,-r*.57,r*.18,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#FFF8C7'; ctx.beginPath(); ctx.arc(r*.43,-r*.62,r*.055,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawCommercialHeroV2(s) {
+    if (!s || !s.alive) return;
+    const t = TYPES[s.type] || TYPES[DEFAULT_DECK[0]];
+    const role = t.role || 'front';
+    const tier = typeof battleUnitTierKeyV59 === 'function' ? battleUnitTierKeyV59(s) : 'small';
+    const tierScale = ({small:1,large:1.08,elite:1.17,advanced:1.26,legendary:1.38})[tier] || 1;
+    const baseY = typeof battleVisualYV59 === 'function' ? battleVisualYV59(s) : s.y;
+    const depth = .80 + .20 * ((baseY - LAYOUT.fieldY) / Math.max(1, LAYOUT.fieldH));
+    const r = (22.5 + Math.min(5, Math.max(0, (s.level || 1) - 1)) * 1.45) * depth * tierScale;
+    const vis = typeof battleVisualPosV59 === 'function' ? battleVisualPosV59(s, r) : {x:s.x,y:baseY};
+    const enemy = s.side === 'enemy';
+    const team = typeof commercialTeamV2 === 'function' ? commercialTeamV2(enemy) : (enemy
+      ? {main:'#F04D72',deep:'#6E173D',glow:'#FF7895',trim:'#FFD37A'}
+      : {main:'#2ED6B4',deep:'#075C68',glow:'#65F6D2',trim:'#FFD37A'});
+    const hpRatio = Math.max(0, Math.min(1, (Number(s.hp)||0) / Math.max(1, Number(s.maxHp)||1)));
+    const fighting = s.mode === 'fight' || s.mode === 'siege' || s.mode === 'siege_support';
+    const bob = window.REDUCE_MOTION ? 0 : Math.sin((state.time||0)*7 + vis.x*.04) * (fighting ? 1.5 : .7);
+    const x = vis.x, y = vis.y + bob;
+    const dir = s._faceDirV61 || (enemy ? -1 : 1);
+
+    ctx.save();
+    if (typeof isInvisible === 'function' && isInvisible(s)) ctx.globalAlpha = .44;
+
+    ctx.fillStyle = 'rgba(0,0,0,.34)';
+    ctx.beginPath(); ctx.ellipse(x, y + r*.92, r*.82, r*.24, 0, 0, Math.PI*2); ctx.fill();
+
+    if (fighting || (s.hitFlash||0) > .02) {
+      const aura = ctx.createRadialGradient(x,y+r*.36,2,x,y+r*.36,r*1.65);
+      aura.addColorStop(0, enemy ? 'rgba(255,85,124,.30)' : 'rgba(66,244,202,.28)');
+      aura.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = aura; ctx.beginPath(); ctx.arc(x,y+r*.30,r*1.65,0,Math.PI*2); ctx.fill();
+    }
+
+    // Boots and body create a character silhouette instead of a token.
+    ctx.fillStyle = '#19283B';
+    ctx.beginPath(); ctx.ellipse(x-r*.28,y+r*.78,r*.28,r*.16,-.15,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x+r*.28,y+r*.78,r*.28,r*.16,.15,0,Math.PI*2); ctx.fill();
+
+    const body = ctx.createLinearGradient(0,y-r*.05,0,y+r*.76);
+    body.addColorStop(0, (s.hitFlash||0)>.02 ? '#FFFBE4' : team.main);
+    body.addColorStop(.58, team.deep);
+    body.addColorStop(1, '#10243A');
+    ctx.fillStyle = body; ctx.strokeStyle = team.trim; ctx.lineWidth = 1.8;
+    roundRect(x-r*.53,y-r*.02,r*1.06,r*.88,r*.34); ctx.fill(); ctx.stroke();
+
+    // Cape and shoulder badge make team ownership readable without a full ring.
+    ctx.fillStyle = enemy ? '#962B59' : '#0D7180';
+    ctx.beginPath();
+    ctx.moveTo(x-r*.46,y+r*.14); ctx.lineTo(x-r*.66,y+r*.66); ctx.lineTo(x-r*.20,y+r*.55); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = team.trim; ctx.beginPath(); ctx.arc(x-r*.38,y+r*.13,r*.10,0,Math.PI*2); ctx.fill();
+
+    ctx.fillStyle = team.main; ctx.strokeStyle = '#FFF0B2'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x-r*.58,y+r*.28,r*.19,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x+r*.58,y+r*.28,r*.19,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+    heroWeaponV2(x + r*.06, y + r*.18, r, role, enemy, dir);
+
+    ctx.save();
+    ctx.shadowColor = team.glow; ctx.shadowBlur = (s.hitFlash||0)>.02 ? 14 : 6;
+    if (typeof drawCommercialFruitFaceV2 === 'function') {
+      drawCommercialFruitFaceV2(x, y-r*.27, r*.78, s.type, t.color || team.main, enemy);
+    } else if (typeof window.drawFruitGlyphV62 === 'function') {
+      window.drawFruitGlyphV62(ctx,x,y-r*.27,r*.78,s.type,t.color, '#FFF4D6');
+    }
+    ctx.restore();
+
+    const bw = Math.max(26,r*1.7), by = y-r*1.22;
+    if (hpRatio < .985 || fighting || (s.shield||0)>0) {
+      ctx.fillStyle = 'rgba(4,12,22,.78)'; roundRect(x-bw/2,by,bw,5,3); ctx.fill();
+      const hp = ctx.createLinearGradient(x-bw/2,0,x+bw/2,0);
+      hp.addColorStop(0, hpRatio>.35 ? '#FFF06B' : '#FF7558');
+      hp.addColorStop(1, hpRatio>.35 ? team.glow : '#FF3C68');
+      ctx.fillStyle = hp; roundRect(x-bw/2+1,by+1,Math.max(3,(bw-2)*hpRatio),3,2); ctx.fill();
+    }
+
+    if ((s.level||1) >= 2) {
+      ctx.fillStyle = '#FFD75F'; ctx.strokeStyle = '#FFF2AB'; ctx.lineWidth = 1;
+      roundRect(x+r*.30,y-r*.98,25,14,6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#4A2A0A'; ctx.font = '900 9px "Nunito",sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(`Lv${s.level}`,x+r*.30+12.5,y-r*.98+7);
+    }
+
+    if (s._boss && typeof drawBossBadgeV59 === 'function') drawBossBadgeV59(s,x,y-r-30,Math.max(96,r*3.5));
+    ctx.restore();
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  drawSoldier = function commercialHeroDrawSoldierV2(s) {
+    if (window.RenderHooks?.beforeDrawSoldier) window.RenderHooks.beforeDrawSoldier.run(ctx,s);
+    drawCommercialHeroV2(s);
+    if (window.RenderHooks?.afterDrawSoldier) window.RenderHooks.afterDrawSoldier.run(ctx,s);
+  };
+  drawSoldier._commercialFruitHeroV2 = true;
 })();

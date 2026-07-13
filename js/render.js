@@ -430,13 +430,15 @@ function drawFx() {
   for (const f of state.fx) {
     const alpha = f.life / f.maxLife;
     const isBuildFx = f.priority === 'build';
-    const scale = isBuildFx ? 1 : (f.vx ? 1 : (1 + (1 - alpha) * 0.3));
+    const isCombatCallout = /克制|优势|受制|击破|破城/.test(String(f.text || ''));
+    const scale = 1;
     ctx.save();
     const baseY = isBuildFx ? (f.y - (1 - alpha) * 8) : (f.vx ? f.y : (f.y - (1 - alpha) * 30));
     ctx.translate(f.x, baseY);
     if (scale !== 1) ctx.scale(scale, scale);
     ctx.globalAlpha = isBuildFx ? Math.min(alpha * 1.6, 1) : (f.vx ? Math.min(alpha * 2, 1) : alpha);
-    ctx.font = `bold ${f.size}px sans-serif`;
+    const finalSize = isCombatCallout ? Math.min(12, Number(f.size) || 12) : Number(f.size) || 12;
+    ctx.font = `${isBuildFx ? 800 : 700} ${finalSize}px sans-serif`;
     ctx.textAlign = 'center';
     if (isBuildFx) {
       const textW = ctx.measureText(f.text).width;
@@ -455,7 +457,7 @@ function drawFx() {
       ctx.fillStyle = f.color;
       ctx.fillText(f.text, 0, -6);
     } else {
-      ctx.fillStyle = f.color;
+      ctx.fillStyle = isCombatCallout ? '#C6B58F' : f.color;
       ctx.fillText(f.text, 0, 0);
     }
     ctx.restore();

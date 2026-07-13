@@ -524,9 +524,12 @@ body.hifi-menu #wrap{display:none;}
 
 /* ---- Battle shell: keep canvas battle inside the same hifi phone frame ---- */
 body.battle-shell-active{
-  background:
-    radial-gradient(120% 80% at 50% 0%,rgba(245,194,66,.18),transparent 42%),
-    linear-gradient(180deg,#201510,#100a06);
+  background:#0F1010;
+}
+body.battle-shell-active::after{
+  border:1px solid rgba(151,126,86,.62);
+  border-radius:10px;
+  box-shadow:inset 0 0 0 1px rgba(222,204,170,.06),0 18px 50px rgba(0,0,0,.62);
 }
 body.battle-shell-active #wrap{
   position:fixed;
@@ -535,16 +538,14 @@ body.battle-shell-active #wrap{
   z-index:1;
   overflow:hidden;
   background:
-    linear-gradient(180deg,rgba(255,246,214,.06),transparent 18%,rgba(20,10,4,.28) 100%),
-    url('../art/bg-clean_002.jpg') center/cover,
-    #14100b;
+    linear-gradient(180deg,#171619 0%,#191C1C 50%,#121513 100%);
 }
 /* 金色手机框已移至 body::after(常驻壳+战斗) */
 body.battle-shell-active #game{
   position:absolute;
   z-index:2;
   background:#14100b;
-  border-radius:20px;
+  border-radius:8px;
 }
 .battle-shell-hud{
   position:fixed;
@@ -554,28 +555,29 @@ body.battle-shell-active #game{
   padding:0 10px;
   display:none;
   align-items:center;
-  gap:8px;
+  gap:7px;
   z-index:60;
   pointer-events:none;
-  color:#FFE9A8;
+  color:#D9CDB8;
   font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;
 }
 .battle-shell-hud.show{display:flex;}
 .battle-shell-hud .battle-pill,
 .battle-shell-hud .battle-title{
   pointer-events:auto;
-  min-height:34px;
-  border:2px solid #7A4E08;
-  border-radius:999px;
-  background:linear-gradient(180deg,rgba(62,39,22,.96),rgba(34,17,10,.96));
-  box-shadow:0 4px 10px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,233,168,.24);
+  min-height:36px;
+  border:1px solid rgba(151,126,86,.52);
+  border-radius:7px;
+  background:rgba(19,19,20,.96);
+  box-shadow:0 4px 12px rgba(0,0,0,.38);
 }
 .battle-shell-hud .battle-pill{
   flex:none;
-  padding:0 12px;
-  color:#FFE9A8;
-  font-family:'ZCOOL KuaiLe','PingFang SC','Microsoft YaHei',sans-serif;
-  font-size:14px;
+  padding:0 11px;
+  color:#D9CDB8;
+  font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;
+  font-size:13px;
+  font-weight:800;
 }
 .battle-shell-hud .battle-speed{
   min-width:44px;
@@ -594,15 +596,46 @@ body.battle-shell-active #game{
   padding:3px 10px;
 }
 .battle-shell-hud .battle-title b{
-  font-family:'ZCOOL KuaiLe','PingFang SC','Microsoft YaHei',sans-serif;
-  font-size:15px;
-  color:#FFE9A8;
+  font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;
+  font-size:14px;
+  font-weight:800;
+  letter-spacing:.04em;
+  color:#D9CDB8;
 }
 .battle-shell-hud .battle-title span{
   font-size:10px;
   font-weight:900;
-  color:#C9B48A;
+  color:#8D8375;
 }
+.battle-shell-hud .battle-title span.danger{color:#B66A72;}
+.battle-shell-hud .battle-back span{font:900 22px/0.7 'Nunito',sans-serif;vertical-align:-2px;margin-right:2px;}
+
+/* Commercial battle shell v2 */
+body.battle-shell-active{
+  background:radial-gradient(circle at 50% 0,#28496f 0,#10283f 46%,#071826 100%);
+}
+body.battle-shell-active::after{
+  border:2px solid rgba(255,214,112,.82);
+  border-radius:18px;
+  box-shadow:inset 0 0 0 2px rgba(83,238,207,.10),0 24px 70px rgba(0,0,0,.72),0 0 28px rgba(55,205,189,.14);
+}
+body.battle-shell-active #wrap{
+  background:linear-gradient(180deg,#172b49 0%,#123c4d 55%,#082532 100%);
+}
+body.battle-shell-active #game{background:#10283f;border-radius:14px;}
+.battle-shell-hud{gap:8px;padding:0 10px;color:#FFF5DA;}
+.battle-shell-hud .battle-pill,
+.battle-shell-hud .battle-title{
+  min-height:38px;
+  border:1.5px solid rgba(255,216,112,.78);
+  border-radius:11px;
+  background:linear-gradient(180deg,rgba(42,76,111,.98),rgba(14,37,65,.98));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 5px 14px rgba(0,0,0,.42);
+}
+.battle-shell-hud .battle-pill{color:#FFF5DA;font-size:13px;text-shadow:0 1px 0 rgba(0,0,0,.55);}
+.battle-shell-hud .battle-title b{color:#FFF4D3;font-size:15px;text-shadow:0 1px 0 rgba(0,0,0,.55);}
+.battle-shell-hud .battle-title span{color:#6EF0CE;font-size:10px;}
+.battle-shell-hud .battle-title span.danger{color:#FF7996;}
 @media(min-width:470px){
   body.battle-shell-active #wrap{
     /* 位置已由 #wrap 基础规则 + phone-* 变量统一控制,仅补阴影 */

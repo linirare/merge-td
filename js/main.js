@@ -5,19 +5,47 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 let scale = 1;
+let _battleResizeRetry = 0;
+
+function scheduleBattleResize() {
+  _battleResizeRetry++;
+  const ticket = _battleResizeRetry;
+  const attempt = (n = 0) => requestAnimationFrame(() => {
+    if (ticket !== _battleResizeRetry || typeof resize !== 'function') return;
+    const host = document.getElementById('wrap');
+    const rect = host?.getBoundingClientRect();
+    if (rect && rect.width >= 100 && rect.height >= 100) {
+      resize();
+      // 壳层/底栏也可能在同一帧切换，再校正一帧防止拿到过渡尺寸。
+      if (n === 0) attempt(1);
+      return;
+    }
+    if (n < 8) setTimeout(() => attempt(n + 1), 24);
+  });
+  attempt();
+}
+window.scheduleBattleResize = scheduleBattleResize;
 
 function syncBattleShellVisibility() {
   const active = !!(state && (state.phase === 'playing' || state.phase === 'paused'));
   const wasActive = document.body.classList.contains('battle-shell-active');
   document.body.classList.toggle('battle-shell-active', active);
-  if (active !== wasActive && typeof resize === 'function') requestAnimationFrame(resize);
+  if (active !== wasActive) scheduleBattleResize();
   const hud = document.getElementById('battleShellHud');
   if (hud) {
     hud.classList.toggle('show', active);
     const pause = hud.querySelector('[data-battle-pause]');
     const speed = hud.querySelector('[data-battle-speed]');
+    const title = hud.querySelector('[data-battle-title]');
+    const status = hud.querySelector('[data-battle-status]');
     if (pause) pause.textContent = state.phase === 'paused' ? '继续' : '暂停';
     if (speed) speed.textContent = `×${state.speed || 1}`;
+    if (title) title.textContent = state.mode === 'pvp' ? '竞技对战' : `第 ${state.currentLevel || 1} 关`;
+    if (status) {
+      const wallRatio = Number(state.playerWallHp || 0) / Math.max(1, Number(state.playerWallMax || 1));
+      status.textContent = wallRatio < 0.35 ? '防线告急' : wallRatio < 0.75 ? '防线承压' : '战线稳定';
+      status.classList.toggle('danger', wallRatio < 0.35);
+    }
   }
 }
 window.syncBattleShellVisibility = syncBattleShellVisibility;
@@ -28,8 +56,8 @@ function ensureBattleShellHud() {
   hud.id = 'battleShellHud';
   hud.className = 'battle-shell-hud hifi';
   hud.innerHTML = `
-    <button type="button" class="battle-pill battle-back" data-battle-back>返回</button>
-    <div class="battle-title"><b>水果突击</b><span>对战中</span></div>
+    <button type="button" class="battle-pill battle-back" data-battle-back><span aria-hidden="true">‹</span> 返回</button>
+    <div class="battle-title"><b data-battle-title>第 1 关</b><span data-battle-status>战线稳定</span></div>
     <button type="button" class="battle-pill" data-battle-pause>暂停</button>
     <button type="button" class="battle-pill battle-speed" data-battle-speed>×1</button>
   `;
@@ -94,7 +122,15 @@ function resize() {
   recalcPhoneFrame();
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const host = document.getElementById('wrap') || document.body;
-  const rect = host.getBoundingClientRect();
+  const measured = host.getBoundingClientRect();
+  // 菜单切战斗时 #wrap 可能短暂 display:none。此时直接使用已经计算好的手机框尺寸，
+  // 不再等待 DOM 时序，也绝不允许 canvas 被压成 1px。
+  const rootStyle = getComputedStyle(document.documentElement);
+  const fallbackW = parseFloat(rootStyle.getPropertyValue('--phone-w')) || window.innerWidth || W;
+  const fallbackH = parseFloat(rootStyle.getPropertyValue('--phone-h')) || window.innerHeight || H;
+  const rect = measured.width >= 100 && measured.height >= 100
+    ? measured
+    : { width: Math.max(100, fallbackW), height: Math.max(100, fallbackH) };
   // 壳内框留 8px 边距对齐金框内沿
   const margin = 8;
   const availW = Math.max(1, rect.width - margin * 2);
@@ -107,6 +143,10 @@ function resize() {
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Canvas resize invalidates paint resources created by the previous backing
+  // store. Rebuild cached gradients on the next frame instead of reusing them.
+  if (typeof _bgGrad !== 'undefined') _bgGrad = null;
+  if (typeof _fieldGrad !== 'undefined') _fieldGrad = null;
   if (typeof LAYOUT !== 'undefined' && typeof LAYOUT.recalc === 'function') LAYOUT.recalc(W, H);
 }
 window.addEventListener('resize', resize);
@@ -340,10 +380,15 @@ function loop(t) {
   requestAnimationFrame(loop);
   if (t - _lastFrame < 16) return; // 帧率上限 ~60fps
   _lastFrame = t;
+  if (window.__freezeBattleFrame) return;
   const dt = Math.min((t - last) / 1000, 0.05);
   last = t;
   update(dt * state.speed);
   syncBattleShellVisibility();
+  if (document.body.classList.contains('battle-shell-active')) {
+    const liveRect = canvas.getBoundingClientRect();
+    if (liveRect.width < 100 || liveRect.height < 100) resize();
+  }
   draw();
 }
 

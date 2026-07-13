@@ -392,16 +392,15 @@ function drawJuiceLayer() {
   for (const t of j.texts) {
     const a = Math.max(0, t.life / t.maxLife);
     ctx.globalAlpha = Math.min(1, a * 1.4);
-    ctx.font = `900 ${Math.round(t.size)}px sans-serif`;
+    const callout = /破城|克制|优势|受制/.test(String(t.text || ''));
+    const textSize = callout ? Math.min(12, Math.round(t.size)) : Math.min(15, Math.round(t.size));
+    ctx.font = `${callout ? 700 : 800} ${textSize}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'rgba(0,0,0,0.72)';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.58)';
     ctx.strokeText(t.text, t.x, t.y);
-    ctx.fillStyle = t.color;
-    ctx.shadowColor = t.color;
-    ctx.shadowBlur = 10;
+    ctx.fillStyle = callout ? '#C6B58F' : t.color;
     ctx.fillText(t.text, t.x, t.y);
-    ctx.shadowBlur = 0;
   }
 
   if (j.combo >= 3 && j.comboTimer > 0) {

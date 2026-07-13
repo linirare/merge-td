@@ -254,4 +254,13 @@ function initLevel(k) {
   }));
   state.phase = 'playing';
   resetAI();
+  // 关卡入口可能由多个壳层触发；立即同步，避免首帧出现黑底或旧导航。
+  if (typeof window !== 'undefined' && typeof window.syncBattleShellVisibility === 'function') {
+    window.syncBattleShellVisibility();
+  }
+  // Re-entering battle from another live stage does not toggle the shell class,
+  // so force a fresh layout pass for every stage start as well.
+  if (typeof window !== 'undefined' && typeof window.scheduleBattleResize === 'function') {
+    window.scheduleBattleResize();
+  }
 }

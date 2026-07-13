@@ -29,24 +29,24 @@ function drawInfo() {
   const desc = state.mode === 'pvp'
     ? `房间 ${state.pvpRoomId || '----'}`
     : (state.levelConfig?.isBoss ? '果堡 Boss' : '闯关推进');
-  const x = 8;
+  const x = 18;
   const y = LAYOUT.enemyInfoY || 6;
 
   ctx.save();
-  hudPanel(x, y, 148, 34, 10, 'rgba(255,255,255,.84)');
-  ctx.fillStyle = '#FFE9A8';
-  ctx.font = '900 13px sans-serif';
+  hudPanel(x, y, 148, 36, 4, 'rgba(19,19,20,.94)', 'rgba(151,126,86,.42)');
+  ctx.fillStyle = '#D9CDB8';
+  ctx.font = '800 13px "Microsoft YaHei",sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(mode, x + 11, y + 12);
-  ctx.fillStyle = '#C9B48A';
-  ctx.font = '700 12px sans-serif';
+  ctx.fillStyle = '#918474';
+  ctx.font = '700 11px "Microsoft YaHei",sans-serif';
   ctx.fillText(desc, x + 11, y + 25);
 
   const elapsed = Math.floor(state.time || 0);
-  hudPanel(W / 2 - 34, y, 68, 34, 10, 'rgba(34,22,12,.88)', 'rgba(255,255,255,.18)');
-  ctx.fillStyle = '#fff8cf';
-  ctx.font = '900 13px sans-serif';
+  hudPanel(W / 2 - 34, y, 68, 36, 4, 'rgba(19,19,20,.96)', 'rgba(151,126,86,.42)');
+  ctx.fillStyle = '#D9CDB8';
+  ctx.font = '800 13px "Nunito","Microsoft YaHei",sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(`${elapsed}s`, W / 2, y + 18);
   ctx.restore();
@@ -88,74 +88,60 @@ function drawOperationResourceStripV61() {
     y,
     w,
     h,
-    12,
-    'rgba(255,255,255,.88)',
-    pulseKind === 'lack' && pulse > 0 ? 'rgba(223,89,100,.48)' : 'rgba(122,78,8,.14)'
+    6,
+    'rgba(18,20,19,.97)',
+    pulseKind === 'lack' && pulse > 0 ? 'rgba(152,80,90,.82)' : 'rgba(151,126,86,.52)'
   );
 
   const juiceW = 112;
-  const juiceFill = canAct ? '#3E2716' : '#6f3a3d';
+  const juiceFill = '#222320';
   ctx.fillStyle = juiceFill;
-  hudRoundRect(x + 5, y + 5, juiceW, h - 10, 9);
+  hudRoundRect(x + 5, y + 5, juiceW, h - 10, 3);
   ctx.fill();
   if (pulse > 0) {
     ctx.globalAlpha = 0.20 * pulse;
-    ctx.fillStyle = pulseKind === 'lack' ? '#df5964' : '#f4c64f';
-    hudRoundRect(x + 5, y + 5, juiceW, h - 10, 9);
+    ctx.fillStyle = pulseKind === 'lack' ? '#98505A' : '#9A835D';
+    hudRoundRect(x + 5, y + 5, juiceW, h - 10, 3);
     ctx.fill();
     ctx.globalAlpha = 1;
   }
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.font = '700 12px sans-serif';
-  ctx.fillStyle = canAct ? '#F3E3C0' : '#ffd1d6';
-  ctx.fillText('\u679c\u6c41', x + 15, y + 14);
-  ctx.font = '950 20px sans-serif';
-  ctx.fillStyle = '#FFE9A8';
+  ctx.font = '700 11px "Microsoft YaHei",sans-serif';
+  ctx.fillStyle = '#928675';
+  ctx.fillText('果汁', x + 15, y + 14);
+  ctx.font = '800 20px "Nunito","Microsoft YaHei",sans-serif';
+  ctx.fillStyle = canAct ? '#E9DFC9' : '#9E9290';
   ctx.fillText(String(juice), x + 56, y + 21);
 
   const btn = getJuiceSpawnButtonRectV60();
-  const btnGrad = ctx.createLinearGradient(0, btn.y, 0, btn.y + btn.h);
-  if (canAct) {
-    btnGrad.addColorStop(0, '#ffe47a');
-    btnGrad.addColorStop(1, '#ff9d3f');
-  } else {
-    btnGrad.addColorStop(0, '#f7d9b7');
-    btnGrad.addColorStop(1, '#d9a081');
-  }
-  ctx.fillStyle = btnGrad;
-  hudRoundRect(btn.x, btn.y, btn.w, btn.h, 10);
+  ctx.fillStyle = canAct ? '#B69557' : '#4A4640';
+  hudRoundRect(btn.x, btn.y, btn.w, btn.h, 4);
   ctx.fill();
-  ctx.strokeStyle = canAct ? 'rgba(151,86,20,.30)' : 'rgba(112,68,60,.26)';
+  ctx.strokeStyle = canAct ? '#D1B77F' : '#676159';
   ctx.lineWidth = 1;
-  hudRoundRect(btn.x + 0.5, btn.y + 0.5, btn.w - 1, btn.h - 1, 10);
+  hudRoundRect(btn.x + 0.5, btn.y + 0.5, btn.w - 1, btn.h - 1, 4);
   ctx.stroke();
-
-  ctx.globalAlpha = 0.18;
-  ctx.fillStyle = '#fffdf0';
-  hudRoundRect(btn.x + 4, btn.y + 3, btn.w - 8, 6, 5);
-  ctx.fill();
-  ctx.globalAlpha = 1;
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = '950 17px sans-serif';
-  ctx.fillStyle = canAct ? '#6a320c' : '#8c5950';
-  ctx.fillText('\u51fa\u6218', btn.x + btn.w * 0.44, btn.y + btn.h / 2 + 1);
+  ctx.font = '800 15px "Microsoft YaHei",sans-serif';
+  ctx.fillStyle = canAct ? '#211D16' : '#A39B91';
+  ctx.fillText('召唤水果营', btn.x + btn.w * 0.43, btn.y + btn.h / 2 + 1);
 
   const badgeW = 44;
   const badgeH = 22;
   const badgeX = btn.x + btn.w - badgeW - 8;
   const badgeY = btn.y + (btn.h - badgeH) / 2;
-  ctx.fillStyle = canAct ? '#c94b55' : '#a76b67';
-  hudRoundRect(badgeX, badgeY, badgeW, badgeH, 8);
+  ctx.fillStyle = canAct ? '#332A20' : '#302D2B';
+  hudRoundRect(badgeX, badgeY, badgeW, badgeH, 3);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.54)';
-  hudRoundRect(badgeX + 0.5, badgeY + 0.5, badgeW - 1, badgeH - 1, 8);
+  ctx.strokeStyle = 'rgba(225,207,171,.25)';
+  hudRoundRect(badgeX + 0.5, badgeY + 0.5, badgeW - 1, badgeH - 1, 3);
   ctx.stroke();
-  ctx.font = '950 13px sans-serif';
-  ctx.fillStyle = '#fff8cf';
+  ctx.font = '800 12px "Nunito","Microsoft YaHei",sans-serif';
+  ctx.fillStyle = '#D9CDB8';
   ctx.fillText(`-${cost}`, badgeX + badgeW / 2, badgeY + badgeH / 2 + 0.5);
 
   ctx.restore();
@@ -191,6 +177,76 @@ function drawTopActionBarV60() {
   drawMiniButton(HELP_RECT, '?');
   drawMiniButton(SPEED_RECT, `×${state.speed || 1}`, true);
   ctx.restore();
+}
+
+/* ---- Commercial HUD v2 ----------------------------------------------- */
+function drawInfo() {
+  if (state.phase !== 'playing' && state.phase !== 'paused') return;
+  const x = 14, y = LAYOUT.enemyInfoY || 5;
+  const level = state.currentLevel || 1;
+  const elapsed = Math.floor(state.time || 0);
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.42)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+  const plate = ctx.createLinearGradient(0,y,0,y+42);
+  plate.addColorStop(0,'#284B72'); plate.addColorStop(1,'#102844');
+  hudPanel(x,y,160,42,12,plate,'rgba(255,215,115,.78)');
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#FFD86F';
+  ctx.beginPath(); ctx.arc(x+17,y+21,7,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#FFF7E5'; ctx.font = '900 15px "Microsoft YaHei",sans-serif';
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText(state.mode === 'pvp' ? 'PVP 竞技' : `第 ${level} 关`,x+31,y+14);
+  ctx.fillStyle = '#93EBD9'; ctx.font = '800 10px "Microsoft YaHei",sans-serif';
+  ctx.fillText(state.levelConfig?.isBoss ? 'BOSS 攻坚战' : '果园前线',x+31,y+30);
+
+  const timer = ctx.createLinearGradient(0,y,0,y+42);
+  timer.addColorStop(0,'#5B3A83'); timer.addColorStop(1,'#2A1E55');
+  hudPanel(W/2-38,y,76,42,12,timer,'rgba(255,215,115,.78)');
+  ctx.fillStyle='#FFF5D8'; ctx.font='900 16px "Nunito",sans-serif'; ctx.textAlign='center';
+  ctx.fillText(`${elapsed}s`,W/2,y+21);
+  ctx.restore();
+  ctx.textBaseline='alphabetic';
+}
+
+function drawOperationResourceStripV61() {
+  const y = LAYOUT.operationY || (LAYOUT.playerWallY + LAYOUT.wallH + 16);
+  const x = BOARD_X, h = LAYOUT.operationH || 38, w = BOARD_W;
+  const cost = nextActionCostV60();
+  const juice = Number(state.sp || 0);
+  const canAct = juice >= cost;
+  const btn = getJuiceSpawnButtonRectV60();
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,.52)'; ctx.shadowBlur=12; ctx.shadowOffsetY=5;
+  const tray=ctx.createLinearGradient(0,y,0,y+h);
+  tray.addColorStop(0,'#274F6A'); tray.addColorStop(1,'#0A2439');
+  hudPanel(x,y,w,h,12,tray,'rgba(255,215,111,.76)');
+  ctx.shadowBlur=0;
+
+  const juiceGrad=ctx.createLinearGradient(0,y+4,0,y+h-4);
+  juiceGrad.addColorStop(0,'#7C49C9'); juiceGrad.addColorStop(1,'#39206E');
+  hudPanel(x+5,y+5,114,h-10,9,juiceGrad,'rgba(222,193,255,.50)');
+  ctx.fillStyle='#E9D1FF'; ctx.beginPath(); ctx.arc(x+23,y+h/2,11,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#9B5EFF'; ctx.beginPath(); ctx.arc(x+23,y+h/2+2,7,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#FFF5FF'; ctx.beginPath(); ctx.arc(x+20,y+h/2-2,2.3,0,Math.PI*2); ctx.fill();
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillStyle='#EADFFF'; ctx.font='800 10px "Microsoft YaHei",sans-serif'; ctx.fillText('果汁能量',x+40,y+12);
+  ctx.fillStyle='#FFFFFF'; ctx.font='900 20px "Nunito",sans-serif'; ctx.fillText(String(juice),x+72,y+26);
+
+  const action=ctx.createLinearGradient(0,btn.y,0,btn.y+btn.h);
+  if (canAct) { action.addColorStop(0,'#7AFADE'); action.addColorStop(.5,'#26DAB7'); action.addColorStop(1,'#0D9A91'); }
+  else { action.addColorStop(0,'#6B7482'); action.addColorStop(1,'#3D4553'); }
+  ctx.shadowColor=canAct?'rgba(46,237,194,.45)':'rgba(0,0,0,.25)'; ctx.shadowBlur=canAct?12:4;
+  hudPanel(btn.x,btn.y,btn.w,btn.h,10,action,canAct?'#C6FFF0':'#87909A');
+  ctx.shadowBlur=0;
+  ctx.fillStyle=canAct?'#053F42':'#C0C5CB'; ctx.font='900 15px "Microsoft YaHei",sans-serif';
+  ctx.textAlign='center'; ctx.fillText('召唤水果军团',btn.x+btn.w*.43,btn.y+btn.h/2+1);
+
+  const badgeX=btn.x+btn.w-49,badgeY=btn.y+5;
+  hudPanel(badgeX,badgeY,42,btn.h-10,8,'rgba(6,30,43,.78)','rgba(255,255,255,.35)');
+  ctx.fillStyle='#FFF2B0'; ctx.font='900 12px "Nunito",sans-serif';
+  ctx.fillText(`-${cost}`,badgeX+21,badgeY+(btn.h-10)/2+1);
+  ctx.restore();
+  ctx.textBaseline='alphabetic';
 }
 
 // drawSpeedBtn/drawPauseBtn/drawHelpBtn → 已迁移至壳HUD(#battleShellHud)

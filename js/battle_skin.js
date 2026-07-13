@@ -48,91 +48,96 @@ function drawField() {
 
   if (!_fieldGrad || _fieldFY !== fy || _fieldFH !== fh) {
     _fieldGrad = ctx.createLinearGradient(0, fy, 0, fy + fh);
-    _fieldGrad.addColorStop(0, 'rgba(246,231,188,0.98)');
-    _fieldGrad.addColorStop(0.50, 'rgba(238,221,172,0.94)');
-    _fieldGrad.addColorStop(1, 'rgba(232,207,143,0.96)');
+    _fieldGrad.addColorStop(0, '#252326');
+    _fieldGrad.addColorStop(0.48, '#202324');
+    _fieldGrad.addColorStop(0.52, '#1E2321');
+    _fieldGrad.addColorStop(1, '#202521');
     _fieldFY = fy; _fieldFH = fh;
   }
   ctx.save();
-  ctx.globalAlpha = 0.18;
-  ctx.fillStyle = '#5b3618';
-  roundRect(x + 3, fy + 5, w, fh, 16);
+  ctx.globalAlpha = 0.38;
+  ctx.fillStyle = '#000';
+  roundRect(x + 2, fy + 4, w, fh, 8);
   ctx.fill();
   ctx.restore();
-  drawPanel(x, fy, w, fh, 16, _fieldGrad, 'rgba(167,126,50,0.48)');
+  drawPanel(x, fy, w, fh, 8, _fieldGrad, 'rgba(151,126,86,0.50)');
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.58)';
-  ctx.lineWidth = 1.2;
-  roundRect(x + 1, fy + 1, w - 2, fh - 2, 15);
+  ctx.strokeStyle = 'rgba(219,200,163,0.10)';
+  ctx.lineWidth = 1;
+  roundRect(x + 4, fy + 4, w - 8, fh - 8, 5);
   ctx.stroke();
   ctx.restore();
 
-  // 上下墙前安全带，只做空间暗示，不放文字、不做大提示。
+  // 敌我两端只是漆面色温变化，不使用亮色发光带。
   ctx.save();
-  ctx.fillStyle = 'rgba(255,255,255,0.14)';
-  roundRect(x + 10, fy + 8, w - 20, 18, 10);
-  ctx.fill();
-  roundRect(x + 10, fy + fh - 26, w - 20, 18, 10);
-  ctx.fill();
+  ctx.fillStyle = 'rgba(126,62,70,0.09)';
+  ctx.fillRect(x + 6, fy + 6, w - 12, 24);
+  ctx.fillStyle = 'rgba(72,108,85,0.09)';
+  ctx.fillRect(x + 6, fy + fh - 30, w - 12, 24);
+  ctx.strokeStyle = 'rgba(189,162,107,0.20)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + 14, fy + 30); ctx.lineTo(x + w - 14, fy + 30);
+  ctx.moveTo(x + 14, fy + fh - 30); ctx.lineTo(x + w - 14, fy + fh - 30);
+  ctx.stroke();
   ctx.restore();
 
-  const laneTop = fy + 32;
-  const laneBottom = fy + fh - 34;
-  const laneH = laneBottom - laneTop;
-  ctx.save();
-  for (let c = 0; c < COLS; c++) {
-    const lx = BOARD_X + c * (CELL + GAP) + CELL / 2;
-    const lanePanelW = CELL * 0.72;
-    ctx.fillStyle = c % 2 === 0 ? 'rgba(255,255,255,0.065)' : 'rgba(149,104,36,0.045)';
-    roundRect(lx - lanePanelW / 2, laneTop, lanePanelW, laneH, 12);
-    ctx.fill();
-  }
-  ctx.restore();
-
+  const laneTop = fy + 30;
+  const laneBottom = fy + fh - 30;
+  const midY = fy + fh / 2;
   for (let c = 0; c < COLS; c++) {
     const lx = BOARD_X + c * (CELL + GAP) + CELL / 2;
     const st = state.laneStats?.[c];
-    let laneColor = 'rgba(136,91,26,0.18)';
-    let laneW = c === 2 ? 1.45 : 1.05;
+    const enemyPressure = st && ['enemy_adv','wall_danger','enemy_push'].includes(st.status);
+    const playerPressure = st && ['player_adv','siege_ready','player_push'].includes(st.status);
+    const clash = st?.status === 'clash';
 
-    if (st?.status === 'enemy_adv' || st?.status === 'wall_danger') {
-      laneColor = 'rgba(212,65,85,0.26)';
-      laneW = 1.8;
-    } else if (st?.status === 'player_adv' || st?.status === 'siege_ready') {
-      laneColor = 'rgba(39,159,95,0.23)';
-      laneW = 1.7;
-    } else if (st?.status === 'clash') {
-      laneColor = 'rgba(206,139,42,0.26)';
-      laneW = 1.65;
+    if (enemyPressure || playerPressure || clash) {
+      ctx.save();
+      ctx.fillStyle = enemyPressure
+        ? 'rgba(126,62,70,0.16)'
+        : playerPressure
+          ? 'rgba(72,108,85,0.15)'
+          : 'rgba(154,128,82,0.10)';
+      ctx.fillRect(lx - CELL * 0.34, laneTop, CELL * 0.68, laneBottom - laneTop);
+      ctx.restore();
     }
 
     ctx.save();
-    ctx.strokeStyle = laneColor;
-    ctx.lineWidth = laneW;
+    ctx.strokeStyle = c === 2 ? 'rgba(189,162,107,0.30)' : 'rgba(213,199,171,0.11)';
+    ctx.lineWidth = c === 2 ? 1.2 : 0.8;
     ctx.beginPath();
-    ctx.moveTo(lx, laneTop);
-    ctx.lineTo(lx, laneBottom);
+    ctx.moveTo(lx, laneTop + 8);
+    ctx.lineTo(lx, laneBottom - 8);
     ctx.stroke();
+
+    // 状态只用一枚克制的推进箭头，不再画整条霓虹线与圆点。
+    if (enemyPressure || playerPressure) {
+      const ay = enemyPressure ? laneBottom - 12 : laneTop + 12;
+      const dir = enemyPressure ? 1 : -1;
+      ctx.strokeStyle = enemyPressure ? '#98505A' : '#64846F';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(lx - 4, ay - dir * 3);
+      ctx.lineTo(lx, ay + dir * 2);
+      ctx.lineTo(lx + 4, ay - dir * 3);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
+  // 中线像战棋桌上的铜制分界条：双细线 + 单个菱形定位点。
   ctx.save();
-  const midY = fy + fh / 2;
-  const midGrad = ctx.createLinearGradient(x + 18, midY, x + w - 18, midY);
-  midGrad.addColorStop(0, 'rgba(255,255,255,0.02)');
-  midGrad.addColorStop(0.5, 'rgba(120,75,18,0.30)');
-  midGrad.addColorStop(1, 'rgba(255,255,255,0.02)');
-  ctx.strokeStyle = midGrad;
-  ctx.setLineDash([7, 8]);
-  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = 'rgba(189,162,107,0.34)';
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(x + 18, midY);
-  ctx.lineTo(x + w - 18, midY);
+  ctx.moveTo(x + 18, midY - 2); ctx.lineTo(x + w - 18, midY - 2);
+  ctx.moveTo(x + 18, midY + 2); ctx.lineTo(x + w - 18, midY + 2);
   ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(122,78,20,0.09)';
-  roundRect(x + 34, midY - 19, w - 68, 38, 19);
-  ctx.fill();
+  ctx.fillStyle = '#9A835D';
+  ctx.translate(W / 2, midY);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillRect(-4, -4, 8, 8);
   ctx.restore();
 }
 
@@ -143,24 +148,24 @@ function drawWall(hp, maxHp, isEnemy) {
   const w = BOARD_W;
   const h = LAYOUT.wallH;
   const cfg = isEnemy
-    ? { body:'#C97984', dark:'#A95663', trim:'#F4D7DC', hp:'#F06B79', hpBg:'rgba(116,37,48,0.46)' }
-    : { body:'#E8C76A', dark:'#B58A2E', trim:'#FFF6DE', hp:'#FDE79A', hpBg:'rgba(90,55,15,0.46)' };
+    ? { body:'#6F3B42', dark:'#2A2022', trim:'#A47473', hp:'#98505A', hpBg:'rgba(0,0,0,0.62)' }
+    : { body:'#3D604C', dark:'#202923', trim:'#78917E', hp:'#64846F', hpBg:'rgba(0,0,0,0.62)' };
 
   ctx.save();
   ctx.globalAlpha = 0.13;
   ctx.fillStyle = '#000';
-  roundRect(x + 2, y + 4, w, h, 8);
+  roundRect(x + 2, y + 4, w, h, 4);
   ctx.fill();
   ctx.globalAlpha = 1;
 
   ctx.fillStyle = cfg.dark;
-  roundRect(x, y, w, h, 8);
+  roundRect(x, y, w, h, 4);
   ctx.fill();
   ctx.fillStyle = cfg.body;
-  roundRect(x + 2, y + 2, w - 4, h - 5, 7);
+  roundRect(x + 2, y + 2, w - 4, h - 5, 3);
   ctx.fill();
   ctx.fillStyle = cfg.trim;
-  roundRect(x + 5, y + 3, w - 10, 3.5, 3);
+  ctx.fillRect(x + 5, y + 3, w - 10, 2);
   ctx.fill();
 
   const segW = 18, gap = 6;
@@ -168,22 +173,19 @@ function drawWall(hp, maxHp, isEnemy) {
   for (let i = 0; i < count; i++) {
     const sx = x + 9 + i * (segW + gap);
     ctx.fillStyle = cfg.dark;
-    roundRect(sx, y - 3, segW, 5, 3);
+    roundRect(sx, y - 3, segW, 5, 1.5);
     ctx.fill();
     ctx.fillStyle = cfg.trim;
-    roundRect(sx + 1.5, y - 2.2, segW - 3, 2.6, 2);
+    ctx.fillRect(sx + 1.5, y - 2.2, segW - 3, 2.2);
     ctx.fill();
   }
 
   const bx = x + 26, by = y + 8, bw = w - 52, bh = 7;
-  ctx.fillStyle = 'rgba(255,255,255,0.24)';
-  roundRect(bx - 2, by - 2, bw + 4, bh + 4, 5);
-  ctx.fill();
   ctx.fillStyle = cfg.hpBg;
-  roundRect(bx, by, bw, bh, 4);
+  roundRect(bx, by, bw, bh, 2);
   ctx.fill();
   ctx.fillStyle = cfg.hp;
-  roundRect(bx + 1.5, by + 1.5, Math.max(4, (bw - 3) * ratio), bh - 3, 3);
+  roundRect(bx + 1, by + 1, Math.max(4, (bw - 2) * ratio), bh - 2, 1.5);
   ctx.fill();
 
   // HP 数字 — 直接画在城墙表面
@@ -192,10 +194,7 @@ function drawWall(hp, maxHp, isEnemy) {
   ctx.font = 'bold 13px "Nunito","Segoe UI","Microsoft YaHei",sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.strokeStyle = 'rgba(0,0,0,0.65)';
-  ctx.lineWidth = 3;
-  ctx.strokeText(hpText, cx, y + h / 2);
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = '#E6DDCA';
   ctx.fillText(hpText, cx, y + h / 2);
   ctx.textBaseline = 'alphabetic';
 
@@ -386,4 +385,131 @@ function drawBattleUnitHpV59(s, x, y, w) {
     ctx.fill();
   }
   ctx.restore();
+}
+
+/* ---- Commercial orchard arena v2 -------------------------------------- */
+function drawField() {
+  const fy = LAYOUT.fieldY;
+  const fh = LAYOUT.fieldH;
+  const x = 18;
+  const w = W - 36;
+  const midY = fy + fh / 2;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.55)';
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 8;
+  const stone = ctx.createLinearGradient(0, fy, 0, fy + fh);
+  stone.addColorStop(0, '#FFE19A');
+  stone.addColorStop(.035, '#B9773E');
+  stone.addColorStop(.07, '#183A4A');
+  stone.addColorStop(.94, '#102C38');
+  stone.addColorStop(.975, '#8B5B35');
+  stone.addColorStop(1, '#FFD37A');
+  drawPanel(x, fy, w, fh, 18, stone, 'rgba(255,231,158,.76)');
+  ctx.restore();
+
+  const grass = ctx.createLinearGradient(0, fy + 10, 0, fy + fh - 10);
+  grass.addColorStop(0, '#1E7A68');
+  grass.addColorStop(.42, '#176658');
+  grass.addColorStop(.58, '#155D55');
+  grass.addColorStop(1, '#0F564D');
+  drawPanel(x + 8, fy + 10, w - 16, fh - 20, 13, grass, 'rgba(173,255,220,.18)');
+
+  const laneTop = fy + 28;
+  const laneBottom = fy + fh - 28;
+  for (let c = 0; c < COLS; c++) {
+    const lx = BOARD_X + c * (CELL + GAP) + CELL / 2;
+    const st = state.laneStats?.[c];
+    const enemyPressure = st && ['enemy_adv','wall_danger','enemy_push'].includes(st.status);
+    const playerPressure = st && ['player_adv','siege_ready','player_push'].includes(st.status);
+    const active = enemyPressure || playerPressure || st?.status === 'clash';
+    ctx.save();
+    const lane = ctx.createLinearGradient(lx - CELL * .33, 0, lx + CELL * .33, 0);
+    lane.addColorStop(0, 'rgba(255,255,255,0)');
+    lane.addColorStop(.18, active ? (enemyPressure ? 'rgba(255,72,112,.20)' : 'rgba(64,239,197,.18)') : 'rgba(190,255,218,.08)');
+    lane.addColorStop(.5, active ? (enemyPressure ? 'rgba(255,72,112,.28)' : 'rgba(64,239,197,.25)') : 'rgba(238,255,221,.13)');
+    lane.addColorStop(.82, active ? (enemyPressure ? 'rgba(255,72,112,.20)' : 'rgba(64,239,197,.18)') : 'rgba(190,255,218,.08)');
+    lane.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = lane;
+    ctx.fillRect(lx - CELL * .34, laneTop, CELL * .68, laneBottom - laneTop);
+
+    ctx.strokeStyle = active ? (enemyPressure ? '#FF6A8C' : '#57EBC4') : 'rgba(223,255,226,.18)';
+    ctx.lineWidth = active ? 2 : 1;
+    ctx.setLineDash(active ? [] : [3, 7]);
+    ctx.beginPath(); ctx.moveTo(lx, laneTop + 8); ctx.lineTo(lx, laneBottom - 8); ctx.stroke();
+    ctx.setLineDash([]);
+
+    const dir = enemyPressure ? 1 : -1;
+    const ay = enemyPressure ? laneBottom - 16 : laneTop + 16;
+    ctx.fillStyle = enemyPressure ? '#FF6A8C' : '#79F0C9';
+    ctx.beginPath();
+    ctx.moveTo(lx, ay + dir * 6); ctx.lineTo(lx - 5, ay - dir * 2); ctx.lineTo(lx + 5, ay - dir * 2); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,220,125,.78)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x + 22, midY); ctx.lineTo(x + w - 22, midY); ctx.stroke();
+  ctx.fillStyle = '#FFD66B';
+  ctx.strokeStyle = '#7D4E24';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(W / 2, midY, 13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#245E55';
+  ctx.beginPath();
+  ctx.moveTo(W/2, midY-7); ctx.lineTo(W/2+7, midY); ctx.lineTo(W/2, midY+7); ctx.lineTo(W/2-7, midY); ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // Clean foreground foliage silhouettes add world depth without noisy texture.
+  ctx.save();
+  ctx.fillStyle = 'rgba(8,54,45,.76)';
+  for (const [bx, by, br] of [[27,fy+34,16],[W-25,fy+52,18],[24,fy+fh-38,18],[W-28,fy+fh-34,15]]) {
+    ctx.beginPath(); ctx.arc(bx,by,br,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bx+br*.65,by+3,br*.7,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawWall(hp, maxHp, isEnemy) {
+  const ratio = clamp01(hp / Math.max(1, maxHp));
+  const x = BOARD_X;
+  const y = isEnemy ? LAYOUT.enemyWallY : LAYOUT.playerWallY;
+  const w = BOARD_W;
+  const h = LAYOUT.wallH;
+  const team = typeof commercialTeamV2 === 'function' ? commercialTeamV2(isEnemy) : (isEnemy
+    ? {main:'#F04D72',deep:'#6E173D',trim:'#FFD37A'}
+    : {main:'#2ED6B4',deep:'#075C68',trim:'#FFD37A'});
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.52)'; ctx.shadowBlur = 9; ctx.shadowOffsetY = 5;
+  const body = ctx.createLinearGradient(0, y - 6, 0, y + h + 4);
+  body.addColorStop(0, team.trim);
+  body.addColorStop(.20, team.main);
+  body.addColorStop(.55, team.deep);
+  body.addColorStop(1, '#081923');
+  ctx.fillStyle = body;
+  roundRect(x, y - 2, w, h + 4, 7); ctx.fill();
+  ctx.strokeStyle = '#FFE7A4'; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  for (const tx of [x + 4, x + w - 26]) {
+    ctx.fillStyle = team.deep;
+    roundRect(tx, y - 8, 22, h + 10, 5); ctx.fill();
+    ctx.strokeStyle = team.trim; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.fillStyle = team.main;
+    for (let i = 0; i < 3; i++) ctx.fillRect(tx + 2 + i * 7, y - 12, 5, 6);
+  }
+
+  const bx = x + 34, by = y + 5, bw = w - 68, bh = 8;
+  ctx.fillStyle = 'rgba(2,10,18,.72)'; roundRect(bx, by, bw, bh, 4); ctx.fill();
+  const hpGrad = ctx.createLinearGradient(bx,0,bx+bw,0);
+  hpGrad.addColorStop(0, ratio > .35 ? '#FFF07C' : '#FF704F');
+  hpGrad.addColorStop(1, ratio > .35 ? team.glow || team.main : '#FF3E67');
+  ctx.fillStyle = hpGrad; roundRect(bx + 1, by + 1, Math.max(5, (bw - 2) * ratio), bh - 2, 3); ctx.fill();
+  ctx.fillStyle = '#FFF8DF'; ctx.font = '900 13px "Nunito",sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`${Math.round(hp)}/${Math.round(maxHp)}`, W / 2, y + h / 2 + 1);
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
 }
