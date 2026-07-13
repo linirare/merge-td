@@ -999,9 +999,18 @@
               if (r.server_gold != null) try { localStorage.setItem('fa_srv_gold', String(r.server_gold)); } catch(e) {}
               saveAll(); refreshResourceNumbers();
               mail.is_read = 1;
-              account.getMail().then(newMails => { if (Array.isArray(newMails)) mailsCache = newMails; renderList(); }).catch(() => renderList());
+              // 即时弹出到账提示
+              const items = [];
+              if (r.granted.gold) items.push(r.granted.gold + '金币');
+              if (r.granted.diamonds) items.push(r.granted.diamonds + '钻石');
+              if (r.granted.fragments) items.push(r.granted.fragments + '碎片');
+              if (items.length) hifiToast('🎉 获得 ' + items.join('、') + '！');
             }
+            // 留在详情页显示"✅ 已领取",不自动跳回列表
             this.textContent = '✅ 已领取'; this.classList.add('gray');
+            // 更新缓存,方便返回列表时刷新
+            // 后台拉新邮件列表,不阻塞UI
+            account.getMail().then(newMails => { if (Array.isArray(newMails)) mailsCache = newMails; }).catch(() => {});
           }).catch(() => { this.disabled = false; this.textContent = '🎁 领取奖励'; });
         });
       }
