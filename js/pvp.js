@@ -372,6 +372,10 @@
     state.currentLevel = 1;
     state.levelConfig = { id: 1, isBoss: false, enemyInitLevel: 1, enemyWallHp: state.enemyWallMax, enemySpawnInterval: 9999, reward: 0, desc: '实时 PVP' };
     // 服务器权威:棋盘/士兵/城墙全部由服务端快照驱动,客户端不再本地布局或跑战斗
+    // 开局在棋盘放初始球(与服务端 pvp-sim.js pvpOpening 对称),让玩家立即可见
+    pvpOpening(state.playerSlots, myDeck, true);
+    pvpOpening(state.enemySlots, peerDeck, false);
+
     state.phase = 'playing';
     document.body.classList.remove('hifi-menu');
     pvp._gotSnap = false;
@@ -398,6 +402,7 @@
   }
   function applySnapshot(snap) {
     if (state.mode !== 'pvp' || !snap || !snap.walls) return;
+    pvp._lastSnapTs = performance.now();
     if (!pvp._gotSnap) { pvp._gotSnap = true; console.log('[PVP] 收到首个 snapshot → 服务端权威生效(兵=' + (snap.soldiers ? snap.soldiers.length : 0) + ')'); }
     const mySide = pvp.playerIndex === 1 ? 1 : 0;
     const flip = mySide === 1;
