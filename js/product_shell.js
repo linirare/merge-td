@@ -80,8 +80,6 @@
         <span class="cchip"><svg class="icon"><use href="#i-coin"/></svg><b data-shell-gold>${meta.gold || 0}</b><span class="plus"><svg class="icon"><use href="#i-plus"/></svg></span></span>
         <span class="cchip"><svg class="icon"><use href="#i-gem"/></svg><b data-shell-gems>${shell.gems || 0}</b><span class="plus"><svg class="icon"><use href="#i-plus"/></svg></span></span>
         <span class="sp"></span>
-        <button class="ring" data-tut><span class="inner"><svg class="icon"><use href="#i-help"/></svg></span></button>
-        <button class="ring" data-go="shop"><span class="inner"><svg class="icon"><use href="#i-bag"/></svg></span></button>
       </header>`;
   }
 
@@ -507,8 +505,7 @@
         return `<button class="card lock" style="--rc:#444"><span class="rc" style="background:#555">?</span>${hifiDisc(id, 46)}<span class="nm" style="color:#666">???</span><span class="lk"><svg class="icon"><use href="#i-lock"/></svg><small>抽卡解锁</small></span></button>`;
       }
       const lv = initLv(id);
-      const stars = Array.from({ length: Math.min(5, lv) }, () => '<svg class="icon"><use href="#i-star"/></svg>').join('');
-      return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 46)}<span class="stars">${stars}</span><span class="nm">${t.name}</span></button>`;
+      return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 46)}<span class="nm">${t.name}</span></button>`;
     }).join('') || '<div style="grid-column:1/-1;text-align:center;color:#8a7a5a;font-weight:800;padding:24px">该职责暂无英雄</div>';
 
     root.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => { squadFilter = btn.dataset.filter; renderSquad(); }));
@@ -538,12 +535,10 @@
     detailId = id;
     const t = fruit(id);
     const lv = initLv(id);
-    const starTier = typeof heroStarTier === 'function' ? heroStarTier(lv) : 1;
-    const sl = [1, 2, 3, 4, 5, 6, 7].map(k => `<svg class="icon ${k <= starTier ? 'on' : ''}"><use href="#i-star"/></svg>`).join('');
     const body = document.getElementById('hifiCardBody');
     if (!body) return;
     body.innerHTML =
-      `<div class="hero"><div class="big">${hifiDisc(id, 42)}</div><div style="flex:1"><h3>${t.name}</h3><div class="tags"><span class="rchip" style="background:${RAR_COLOR[t.rarity] || '#9AA6B2'}">${RAR_KEY[t.rarity] || 'N'}</span><span class="rchip" style="background:#5c4a2a;color:#F3E3C0">${roleZh(t.role)}</span><span style="font-weight:800;font-size:12px;color:#C9B48A">Lv.${lv}</span></div><div class="stars-line" style="margin-top:6px">${sl}</div></div></div>`
+      `<div class="hero"><div class="big">${hifiDisc(id, 42)}</div><div style="flex:1"><h3>${t.name}</h3><div class="tags"><span class="rchip" style="background:${RAR_COLOR[t.rarity] || '#9AA6B2'}">${RAR_KEY[t.rarity] || 'N'}</span><span class="rchip" style="background:#5c4a2a;color:#F3E3C0">${roleZh(t.role)}</span><span style="font-weight:800;font-size:12px;color:#C9B48A">Lv.${lv}</span></div></div></div>`
       + `<div class="ctabs">${[['attr', '属性·技能'], ['grow', '等级成长']].map(([k, l]) => `<button class="ctab ${detailTab === k ? 'on' : ''}" data-ctab="${k}">${l}</button>`).join('')}</div>`
       + `<div id="hifiCardTabBody"></div>`
       + `<div id="hifiCardActions" style="display:flex;gap:10px;margin-top:14px"></div>`
@@ -1175,7 +1170,7 @@
       }
       box.appendChild(item);
     }
-    overlay.querySelector('#closeGacha').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#closeGacha').addEventListener('click', () => { overlay.remove(); renderSquad(); });
   }
 
   function startLadder() {
