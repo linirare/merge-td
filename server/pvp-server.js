@@ -150,10 +150,11 @@ function finishMatch(room, result) {
   stopBattleLoop(room);
 }
 
-function startBattleLoop(room, decks) {
+function startBattleLoop(room, decks, commanders) {
   stopBattleLoop(room);
   room._finished = false;
-  try { room.battle = new PvpBattle(room.seed, decks[0], decks[1]); }
+  commanders = Array.isArray(commanders) ? commanders : ['orchard_lord', 'orchard_lord'];
+  try { room.battle = new PvpBattle(room.seed, decks[0], decks[1], commanders[0], commanders[1]); }
   catch (e) { return finishMatch(room, { seed: room.seed, winner: 0, duration: 0, reason: 'sim_init_error' }); }
   let frame = 0;
   room._loop = setInterval(() => {
@@ -187,7 +188,12 @@ function sanitizeDeck(deck) {
     .slice(0, 5);
 }
 
-const ACTION_TYPES = new Set(['summon_cell', 'move_cell', 'merge_or_swap_cell', 'urgent_dispatch']);
+function sanitizeCommander(id) {
+  const clean = sanitizeText(id || '', 40);
+  return ['orchard_lord', 'berry_general', 'juice_sage'].includes(clean) ? clean : 'orchard_lord';
+}
+
+const ACTION_TYPES = new Set(['summon_cell', 'move_cell', 'merge_or_swap_cell', 'urgent_dispatch', 'commander_skill']);
 const ACTION_PAYLOAD_MAX_BYTES = 1024;
 
 function clampCell(value, maxExclusive) {
@@ -227,6 +233,7 @@ function normalizeActionPayload(type, payload) {
       cost: Math.round(clampNumber(payload.cost, 0, 20, 0)),
     };
   }
+  if (type === 'commander_skill') return {};
   return null;
 }
 
@@ -237,6 +244,7 @@ function roomState(room) {
       index: player.index,
       ready: !!player.ready,
       deck: sanitizeDeck(player.deck || []),
+      commander: sanitizeCommander(player.commander),
     } : null),
   };
 }
@@ -279,6 +287,7 @@ function leaveRoom(client, notify = true) {
   client.index = -1;
   client.ready = false;
   client.deck = [];
+  client.commander = 'orchard_lord';
 }
 
 function disconnectClient(client) {
@@ -294,6 +303,7 @@ function disconnectClient(client) {
     if (room.observers) for (const obs of room.observers) send(obs, { type: 'peer_disconnected', roomId: room.id });
     room._reconnectSlot = client.index;
     room._reconnectDeck = sanitizeDeck(client.deck || []);
+    room._reconnectCommander = sanitizeCommander(client.commander);
     room._reconnectReady = !!client.ready;
     room.players[client.index] = null;
     client.roomId = 'reconnect:' + room.id;
@@ -308,6 +318,7 @@ function disconnectClient(client) {
       } else { stopBattleLoop(room); }
       room._reconnectSlot = null;
       room._reconnectDeck = null;
+      room._reconnectCommander = null;
       room._reconnectReady = false;
       if (!room.players[0] && !room.players[1]) rooms.delete(room.id);
     }, RECONNECT_TIMEOUT_MS);
@@ -336,6 +347,7 @@ function createRoom(client) {
   client.index = 0;
   client.ready = false;
   client.deck = [];
+  client.commander = 'orchard_lord';
   client._lastActionSeq = 0;
   room.players[0] = client;
   rooms.set(id, room);
@@ -357,9 +369,11 @@ function reconnectRoom(client, roomId) {
   client.roomId = room.id;
   client.index = slot;
   client.deck = sanitizeDeck(room._reconnectDeck || []);
+  client.commander = sanitizeCommander(room._reconnectCommander);
   client.ready = !!room._reconnectReady;
   room._reconnectSlot = null;
   room._reconnectDeck = null;
+  room._reconnectCommander = null;
   room._reconnectReady = false;
   room.players[slot] = client;
   send(client, { type: 'reconnected', ...roomState(room), playerIndex: slot });
@@ -377,18 +391,20 @@ function joinRoom(client, roomId) {
   client.index = 1;
   client.ready = false;
   client.deck = [];
+  client.commander = 'orchard_lord';
   client._lastActionSeq = 0;
   room.players[1] = client;
   send(client, { type: 'room_joined', ...roomState(room), playerIndex: 1 });
   broadcast(room, { type: 'peer_joined', ...roomState(room) }, client);
 }
 
-function setReady(client, ready, deck) {
+function setReady(client, ready, deck, commander) {
   const room = rooms.get(client.roomId);
   if (!room) return sendError(client, 'not_in_room');
 
   client.ready = !!ready;
   client.deck = sanitizeDeck(deck);
+  client.commander = sanitizeCommander(commander);
   broadcast(room, { type: 'ready_state', ...roomState(room) });
 
   if (room.players[0] && room.players[1] && room.players.every(player => player.ready)) {
@@ -396,8 +412,9 @@ function setReady(client, ready, deck) {
     for (const player of room.players) player._lastActionSeq = 0;
     room.result = null;
     const decks = room.players.map(player => sanitizeDeck(player.deck || []));
-    broadcast(room, { type: 'match_start', roomId: room.id, seed: room.seed, decks });
-    startBattleLoop(room, decks); // 服务器起权威战斗,开始逐帧推进+广播快照
+    const commanders = room.players.map(player => sanitizeCommander(player.commander));
+    broadcast(room, { type: 'match_start', roomId: room.id, seed: room.seed, decks, commanders });
+    startBattleLoop(room, decks, commanders); // 服务器起权威战斗,开始逐帧推进+广播快照
   }
 }
 
@@ -516,7 +533,7 @@ function handleMessage(client, raw) {
   if (message.type === 'create_room') createRoom(client);
   else if (message.type === 'join_room') joinRoom(client, message.roomId);
   else if (message.type === 'reconnect_room') reconnectRoom(client, message.roomId);
-  else if (message.type === 'ready') setReady(client, message.ready, message.deck);
+  else if (message.type === 'ready') setReady(client, message.ready, message.deck, message.commander);
   else if (message.type === 'action') forwardAction(client, message.action);
   else if (message.type === 'result') { /* 服务器权威:结果由服务端模拟决定,忽略客户端自报(杜绝作弊) */ }
   else if (message.type === 'leave' || message.type === 'leave_room') { leaveObserve(client); leaveRoom(client); }
@@ -537,7 +554,7 @@ function flushClientBuffer(client) {
 
 function attachSocket(socket, head = null, auth = null, clientIp = '') {
   const client = {
-    socket, buffer: Buffer.alloc(0), roomId: '', index: -1, ready: false, deck: [], _observer: '',
+    socket, buffer: Buffer.alloc(0), roomId: '', index: -1, ready: false, deck: [], commander: 'orchard_lord', _observer: '',
     _uid: (auth && auth.uid) || '', _nick: (auth && auth.nick) || '', _ip: clientIp,
   };
   if (client._uid) onlineUsers.set(client._uid, { ws: socket, nickname: client._nick, level: 1, lastHeartbeat: Date.now() }); // 在线追踪(审计C2)

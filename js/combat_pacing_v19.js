@@ -21,18 +21,15 @@ function patchLevelPacingV19() {
   initLevel = function initLevelPacingV19(k) {
     oldInitLevel(k);
 
-    const enemyMul = state.levelConfig?.isBoss ? 0.78 : 0.68;
-    const playerMul = 0.92;
-    state.enemyWallMax = Math.max(24, Math.round(state.enemyWallMax * enemyMul));
+    // Stage data is now authoritative. Do not secretly discount wall HP or slow
+    // the opponent here; those late multipliers made stage strength non-obvious.
+    state.enemyWallMax = Math.max(24, Math.round(state.enemyWallMax));
     state.enemyWallHp = Math.min(state.enemyWallHp, state.enemyWallMax);
-    state.playerWallMax = Math.max(32, Math.round(state.playerWallMax * playerMul));
+    state.playerWallMax = Math.max(32, Math.round(state.playerWallMax));
     state.playerWallHp = Math.min(state.playerWallHp, state.playerWallMax);
 
-    if (state.levelConfig) {
-      state.levelConfig.enemySpawnInterval = Math.max(4.8, (state.levelConfig.enemySpawnInterval || BALL_SPAWN_INTERVAL) * 1.34);
-    }
-    state.enemyBallTimer = Math.min(state.enemyBallTimer || 0, -1.2);
-    state._enemyReinforcePause = 1.4;
+    state.enemyBallTimer = Math.min(state.enemyBallTimer || 0, -0.6);
+    state._enemyReinforcePause = 0.6;
     state._lastEnemyCombatantsV19 = 0;
   };
   initLevel._pacingV19 = true;
@@ -62,7 +59,7 @@ function patchEnemyReinforceWindowV19() {
     const oldAI = updateAI;
     updateAI = function updateAIPacingV19(dt) {
       if ((state._enemyReinforcePause || 0) > 0) return;
-      oldAI(dt * 0.78);
+      oldAI(dt);
     };
     updateAI._pacingV19 = true;
   }
@@ -81,7 +78,7 @@ function patchEnemyReinforceWindowV19() {
 
       const afterEnemy = enemyCombatantsV19();
       if (beforeEnemy > 0 && afterEnemy === 0 && playerCombatantsV19() > 0 && hasPlayerPressureV19()) {
-        const windowSec = state.currentLevel <= 3 ? 5.0 : 4.1;
+        const windowSec = state.currentLevel <= 3 ? 2.6 : 2.2;
         state._enemyReinforcePause = Math.max(state._enemyReinforcePause || 0, windowSec);
         state.enemyBallTimer = Math.min(state.enemyBallTimer || 0, -windowSec);
       }

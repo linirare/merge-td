@@ -153,16 +153,20 @@ async function startMatch(port) {
   assert.strictEqual(joined.roomId, created.roomId);
   await host.nextType('peer_joined');
 
-  host.send({ type: 'ready', ready: true, deck: ['watermelon_guard', 'grape_archer'] });
-  guest.send({ type: 'ready', ready: true, deck: ['banana_raider', 'orange_cannon'] });
+  host.send({ type: 'ready', ready: true, deck: ['watermelon_guard', 'grape_archer'], commander: 'juice_sage' });
+  guest.send({ type: 'ready', ready: true, deck: ['banana_raider', 'orange_cannon'], commander: 'berry_general' });
   const startA = await host.nextType('match_start');
   const startB = await guest.nextType('match_start');
   assert.strictEqual(startA.seed, startB.seed);
   assert.ok(Number.isInteger(startA.seed));
+  assert.deepStrictEqual(startA.commanders, ['juice_sage', 'berry_general']);
+  assert.deepStrictEqual(startB.commanders, ['juice_sage', 'berry_general']);
 
   const snap0 = await host.nextType('snapshot', 2500);
   assert.ok(snap0.snap && snap0.snap.walls && Array.isArray(snap0.snap.soldiers), 'snapshot 应含 walls + soldiers');
   assert.ok(snap0.snap.boards && snap0.snap.boards.p && snap0.snap.boards.e, 'snapshot 应含双方棋盘');
+  assert.strictEqual(snap0.snap.commanders.p.id, 'juice_sage');
+  assert.strictEqual(snap0.snap.commanders.e.id, 'berry_general');
   await guest.nextType('snapshot', 2500);
 
   return { host, guest, roomId: created.roomId, seed: startA.seed };

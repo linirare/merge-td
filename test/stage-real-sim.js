@@ -29,6 +29,7 @@ const FILES = [
   'js/board.js',
   'js/combat.js',
   'js/ai.js',
+  'js/tutorial_balance.js',
   'js/fruit_mechanics.js',
   'js/balance_fix_v15.js',
   'js/lane_block_fix.js',
@@ -37,6 +38,8 @@ const FILES = [
   'js/status_engine_v61.js',
   'js/boss_v63.js',
   'js/dynamic_difficulty_v64.js',
+  'js/juice_economy.js',
+  'js/commander_system_v1.js',
   'js/build_combo_v2.js',
 ];
 
@@ -84,24 +87,34 @@ function buildSandbox() {
   return sandbox;
 }
 
+function argValue(name) {
+  const prefix = `--${name}=`;
+  const arg = process.argv.find(value => value.startsWith(prefix));
+  return arg ? arg.slice(prefix.length) : '';
+}
+
 const isFullRun = process.argv.includes('--full');
 const verbose = process.argv.includes('--verbose');
-const simRunsPerStage = isFullRun ? 3 : 1;
-const simMaxSeconds = isFullRun ? 90 : 65;
+const simRunsPerStage = Math.max(1, Number(argValue('runs') || (isFullRun ? 3 : 1)) || 1);
+const simMaxSeconds = Math.max(30, Number(argValue('cap') || (isFullRun ? 165 : 135)) || 135);
+const requestedStrategies = (argValue('strategies') || 'no_action,light,standard').split(',').map(v => v.trim()).filter(Boolean);
+const requestedStages = (argValue('stages') || Array.from({ length: 20 }, (_, i) => i + 1).join(','))
+  .split(',').map(Number).filter(k => Number.isInteger(k) && k >= 1 && k <= 20);
 
 const DRIVER = `
 ;(function () {
   const DT = 1 / 30;
   const SUMMON_COST = 1;                 // 与 input.js 一致
-  const MAX_FRAMES = 90 * 60;            // 90s 超时上限(目标 35-85s,超此即判过慢/僵持)
   const MAX_SIM_FRAMES = Math.round(${simMaxSeconds} / DT);
   const RUNS_PER_STAGE = ${simRunsPerStage};
   const VERBOSE = ${verbose ? 'true' : 'false'};
+  const REQUESTED_STRATEGIES = ${JSON.stringify(requestedStrategies)};
+  const SIM_STAGES = ${JSON.stringify(requestedStages)};
   const STRATEGIES = [
     { id: 'no_action', label: 'No Op', botEvery: 999, summon: 0, urgentEvery: 999 },
     { id: 'light', label: 'Light', botEvery: 1.0, summon: 1, urgentEvery: 7.0 },
-    { id: 'standard', label: 'Standard', botEvery: 0.45, summon: 2, urgentEvery: 3.5 },
-  ];
+    { id: 'standard', label: 'Standard', botEvery: 0.65, summon: 1, urgentEvery: 3.5 },
+  ].filter(strategy => REQUESTED_STRATEGIES.includes(strategy.id));
 
   // —— 复刻 main.js 的出兵封装(渲染副作用走 stub) ——
   function spawnSoldierFromBall(ball, r, c, side, forced = false) {
@@ -111,6 +124,12 @@ const DRIVER = `
     const soldier = side === 'player'
       ? createSoldier(ball.type, ball.level, getAtkMul(meta, ball.type), getHpMul(meta, ball.type))
       : createSoldier(ball.type, ball.level);
+    if (side === 'enemy' && typeof enemyPveStatMultipliersV64 === 'function') {
+      const mul = enemyPveStatMultipliersV64();
+      soldier.atk = Math.round(soldier.atk * mul.atk);
+      soldier.hp = Math.round(soldier.hp * mul.hp);
+      soldier.maxHp = soldier.hp;
+    }
     soldier.x = center.x + (Math.random() - 0.5) * 8;
     soldier.y = center.y;
     soldier.side = side;
@@ -180,10 +199,6 @@ const DRIVER = `
   }
 
   function botSummonLevel(strategy) {
-    if (strategy.id !== 'standard') return 1;
-    const k = state.currentLevel || 1;
-    if (k >= 16) return 3;
-    if (k >= 8) return 2;
     return 1;
   }
 
@@ -197,15 +212,22 @@ const DRIVER = `
       state.sp -= cost;
       botMarkSummonAction();
       state.summonCount = (state.summonCount || 0) + 1;
-      const type = botPickType(strategy);
+      const pool = activeDeck();
+      const type = typeof pickSmoothSummonTypeV1 === 'function'
+        ? pickSmoothSummonTypeV1(pool)
+        : botPickType(strategy);
       const ball = createBall(type, botSummonLevel(strategy));
       ball.spawnTimer = Math.max(ball.spawnTimer, 2.2);
       state.playerSlots[r][c] = ball;
+      if (typeof noteSmoothSummonV1 === 'function') noteSmoothSummonV1();
       placed++;
     }
   }
 
   function botUrgentDispatch() {
+    const dangerLine = LAYOUT.fieldY + LAYOUT.fieldH * 0.62;
+    const underPressure = (state.enemySoldiers || []).some(s => s && s.alive && s.battleReady && s.y >= dangerLine);
+    if (!underPressure && state.playerWallHp >= state.playerWallMax * 0.88) return;
     let best = null;
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       const ball = state.playerSlots[r][c];
@@ -234,6 +256,13 @@ const DRIVER = `
       : strategy.id === 'light'
         ? Math.min(5, Math.floor((k + 2) / 4))
         : 0;
+    const heroLv = strategy.id === 'standard'
+      ? (typeof recommendedHeroLevel === 'function' ? recommendedHeroLevel(k) : Math.min(13, 1 + Math.floor((k - 1) * 0.65)))
+      : strategy.id === 'light'
+        ? Math.min(6, 1 + Math.floor((k - 1) / 4))
+        : 1;
+    window.shell = { commanderId: 'orchard_lord', commanderLv: { orchard_lord: heroLv }, fruitLv: {} };
+    for (const id of UNIT_POOL) window.shell.fruitLv[id] = heroLv;
     meta.wallLv = strategy.id === 'standard' ? Math.min(WALL_UPGRADE_MAX, Math.floor(k / 3)) : (strategy.id === 'light' ? Math.min(WALL_UPGRADE_MAX, Math.floor(k / 6)) : 0);
     meta.spLv = strategy.id === 'standard' ? Math.min(SP_UPGRADE_MAX, Math.floor(k / 4)) : (strategy.id === 'light' ? Math.min(SP_UPGRADE_MAX, Math.floor(k / 8)) : 0);
     for (const id of DEFAULT_DECK) {
@@ -241,6 +270,31 @@ const DRIVER = `
       meta.upgrades[id + '_hp'] = Math.max(0, growth - 1);
       meta.shardsTotal[id] = strategy.id === 'standard' ? k * 12 : (strategy.id === 'light' ? k * 5 : 0);
     }
+  }
+
+  function simPlayerJuiceCap() {
+    return typeof getSpMax === 'function' ? getSpMax(meta) : SP_MAX;
+  }
+
+  function simEnemyJuiceCap() {
+    return Number((TUNING && TUNING.juice && TUNING.juice.enemyCap) || SP_MAX || 24);
+  }
+
+  function simEnemyActionCost() {
+    const cfg = TUNING && TUNING.juice ? TUNING.juice : {};
+    return Math.min(Number(cfg.maxActionCost || 12), Math.max(1, Number(state.enemySummonCostCounter || 1)));
+  }
+
+  function simEnemySummon() {
+    const cost = simEnemyActionCost();
+    if ((state.enemySp || 0) < cost) return false;
+    const added = typeof autoSpawnEnemyPlanBallV1 === 'function'
+      ? autoSpawnEnemyPlanBallV1(1)
+      : autoSpawnBall(state.enemySlots, 1, true);
+    if (!added) return false;
+    state.enemySp -= cost;
+    state.enemySummonCostCounter = Math.min(Number((TUNING && TUNING.juice && TUNING.juice.maxActionCost) || 12), cost + 1);
+    return true;
   }
 
   // —— 复刻 main.js update(dt):敌方全真,玩家兵按 CD 真派 ——
@@ -252,28 +306,22 @@ const DRIVER = `
 
     const juiceCfg = TUNING && TUNING.juice ? TUNING.juice : {};
     const passiveInterval = Number(juiceCfg.passiveInterval || SP_PASSIVE || 5);
-    if (!state._spTimer) state._spTimer = 0;
-    state._spTimer += dt;
-    while (state._spTimer >= passiveInterval) {
-      state._spTimer -= passiveInterval;
-      state.sp = (state.sp || 0) + 1;
+    state._juicePlayerTimer = (state._juicePlayerTimer || 0) + dt;
+    while (state._juicePlayerTimer >= passiveInterval) {
+      state._juicePlayerTimer -= passiveInterval;
+      state.sp = Math.min(simPlayerJuiceCap(), (state.sp || 0) + 1);
     }
 
-    state.enemyBallTimer += dt;
-    const ebi = (state.levelConfig && state.levelConfig.enemySpawnInterval) || BALL_SPAWN_INTERVAL;
-    if (state.enemyBallTimer >= ebi) {
-      state.enemyBallTimer -= ebi;
-      const added = autoSpawnBall(state.enemySlots, 1, true);
-      if (!added) state.enemyOverflow++;
-      if (state.enemyOverflow > 0) {
-        const empties = emptySlots(state.enemySlots);
-        let placed = 0;
-        while (state.enemyOverflow > 0 && placed < empties.length) {
-          const [r, c] = empties[placed];
-          state.enemySlots[r][c] = createBall(randomEnemyType(), 1);
-          state.enemyOverflow--; placed++;
-        }
-      }
+    state._juiceEnemyTimer = (state._juiceEnemyTimer || 0) + dt;
+    while (state._juiceEnemyTimer >= passiveInterval) {
+      state._juiceEnemyTimer -= passiveInterval;
+      state.enemySp = Math.min(simEnemyJuiceCap(), (state.enemySp || 0) + 1);
+    }
+    state.enemySpCheckTimer = (state.enemySpCheckTimer || 0) + dt;
+    const enemyActionInterval = Number(juiceCfg.enemyActionInterval || 4);
+    while (state.enemySpCheckTimer >= enemyActionInterval) {
+      state.enemySpCheckTimer -= enemyActionInterval;
+      simEnemySummon();
     }
 
     updateAI(dt);
@@ -296,6 +344,10 @@ const DRIVER = `
       }
     }
 
+    if (state._simAutoCommander && state.commander && state.commander.cd <= 0 && typeof activateCommanderSkillV1 === 'function') {
+      activateCommanderSkillV1();
+    }
+    if (typeof updateCommanderSystemV1 === 'function') updateCommanderSystemV1(dt);
     updateCombat();
     if (window.GameHooks && window.GameHooks.update) window.GameHooks.update.run(dt);
   }
@@ -324,9 +376,10 @@ const DRIVER = `
     if (typeof resetJuiceEconomyForLevel === 'function') resetJuiceEconomyForLevel(k);
     initLevel(k);
     state.phase = 'playing';
-    state.sp = Number((TUNING && TUNING.juice && TUNING.juice.start) || state.sp || 8);
+    state.sp = Math.min(simPlayerJuiceCap(), Number((TUNING && TUNING.juice && TUNING.juice.start) || state.sp || 8));
     state.summonCostCounter = 1;
     state.summonActionCount = 0;
+    state._simAutoCommander = strategy.id === 'standard';
     let botTimer = 0;
     let urgentTimer = 0;
     let peakJuice = state.sp || 0;
@@ -353,7 +406,7 @@ const DRIVER = `
   }
 
   const rows = [];
-  for (let k = 1; k <= 20; k++) {
+  for (const k of SIM_STAGES) {
     const def = getStageDefinition(k);
     for (let sIdx = 0; sIdx < STRATEGIES.length; sIdx++) {
       const strategy = STRATEGIES[sIdx];
@@ -361,7 +414,7 @@ const DRIVER = `
       let maxMergeLevel = 0, pairComboCount = 0, summonCount = 0, mergeCount = 0;
       let lv2Sum = 0, lv2N = 0, lv3Sum = 0, lv3N = 0, formedSum = 0, formedN = 0;
       for (let i = 0; i < RUNS_PER_STAGE; i++) {
-        const seed = (0x51A2B3C4 ^ (k * 100003 + sIdx * 9973 + i * 101)) >>> 0; // 每关×策略×run 独立确定性种子
+        const seed = (0x51A2B3C4 ^ (k * 100003 + i * 101)) >>> 0; // 同关同run跨策略共享初始种子，便于公平比较
         const r = runStage(k, strategy, seed);
         if (r.win) { wins++; tSum += r.time; wallSum += r.wall; }
         if (r.timeout) timeouts++;
@@ -415,7 +468,7 @@ const check = process.argv[2] === '--check';
 
 function band(v, [lo, hi]) { return v >= lo && v <= hi ? 'OK ' : (v < lo ? 'LOW' : 'HIGH'); }
 
-console.log(`\n=== 真战斗仿真 · 20关 x 3档操作 (${simRunsPerStage} run/stage, ${simMaxSeconds}s cap) ===`);
+console.log(`\n=== 真战斗仿真 · ${requestedStages.length}关 x ${requestedStrategies.length}档操作 (${simRunsPerStage} run/stage, ${simMaxSeconds}s cap) ===`);
 console.log('关 操作档      类型      胜率   胜均时长  城墙剩% 果汁峰 单位峰 超时  vs目标(时长/胜率)');
 for (const r of rows) {
   const winTarget = r.strategy === 'no_action' ? [0, 0.45] : (r.strategy === 'light' ? [0.35, 0.85] : (r.boss ? tuning.bossWinRate : tuning.standardWinRate));
@@ -444,7 +497,7 @@ for (const r of rows) {
 
 // 结构性断言(CI 安全:失衡只报告不 fail)
 const assert = require('assert');
-assert.strictEqual(rows.length, 60, 'should cover stages 1-20 across three strategies');
+assert.strictEqual(rows.length, requestedStages.length * requestedStrategies.length, 'should cover requested stages and strategies');
 for (const r of rows) {
   assert.ok(r.winRate >= 0 && r.winRate <= 100, 'winRate in range');
   assert.ok(r.runs === simRunsPerStage, 'ran configured runs');
@@ -454,5 +507,7 @@ for (const r of rows) {
   assert.ok(r.summonCount >= 0, 'summonCount should be non-negative');
   assert.ok(r.mergeCount >= 0, 'mergeCount should be non-negative');
 }
-assert.strictEqual(rows.filter(r => r.boss && r.strategy === 'standard').length, 4, 'four boss stages in 1-20');
-console.log('\nOK: real-combat sim ran stages 1-20 x 3 strategies (structure valid)');
+if (requestedStrategies.includes('standard') && requestedStages.length === 20) {
+  assert.strictEqual(rows.filter(r => r.boss && r.strategy === 'standard').length, 4, 'four key stages in 1-20');
+}
+console.log('\nOK: real-combat sim ran requested stages and strategies (structure valid)');

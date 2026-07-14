@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>水果突击 · Fruit Assault</title>
+<title>球球英雄Ⅱ · 兵营攻城</title>
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="css/style.css?v=20260713r5">
 <link rel="stylesheet" href="css/hifi_shell.css?v=20260713r5">
@@ -13,11 +13,11 @@
 <div id="rotate-hint">
   <div class="phone-rotate">📱</div>
   <p>请切换到竖屏体验</p>
-  <small>更适合手机 H5 的水果突击布局</small>
+  <small>球球合成 · 兵营出兵 · 五路攻城</small>
 </div>
 
 <div id="wrap">
-  <canvas id="game" aria-label="水果突击游戏画布"></canvas>
+  <canvas id="game" aria-label="球球英雄二游戏画布"></canvas>
 </div>
 
 <div id="overlay"></div>
@@ -36,7 +36,7 @@
         <button class="ring" data-tut><span class="inner"><svg class="icon"><use href="#i-help"/></svg></span></button>
         <button class="ring" data-go="shop"><span class="inner"><svg class="icon"><use href="#i-bag"/></svg></span></button>
       </header>
-      <div class="logo"><h1 class="display">水果突击</h1><div class="rib">灵果召唤 · 合成塔防</div></div>
+      <div class="logo"><h1 class="display">球球英雄Ⅱ</h1><div class="rib">兵营合成 · 五路攻城</div></div>
       <div class="side-l">
         <button class="ring" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">签到</span></button>
         <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg></span><span class="lbl">邮件</span></button>
@@ -66,7 +66,7 @@
     <div class="help-section"><h3>🎯 目标</h3><p>编队：从25种水果中逐步解锁，选出最多5种上阵。对局：消耗果汁召唤水果营→自动产兵→击败敌线→拆毁敌方果堡。防守失败则我方果堡被破。</p></div>
     <div class="help-section"><h3>🖐️ 操作</h3><p><b>点空格</b>：消耗递增🧃果汁，随机召唤编队水果营。</p><p><b>拖拽同种同星</b>：合成升级（上限Lv7），属性大幅提升。</p><p><b>🥝奇异果</b>：拖到同星水果上当万能材料合成。<b>🟣百香果</b>：拖到同星目标上复制。</p><p><b>双击水果营</b>：消耗递增🧃果汁，急派兵救线。</p></div>
     <div class="help-section"><h3>🍓 职责克制（7×7 矩阵 ±50%）</h3><p>坦克🍉🥥克突击(1.2) →被攻城克(1.3)</p><p>远程🍇🫐克前排(1.2) →被突击克(1.5)</p><p>突击🍌🍋切后排(1.5) →被前排/坦克克</p><p>攻城🍊🎃克坦克(1.3) →被突击克 &nbsp;|&nbsp; 控制🍐克突击(1.1) &nbsp;|&nbsp; 辅助🍑治疗</p></div>
-    <div class="help-section"><h3>🧃 果汁经济</h3><p>无上限，开局8。每5秒+1。击杀返还其等级🍋。召唤/急派费递增（每次+1，上限12）。前期铺场、后期留果汁双击救线。</p></div>
+    <div class="help-section"><h3>🧃 果汁经济</h3><p>基础上限24，开局8。每5秒+1，击杀固定+1。召唤/急派费递增（最高12）。前期铺场、中期合成，关键波次要预留果汁急派救线。</p></div>
     <div class="help-section"><h3>⭐ Lv1→Lv7成长</h3><p>Lv1-3 数值成长 | Lv4 解锁专属技能 | Lv5 技能强化+金徽章 | Lv6-7 质变，额外机制。</p></div>
     <button id="btnHelpClose" class="btn-secondary">知道了</button>
   </div>
@@ -118,6 +118,7 @@
 <script src="js/economy_balls_v62.js?v=20260713r5"></script>
 <script src="js/build_combo_v2.js?v=20260713r15"></script>
 <script src="js/experience_flow.js?v=20260713r5"></script>
-<script src="js/art_direction_v4.js?v=20260714r1"></script>
+<script src="js/commander_system_v1.js?v=20260714r1"></script>
+<script src="js/battle_2d_v5.js?v=20260714r1"></script>
 </body>
 </html>

@@ -3,11 +3,13 @@
    ============================================================ */
 
 function slotCenter(r, c, isEnemy) {
-  const bx = BOARD_X, by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
+  const bx = typeof boardX === 'function' ? boardX(isEnemy) : BOARD_X;
+  const by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
   return { x: bx + c * (CELL + GAP) + CELL / 2, y: by + r * (CELL + GAP) + CELL / 2 };
 }
 function slotRect(r, c, isEnemy) {
-  const bx = BOARD_X, by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
+  const bx = typeof boardX === 'function' ? boardX(isEnemy) : BOARD_X;
+  const by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
   return { x: bx + c * (CELL + GAP), y: by + r * (CELL + GAP), w: CELL, h: CELL };
 }
 function slotAt(px, py, isEnemy) {
@@ -96,8 +98,10 @@ function initBuildEnemyOpening(k, level) {
   if (!plan) return;
   const positions = [[1, 2], [0, 2], [2, 2]];
   const opening = Array.isArray(plan.opening) ? plan.opening : [];
-  const targetCount = Math.min(positions.length, k <= 3 ? 1 : k <= 6 ? 2 : 3);
-  const enemyLevel = Math.max(1, Math.min(level, k >= 8 ? 2 : 1));
+  const scriptedInitial = Number(plan.initialCount);
+  const targetCount = Math.min(positions.length, Number.isFinite(scriptedInitial) ? Math.max(1, scriptedInitial) : (k <= 3 ? 1 : k <= 6 ? 2 : 3));
+  // 敌我遵循同一合成规则：所有新兵营从 Lv1 开始，升级必须通过合成。
+  const enemyLevel = 1;
   for (let i = 0; i < targetCount; i++) {
     const [r, c] = positions[i];
     const id = normalizeTypeId(opening[i] || randomEnemyType());

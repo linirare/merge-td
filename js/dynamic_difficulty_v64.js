@@ -9,7 +9,16 @@
    (Boss 墙 HP 覆盖 combat_pacing 的 0.68/0.78 折扣)。
    ============================================================ */
 (function installDynamicDifficultyV64() {
-  const WALL_DIFFICULTY = 0.03; // 属性缩放每养成级的倍率
+  const STAGE_ATK_RATE = 0.04;
+  const STAGE_HP_RATE = 0.08;
+
+  function enemyPveStatMultipliers() {
+    const stageLevel = Math.max(1, Number(state.levelConfig && state.levelConfig.enemyInitLevel || 1));
+    const stageAtkMul = 1 + (stageLevel - 1) * STAGE_ATK_RATE;
+    const stageHpMul = 1 + (stageLevel - 1) * STAGE_HP_RATE;
+    return { atk: stageAtkMul, hp: stageHpMul };
+  }
+  window.enemyPveStatMultipliersV64 = enemyPveStatMultipliers;
 
   /* --- 敌方属性均匀缩放(在士兵生成后) --- */
   if (typeof spawnSoldierFromBall === 'function' && !spawnSoldierFromBall._dynDiffV64) {
@@ -17,11 +26,10 @@
     spawnSoldierFromBall = function spawnSoldierWithScalingV64(ball, r, c, side, forced) {
       const soldier = oldSpawn(ball, r, c, side, forced);
       if (soldier && side === 'enemy' && typeof avgPlayerHeroLv === 'function') {
-        const lv = avgPlayerHeroLv(meta);
-        const mul = 1 + lv * WALL_DIFFICULTY;
-        if (mul > 1) {
-          soldier.atk = Math.round(soldier.atk * mul);
-          soldier.hp = Math.round(soldier.hp * mul);
+        const { atk: atkMul, hp: hpMul } = enemyPveStatMultipliers();
+        if (atkMul > 1 || hpMul > 1) {
+          soldier.atk = Math.round(soldier.atk * atkMul);
+          soldier.hp = Math.round(soldier.hp * hpMul);
           soldier.maxHp = soldier.hp;
         }
       }

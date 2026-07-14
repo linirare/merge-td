@@ -173,6 +173,105 @@ async function assertVisiblePage(page, shotName) {
   }
 }
 
+async function assertBattleGeometry(page) {
+  const geometry = await page.evaluate(() => ({
+    canvas: { w: W, h: H },
+    enemy: { x: boardX(true), y: LAYOUT.enemyBoardY, w: BOARD_W, h: BOARD_H },
+    player: { x: boardX(false), y: LAYOUT.playerBoardY, w: BOARD_W, h: BOARD_H },
+    grid: { rows: ROWS, cols: COLS, cell: CELL, gap: GAP },
+    walls: { enemyY: LAYOUT.enemyWallY, playerY: LAYOUT.playerWallY },
+    operationY: LAYOUT.operationY,
+    commanders: {
+      player: state.commander,
+      enemy: state.enemyCommander,
+      playerSkill: typeof commanderSkillRectV5 === 'function' ? commanderSkillRectV5(false) : null,
+      enemySkill: typeof commanderSkillRectV5 === 'function' ? commanderSkillRectV5(true) : null,
+    },
+  }));
+  const { enemy, player, canvas, grid, walls, operationY } = geometry;
+  if (grid.rows !== 3 || grid.cols !== 5) throw new Error(`battle grid must be 3x5: ${JSON.stringify(geometry)}`);
+  if (enemy.w !== player.w || enemy.h !== player.h) throw new Error(`enemy/player boards differ: ${JSON.stringify(geometry)}`);
+  if (enemy.x + player.x + enemy.w !== canvas.w) throw new Error(`boards are not horizontally mirrored: ${JSON.stringify(geometry)}`);
+  if (!geometry.commanders.player || !geometry.commanders.enemy || !geometry.commanders.playerSkill || !geometry.commanders.enemySkill) {
+    throw new Error(`commander system missing: ${JSON.stringify(geometry)}`);
+  }
+  if (enemy.y + enemy.h >= walls.enemyY || walls.playerY >= player.y || player.y + player.h >= operationY) {
+    throw new Error(`battle regions overlap: ${JSON.stringify(geometry)}`);
+  }
+}
+
+async function assertPvpCommanderClientFlow(page) {
+  const result = await page.evaluate(() => {
+    if (!window.__pvpTest || !window.pvpClient?.localCommanderSkill) return { error: 'pvp commander hooks missing' };
+    const savedSkill = window.pvpClient.localCommanderSkill;
+    const saved = {
+      mode: state.mode, phase: state.phase, commander: state.commander, enemyCommander: state.enemyCommander,
+      playerSlots: state.playerSlots, enemySlots: state.enemySlots,
+      playerSoldiers: state.playerSoldiers, enemySoldiers: state.enemySoldiers,
+      playerWallHp: state.playerWallHp, playerWallMax: state.playerWallMax,
+      enemyWallHp: state.enemyWallHp, enemyWallMax: state.enemyWallMax,
+      sp: state.sp, enemySp: state.enemySp,
+    };
+    try {
+      state.mode = 'pvp';
+      state.phase = 'playing';
+      window.__pvpTest.setSide(1);
+      window.__pvpTest.applySnapshot({
+        walls: { p: 700, pMax: 720, e: 680, eMax: 720 },
+        sp: { p: 9, e: 13 },
+        boards: { p: [[], [], []], e: [[], [], []] },
+        commanders: {
+          p: { id: 'juice_sage', level: 1, cd: 7, maxCd: 26, active: 0 },
+          e: { id: 'berry_general', level: 1, cd: 0, maxCd: 27, active: 0 },
+        },
+        soldiers: [],
+      });
+      const mapped = { own: state.commander?.id, peer: state.enemyCommander?.id, ownSp: state.sp, peerSp: state.enemySp };
+      let sent = 0;
+      window.pvpClient.localCommanderSkill = () => { sent++; return true; };
+      const activated = window.activateCommanderSkillV1();
+      return { mapped, activated, sent, cooldown: state.commander?.cd };
+    } finally {
+      Object.assign(state, saved);
+      window.pvpClient.localCommanderSkill = savedSkill;
+      window.__pvpTest.setSide(0);
+    }
+  });
+  if (result.error) throw new Error(result.error);
+  if (result.mapped.own !== 'berry_general' || result.mapped.peer !== 'juice_sage' || result.mapped.ownSp !== 13 || result.mapped.peerSp !== 9) {
+    throw new Error(`pvp commander snapshot mapping failed: ${JSON.stringify(result)}`);
+  }
+  if (!result.activated || result.sent !== 1 || result.cooldown <= 0) {
+    throw new Error(`pvp commander activation failed: ${JSON.stringify(result)}`);
+  }
+}
+
+async function assertCommanderFlow(page) {
+  const before = await page.evaluate(() => ({
+    id: window.shell?.commanderId || 'orchard_lord',
+    berryLv: Number(window.shell?.commanderLv?.berry_general || 1),
+    gold: Number(meta?.gold || 0),
+  }));
+  const select = page.locator('[data-commander-select="berry_general"]');
+  const upgrade = page.locator('[data-commander-upgrade="berry_general"]');
+  if (await select.count() !== 1 || await upgrade.count() !== 1) throw new Error('commander select/upgrade controls missing');
+  await select.click();
+  const selected = await page.evaluate(() => window.shell?.commanderId);
+  if (selected !== 'berry_general') throw new Error(`commander select failed: ${selected}`);
+  await page.evaluate(() => { meta.gold = 99999; });
+  await upgrade.click();
+  const upgraded = await page.evaluate(() => Number(window.shell?.commanderLv?.berry_general || 0));
+  if (upgraded !== before.berryLv + 1) throw new Error(`commander upgrade failed: ${before.berryLv} -> ${upgraded}`);
+  await page.evaluate(saved => {
+    window.shell.commanderId = saved.id;
+    window.shell.commanderLv.berry_general = saved.berryLv;
+    meta.gold = saved.gold;
+    if (typeof window.saveAll === 'function') window.saveAll();
+    if (typeof window.productShellShowTab === 'function') window.productShellShowTab('upgrade');
+  }, before);
+  await page.waitForTimeout(250);
+}
+
 const SHOTS = [
   {
     name: 'home',
@@ -266,6 +365,9 @@ async function run() {
     await ensureLoggedIn(page);
     await shot.setup(page);
     await assertVisiblePage(page, shot.name);
+    if (shot.name === 'squad') await assertCommanderFlow(page);
+    if (shot.name === 'battle' || shot.name === 'boss') await assertBattleGeometry(page);
+    if (shot.name === 'battle') await assertPvpCommanderClientFlow(page);
     if (process.env.VISUAL_DEBUG === '1' && (shot.name === 'battle' || shot.name === 'boss')) {
       const debug = await page.evaluate(() => {
         const info = el => {

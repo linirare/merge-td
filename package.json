@@ -16,10 +16,14 @@
     "test:ui-security": "node test/ui-safe-render.mjs",
     "test:stages": "node test/stage-config.js",
     "test:stage-sim": "node test/stage-sim.js",
+    "test:progression": "node test/progression-curve.js",
+    "test:pacing": "node test/pacing-curve.js",
+    "test:merge-pity": "node test/merge-pity.js",
+    "test:wall-reach": "node test/wall-reachability.js",
     "test:stage-real": "node test/stage-real-sim.js",
     "visual": "node test/visual-check.mjs",
     "test:pvp-flip": "node test/pvp-client-flip.mjs",
-    "check": "npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:ui-security && npm run test:pvp-sim",
+    "check": "npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:progression && npm run test:pacing && npm run test:merge-pity && npm run test:wall-reach && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:ui-security && npm run test:pvp-sim",
     "check:full": "node test/full-check.js"
   },
   "dependencies": {

@@ -1,34 +1,61 @@
-# Battle art v4
+# Battle 2D art v5
 
-Runtime assets generated with the built-in `image_gen` tool on 2026-07-14. The original generator outputs remain under the Codex generated-images directory. The chroma-key unit sheet was converted to RGBA with `remove_chroma_key.py`; only the final runtime atlas is kept here.
+Generated with the built-in `image_gen` tool on 2026-07-14. Project-bound runtime assets are kept in this directory. Chroma-key sources were converted to RGBA with the imagegen skill's `remove_chroma_key.py` helper; intermediate key plates are not shipped.
 
-## `battlefield-arena-v4.png`
+## `battlefield-flat-2d-v5.png`
 
 ```text
 Use case: stylized-concept
-Asset type: production mobile-game battlefield environment plate for a live 2D canvas game
-Primary request: Create a genuinely shippable premium portrait battlefield foundation for a fruit-kingdom lane defense game. This is not concept art and not a poster; it must be a practical gameplay surface designed for dynamic units and UI overlays. One coherent scene, one camera, one lighting system, one material language.
-Canvas and layout: portrait 390:844 proportion. Locked shallow orthographic three-quarter camera with almost no perspective convergence. The entire composition is a single continuous orchard fortress courtyard. Reserve exact clean functional bands: top 0-7% dark leafy canopy and stone parapet as quiet safe area for HUD; 7-29% a broad flat burgundy enemy deployment terrace with restrained stone edging and no props in its center; 31-64% a wide flat warm-green battle lawn with five extremely subtle vertical lane bands integrated into mowing patterns, no hard grid and no central oversized emblem; 67-91% a broad flat teal player deployment terrace with restrained stone edging and no props in its center; bottom 91-100% quiet dark-teal command-plinth area. Blend all bands naturally with short stone bridges and low walls, while keeping every central gameplay area uncluttered.
-Art direction: premium polished 2.5D hand-painted mobile strategy game background, deliberate graphic shapes, controlled gradients, clean soft-edged shadows, crisp readable silhouette hierarchy, sophisticated restrained saturation, warm ivory stone, deep berry, jade teal, orchard green. Strong cohesive art direction comparable to a top-grossing commercial mobile title, but original. Avoid toy-like plastic rendering and generic AI fantasy detail.
-Composition: symmetrical functional layout, clean negative space, side decoration only, no focal decoration underneath units. No characters, no units, no cards, no buttons, no UI, no text, no numbers, no logos, no watermarks, no visible rectangular cells. Minimalist composition, clean simple background. Focus on the main subject. For architecture: simple clean style, no excessive ornamentation or heavy textures.
-Lighting: soft late-afternoon key from upper left, gentle cool fill, restrained contact shadows, no dramatic beams, no bloom.
-Avoid: deep perspective, isometric diorama, oversized castle gate, giant medallion, detailed fruit piles, busy plants in play space, multiple unrelated biomes, collage look, sticker look, photorealism, plastic 3D, pixel art, harsh outlines, excessive decoration, visible UI grid.
+Asset type: final runtime background plate for a portrait 2D mobile merge-defense battle screen
+Primary request: Design a clean premium pure-2D battlefield for a sequel inspired by the information structure of competitive orb-merging tower-defense games. The gameplay loop is orb barracks merge -> barracks deploy troops -> troops fight in five lanes -> break enemy wall. This must be a practical 480×920 gameplay background, not concept art.
+Exact layout: portrait 480:920. Top HUD safe band from y=0 to 48. Enemy deployment board band from y=58 to 230. Enemy wall band from y=238 to 258. Central five-lane battlefield from y=270 to 640. Player wall band from y=648 to 668. Player deployment board band from y=676 to 848. Bottom command bar safe band from y=858 to 920. The top enemy board and bottom player board must be EXACTLY the same width and height and visually mirrored. Leave a clean vertical portrait recess at the far right of the enemy board and a matching recess at the far left of the player board for commander character portraits. Keep the center of both board bands empty for a 5-column by 3-row interactive grid.
+Composition: perfectly front-on flat 2D screen layout, no camera depth, no foreshortening, no vanishing point, no perspective. Enemy board uses muted warm coral-red; player board uses deep turquoise-blue; central battlefield uses desaturated warm green with five subtle vertical lane stripes. Two slim symmetrical stone-and-wood walls separate the field from the boards. Side borders use simple orchard leaves and flat banners only. Functional symmetry and negative space are more important than decoration.
+Style/medium: polished commercial 2D mobile-game background illustration, clean vector-like cel shading, crisp controlled outlines, broad flat color shapes, minimal two-tone shading, restrained highlights, readable at phone size. Original fruit-kingdom theme. It should look authored by one 2D game UI art team, not like AI fantasy painting.
+Lighting/mood: cheerful daylight represented through flat color blocks; no realistic lighting, no volumetric effects, no rendered materials.
+Constraints: no characters, no units, no balls, no grid cells, no HUD panels, no buttons, no text, no numbers, no logo, no watermark. Minimalist composition, clean simple background. Focus on the main subject. For architecture: simple clean style, no excessive ornamentation or heavy textures.
+Avoid: 2.5D, 3D, clay render, painterly rendering, realistic texture, isometric view, deep perspective, castle diorama, giant emblem, glossy plastic, bevel-heavy UI, crowded plants, tiny decorative clutter, collage look.
 No grain, no dirty texture, no random speckles, no messy background, no harsh glow, no checkerboard pattern, no tiling artifacts, no digital ripples.
 ```
 
-## `fruit-units-v4.png`
+## `orb-barracks-v5.png`
 
 ```text
 Use case: stylized-concept
-Asset type: production gameplay sprite atlas for a portrait mobile lane-defense game
-Primary request: Create exactly five isolated combat-ready fruit-kingdom unit sprites that visually belong inside the same polished hand-painted orchard battlefield. These must read as in-game units seen from an elevated shallow orthographic three-quarter camera, not front-facing character portraits and not toy figurines.
-Characters left to right: 1) stout watermelon guardian with broad rind shield and teal cloth; 2) pineapple lancer with compact leaf crest and short golden spear held inside silhouette; 3) grape ranger with purple hood and compact bow held close; 4) orange bombardier carrying a short brass hand-cannon; 5) banana duelist with curved saber held low. Each character has distinct class silhouette but shared costume construction: warm ivory armor trim, colored cloth, dark brown boots, restrained gold hardware.
-Gameplay readability: approximately 2.5-head-tall proportions, compact bodies, slightly oversized hands and weapons, faces small and understated, clear silhouette at 50-70 pixel display height, feet visible, no extreme poses. Camera elevation and lighting must match the environment: viewer sees top of head and shoulders, feet sit on one common invisible ground line. Consistent scale, body proportions, light direction, outline softness and material rendering across all five.
-Style: premium original 2.5D hand-painted mobile strategy game sprite art, crisp deliberate shapes, controlled detail, subtle painterly modeling, no black cartoon outline, no plastic gloss, no sticker border, no aura.
-Layout: single horizontal row, exactly five equal invisible cells, generous separation, no overlap, no weapon crossing into adjacent cell, each full body centered with ample padding.
-Background: perfectly flat solid pure magenta #FF00FF chroma-key background across the entire image. Absolutely uniform; no gradient, texture, floor, shadow, reflection, scenery or vignette. Do not use magenta or hot pink anywhere on the characters.
-Minimalist composition, clean simple background. Focus on the main subject.
-Constraints: no text, no labels, no numbers, no UI, no borders, no cell dividers, no extra characters, no duplicate limbs, no cropped equipment, no cast shadows, no contact shadows, no watermark.
-Avoid: front-facing portrait pose, giant baby heads, plastic 3D toy, glossy collectible figure, generic fantasy hero portrait, chibi sticker, photorealism, pixel art, noisy micro-detail, exaggerated expressions, weapons pointing outside the character cell.
+Asset type: transparent runtime sprite atlas for the five default orb-barracks used on a 3×5 merge board
+Primary request: Create exactly five circular 2D orb-barracks icons for a premium mobile merge-defense game. They are buildings represented as magical fruit balls, not humanoid portraits. Left to right: watermelon shield barracks, grape archer barracks, banana raider barracks, pineapple lancer barracks, orange cannon barracks. Each icon is a round fruit orb with one simple class symbol integrated into the front: shield, bow, curved blade, spear, cannon. Give each orb a tiny flat base-ring so it reads as a barracks that deploys troops.
+Style/medium: pure 2D game sprite art, clean vector-like cel shading, bold controlled colored outline, broad flat colors, at most two simple shade tones, tiny highlight shape, highly readable at 42-54 pixels. Original cheerful fruit-kingdom design. No 3D render, no painterly volume, no realistic material, no glossy plastic.
+Composition: exactly five equal invisible cells in one horizontal row, same orb diameter, same front-facing orthographic camera, same outline weight, each centered with generous separation and padding. No overlap, no symbols crossing cells.
+Background: perfectly flat solid pure magenta #FF00FF chroma-key background across the entire image. Absolutely uniform; no gradient, texture, floor, shadow, reflection, scenery or vignette. Do not use magenta or hot pink inside the icons.
+Constraints: no text, no labels, no numbers, no stars, no UI frame, no borders, no extra objects, no cast shadow, no watermark. Minimalist composition, clean simple background. Focus on the main subject.
+Avoid: character faces, arms, legs, portrait art, 2.5D, 3D, clay, painterly style, beveled collectible coin, realistic fruit texture, sticker border, excessive detail.
+No grain, no dirty texture, no random speckles, no messy background, no harsh glow, no checkerboard pattern, no tiling artifacts, no digital ripples.
+```
+
+## `fruit-troops-v5.png`
+
+```text
+Use case: stylized-concept
+Asset type: transparent runtime sprite atlas for troops deployed by five orb-barracks into a vertical five-lane battlefield
+Primary request: Create exactly five compact 2D fruit troops matching the same visual language as clean cel-shaded fruit orb icons. Left to right: watermelon shield guard, grape archer, banana curved-blade raider, pineapple spear lancer, orange cannon soldier. These are small field units spawned by the matching orb-barracks.
+View and pose: elevated top-down three-quarter 2D game sprite view suitable for a vertical battlefield. The viewer sees the top of each head and shoulders. All five face upward and slightly toward screen center, ready to march toward the enemy wall. Full body visible, feet together on the same invisible ground line. Compact approximately 2.2-head-tall proportions, simple faces, one readable weapon, strong silhouette at 44-64 pixels.
+Style/medium: pure 2D mobile-game sprite illustration, clean vector-like cel shading, bold controlled colored outlines, broad flat color shapes, at most two simple shading tones, no realistic lighting and no rendered volume. Match the orb-barracks palette and outline weight exactly. Original cheerful fruit-kingdom design.
+Composition: exactly five equal invisible cells in one horizontal row, consistent scale, same camera angle, same body proportions, same outline thickness, generous separation. No overlap and no weapon crossing adjacent cells.
+Background: perfectly flat solid pure magenta #FF00FF chroma-key background across the entire image. Absolutely uniform; no gradient, texture, floor, cast shadow, contact shadow, reflection, scenery or vignette. Do not use magenta or hot pink on the characters.
+Constraints: no text, no labels, no numbers, no UI, no frames, no extra characters, no duplicate limbs, no cropped weapon, no aura, no watermark. Minimalist composition, clean simple background. Focus on the main subject.
+Avoid: 2.5D, 3D, clay, painterly rendering, realistic fruit skin, glossy plastic, portrait pose, giant chibi head, sticker border, isometric diorama, complex costume detail.
+No grain, no dirty texture, no random speckles, no messy background, no harsh glow, no checkerboard pattern, no tiling artifacts, no digital ripples.
+```
+
+## `commanders-v5.png`
+
+```text
+Use case: stylized-concept
+Asset type: transparent runtime portrait atlas for the commander system on a portrait 2D mobile battle screen
+Primary request: Create exactly two half-body 2D commander portraits for a fruit-kingdom merge-defense game. Left cell: the player commander, a confident young orchard lord in jade-green and warm gold light armor, leaf-shaped shoulder guards, short dark hair, holding a small command baton, body turned slightly right toward the battlefield. Right cell: the rival commander, a clever young crimson orchard general in coral-red and ivory light armor, berry-shaped hair ornament, body turned slightly left toward the battlefield. Both are original characters with friendly competitive expressions, clear silhouette and one free hand suitable for a skill activation pose.
+Style/medium: pure 2D commercial mobile-game character illustration, clean vector-like cel shading, bold controlled colored outline, broad flat color shapes, at most two simple shade tones, expressive but not exaggerated face, no realistic lighting, no rendered volume. Match clean flat fruit orb and troop sprites.
+Composition: exactly two equal invisible cells in one horizontal row. Half-body from head to waist, same scale and proportions, each centered with generous padding, mirrored inward-facing poses, no overlap. Portraits must remain readable around 48×96 pixels.
+Background: perfectly flat solid pure magenta #FF00FF chroma-key background across the entire image. Absolutely uniform; no gradient, texture, floor, cast shadow, contact shadow, reflection, scenery or vignette. Do not use magenta or hot pink in clothing, hair or skin accents.
+Constraints: no text, no labels, no numbers, no UI frames, no extra people, no weapons crossing cells, no cropped head or hands, no aura, no watermark. Minimalist composition, clean simple background. Focus on the main subject.
+Avoid: 2.5D, 3D, clay, painterly rendering, realistic portrait, glossy plastic, giant chibi head, sticker border, over-detailed costume, photorealism.
 No grain, no dirty texture, no random speckles, no messy background, no harsh glow, no checkerboard pattern, no tiling artifacts, no digital ripples.
 ```

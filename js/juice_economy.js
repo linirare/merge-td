@@ -1,6 +1,6 @@
 /* ============================================================
    水果突击 · Juice Economy v59
-   果汁闭环：无上限 / 开局8点 / 每5秒+1 / 击杀返还等级 / 主动行动递增成本。
+   果汁闭环：24基础上限 / 开局8点 / 每5秒+1 / 击杀固定+1 / 主动行动递增成本。
    v59：只做轻反馈，不再制造战场遮挡；果汁栏闪烁由 state._juicePulse 驱动。
    ============================================================ */
 (function installJuiceEconomyV59() {
@@ -14,6 +14,26 @@
   function juiceNumber(key, fallback) {
     const value = Number(juiceTuning()[key]);
     return Number.isFinite(value) ? value : fallback;
+  }
+
+  function playerJuiceCap() {
+    return Math.max(1, Number(typeof getSpMax === 'function' ? getSpMax(meta) : SP_MAX || 24));
+  }
+
+  function enemyJuiceCap() {
+    return Math.max(1, juiceNumber('enemyCap', SP_MAX || 24));
+  }
+
+  function addPlayerJuice(amount) {
+    const before = Number(state.sp || 0);
+    state.sp = Math.min(playerJuiceCap(), before + Math.max(0, Number(amount) || 0));
+    return state.sp - before;
+  }
+
+  function addEnemyJuice(amount) {
+    const before = Number(state.enemySp || 0);
+    state.enemySp = Math.min(enemyJuiceCap(), before + Math.max(0, Number(amount) || 0));
+    return state.enemySp - before;
   }
 
   const JUICE_PASSIVE_INTERVAL = juiceNumber('passiveInterval', 5.0);
@@ -47,7 +67,7 @@
   function enemyActionCost() {
     if (!state) return 1;
     state.enemySummonCostCounter = Math.max(1, Number(state.enemySummonCostCounter || 1));
-    return state.enemySummonCostCounter;
+    return Math.min(juiceNumber('maxActionCost', 12), state.enemySummonCostCounter);
   }
 
   function pulseJuice(delta = 0, kind = 'info') {
@@ -83,6 +103,52 @@
     return null;
   }
 
+  function boardHasMergePair() {
+    const seen = new Set();
+    for (const row of state.playerSlots || []) {
+      for (const ball of row || []) {
+        if (!ball || ball.level >= MAX_LEVEL) continue;
+        const key = `${ball.type}#${ball.level}`;
+        if (seen.has(key)) return true;
+        seen.add(key);
+      }
+    }
+    return false;
+  }
+
+  function pickSmoothSummonType(pool) {
+    const list = Array.isArray(pool) && pool.length ? pool : activeDeck();
+    if (state.mode === 'pvp' || window.__pvpMode || boardHasMergePair()) {
+      state._summonsWithoutPair = 0;
+      return randomType(list);
+    }
+    // PVE 受控随机：前两次召唤先建立“前排 + 输出”基本阵型，避免经济球开局造成胜负两极化。
+    const summonIndex = Math.max(0, Math.floor(Number(state.summonActionCount || 0)));
+    if (summonIndex === 0) {
+      const fronts = list.filter(id => TYPES[id] && TYPES[id].role === 'tank');
+      if (fronts.length) return fronts[Math.floor(Math.random() * fronts.length)];
+    }
+    if (summonIndex === 1) {
+      const damage = list.filter(id => TYPES[id] && ['back', 'siege', 'rush'].includes(TYPES[id].role));
+      if (damage.length) return damage[Math.floor(Math.random() * damage.length)];
+    }
+    if (Number(state._summonsWithoutPair || 0) >= 2) {
+      const candidates = [];
+      for (const row of state.playerSlots || []) for (const ball of row || []) {
+        if (ball && ball.level === 1 && list.includes(ball.type) && !candidates.includes(ball.type)) candidates.push(ball.type);
+      }
+      if (candidates.length) return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+    return randomType(list);
+  }
+
+  function noteSmoothSummon() {
+    state._summonsWithoutPair = boardHasMergePair() ? 0 : Number(state._summonsWithoutPair || 0) + 1;
+  }
+
+  window.pickSmoothSummonTypeV1 = pickSmoothSummonType;
+  window.noteSmoothSummonV1 = noteSmoothSummon;
+
   if (typeof getSpStart === 'function' && !getSpStart._juiceV59) {
     getSpStart = function getJuiceStartV59(m) {
       return juiceNumber('start', 8) + Math.floor(((m && m.spLv) || 0) / 2);
@@ -91,12 +157,16 @@
   }
 
   if (typeof getSpMax === 'function' && !getSpMax._juiceV59) {
-    getSpMax = function getJuiceMaxV59() { return Infinity; };
+    getSpMax = function getJuiceMaxV59(m) {
+      return SP_MAX + Math.max(0, Number((m && m.spLv) || 0));
+    };
     getSpMax._juiceV59 = true;
   }
 
   if (typeof getSpRecoverCap === 'function' && !getSpRecoverCap._juiceV59) {
-    getSpRecoverCap = function getJuiceRecoverCapV59() { return Infinity; };
+    getSpRecoverCap = function getJuiceRecoverCapV59(m) {
+      return getSpMax(m);
+    };
     getSpRecoverCap._juiceV59 = true;
   }
 
@@ -106,11 +176,13 @@
     const maxHeroLv = Math.max(...UNIT_POOL.map(id => s?.fruitLv?.[id] || 1), 1);
     const starTier = typeof heroStarTier === 'function' ? heroStarTier(maxHeroLv) : 1;
     const starSp = (typeof starStartSpBonusPvp === 'function' && typeof window !== 'undefined' && window.__pvpMode ? starStartSpBonusPvp(starTier) : (typeof starStartSpBonus === 'function' ? starStartSpBonus(starTier) : 0));
-    state.sp = (typeof getSpStart === 'function' ? getSpStart(meta) : 10) + starSp;
-    state.enemySp = juiceNumber('enemyStart', 8);
+    state.sp = Math.min(playerJuiceCap(), (typeof getSpStart === 'function' ? getSpStart(meta) : 10) + starSp);
+    state.enemySp = Math.min(enemyJuiceCap(), juiceNumber('enemyStart', 8));
     state.summonCostCounter = 1;
     state.summonActionCount = 0;
+    state._summonsWithoutPair = 0;
     state.enemySummonCostCounter = 1;
+    state._enemyPlanCursor = 0;
     state._wallPityTriggers = 0;
     state._juicePlayerTimer = 0;
     state._juiceEnemyTimer = 0;
@@ -136,15 +208,17 @@
     const oldKillSoldier = killSoldier;
     killSoldier = function killSoldierWithJuiceRewardV59(target, killerSide, killerAtk, killerType) {
       const wasAlive = !!(target && target.alive);
-      const reward = Math.max(1, Math.min(MAX_LEVEL || 7, Number(target && target.level) || 1));
+      const reward = 1;
       const result = oldKillSoldier(target, killerSide, killerAtk, killerType);
       if (wasAlive && target && !target.alive) {
         if (killerSide === 'player') {
-          state.sp = (state.sp || 0) + reward; // 叠加而非覆盖 oldKillSoldier 可能已加 SP(如连杀)
-          pulseJuice(reward, 'gain');
-          addFx(target.x, target.y - 18, `+${reward}果汁`, THEME.gold, 10);
+          const gained = addPlayerJuice(reward);
+          if (gained > 0) {
+            pulseJuice(gained, 'gain');
+            addFx(target.x, target.y - 18, `+${gained}果汁`, THEME.gold, 10);
+          }
         } else if (killerSide === 'enemy') {
-          state.enemySp = (state.enemySp || 0) + reward; // M4 fix:叠加而非覆盖
+          addEnemyJuice(reward);
         }
       }
       return result;
@@ -153,17 +227,31 @@
   }
 
   function enemySpawnLevel() {
-    const lv = state.levelConfig && state.levelConfig.enemyInitLevel ? state.levelConfig.enemyInitLevel : 1;
-    const base = Math.max(1, Math.floor(lv));
-    return Math.min(MAX_LEVEL, base + (Math.random() < (lv - base) ? 1 : 0));
+    return 1;
   }
+
+  function autoSpawnEnemyPlanBall(level = 1) {
+    const empties = emptySlots(state.enemySlots);
+    if (!empties.length) return null;
+    const opening = state.levelConfig && state.levelConfig.enemyPlan && Array.isArray(state.levelConfig.enemyPlan.opening)
+      ? state.levelConfig.enemyPlan.opening.map(normalizeTypeId).filter(id => TYPES[id])
+      : [];
+    const pool = opening.length ? opening : ENEMY_POOL;
+    const cursor = Math.max(0, Number(state._enemyPlanCursor || 0));
+    const type = pool[cursor % pool.length] || randomEnemyType();
+    state._enemyPlanCursor = cursor + 1;
+    const [r, c] = empties[Math.floor(Math.random() * empties.length)];
+    state.enemySlots[r][c] = createBall(type, level);
+    return [r, c];
+  }
+  window.autoSpawnEnemyPlanBallV1 = autoSpawnEnemyPlanBall;
 
   function tryEnemyJuiceSummon() {
     if (state?.mode === 'pvp') return false;
     if (!state || state.phase !== 'playing' || !state.enemySlots) return false;
     const cost = enemyActionCost();
     if ((state.enemySp || 0) < cost) return false;
-    const added = typeof autoSpawnBall === 'function' ? autoSpawnBall(state.enemySlots, enemySpawnLevel(), true) : null;
+    const added = autoSpawnEnemyPlanBall(enemySpawnLevel());
     if (!added) return false;
     state.enemySp -= cost;
     state.enemySummonCostCounter = cost + 1;
@@ -177,16 +265,18 @@
     state._juicePlayerTimer = (state._juicePlayerTimer || 0) + dt;
     while (state._juicePlayerTimer >= JUICE_PASSIVE_INTERVAL) {
       state._juicePlayerTimer -= JUICE_PASSIVE_INTERVAL;
-      state.sp = (state.sp || 0) + 1;
-      pulseJuice(1, 'gain');
-      addFx(BOARD_X + 38, (LAYOUT.operationY || 570) - 6, '+1果汁', THEME.gold, 10);
+      const gained = addPlayerJuice(1);
+      if (gained > 0) {
+        pulseJuice(gained, 'gain');
+        addFx(BOARD_X + 38, (LAYOUT.operationY || 570) - 6, '+1果汁', THEME.gold, 10);
+      }
     }
 
     if (state.mode !== 'pvp') {
       state._juiceEnemyTimer = (state._juiceEnemyTimer || 0) + dt;
       while (state._juiceEnemyTimer >= JUICE_PASSIVE_INTERVAL) {
         state._juiceEnemyTimer -= JUICE_PASSIVE_INTERVAL;
-        state.enemySp = (state.enemySp || 0) + 1;
+        addEnemyJuice(1);
       }
 
       state.enemySpCheckTimer = (state.enemySpCheckTimer || 0) + dt;
@@ -211,9 +301,10 @@
     }
     if (gained <= 0) return;
     state._wallPityTriggers = triggers;
-    state.sp = (state.sp || 0) + gained;
-    pulseJuice(gained, 'gain');
-    addFx(BOARD_X + BOARD_W - 44, (LAYOUT.operationY || 570) - 6, `保底 +${gained}果汁`, THEME.gold, 11);
+    const applied = addPlayerJuice(gained);
+    if (applied <= 0) return;
+    pulseJuice(applied, 'gain');
+    addFx(BOARD_X + BOARD_W - 44, (LAYOUT.operationY || 570) - 6, `保底 +${applied}果汁`, THEME.gold, 11);
   }
 
   if (typeof update === 'function' && !update._juiceV59) {
@@ -247,7 +338,7 @@
       return false;
     }
 
-    const type = randomType(activeDeck());
+    const type = pickSmoothSummonType(activeDeck());
     state._shellCreatingPlayerBall = true;
     try {
       state.playerSlots[r][c] = createBall(type, 1);
@@ -255,6 +346,7 @@
       state._shellCreatingPlayerBall = false;
     }
     state.playerSlots[r][c].spawnTimer = Math.max(state.playerSlots[r][c].spawnTimer, 2.2);
+    noteSmoothSummon();
     state.sp -= cost;
     state.summonCount = (state.summonCount || 0) + 1;
     markPlayerSummonAction();

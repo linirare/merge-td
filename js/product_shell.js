@@ -50,7 +50,7 @@
   }
 
   function loadShell() {
-    const base = { gems: 0, fragments: {}, fruitLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0, pityR_t: 0, pityE_t: 0 };
+    const base = { gems: 0, fragments: {}, fruitLv: {}, commanderId: 'orchard_lord', commanderLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0, pityR_t: 0, pityE_t: 0 };
     try {
       const raw = localStorage.getItem(SHELL_KEY);
       if (raw) return Object.assign(base, JSON.parse(raw));
@@ -89,6 +89,11 @@
     shell.gems = Number(shell.gems || 0);
     shell.fragments = shell.fragments || {};
     shell.fruitLv = shell.fruitLv || {};
+    shell.commanderId = shell.commanderId || 'orchard_lord';
+    shell.commanderLv = shell.commanderLv || {};
+    for (const id of ['orchard_lord', 'berry_general', 'juice_sage']) {
+      if (!shell.commanderLv[id]) shell.commanderLv[id] = 1;
+    }
     meta.shardsTotal = meta.shardsTotal || {};
     for (const id of UNIT_POOL) {
       if (!shell.fragments[id]) shell.fragments[id] = 0;
@@ -354,7 +359,7 @@
         <div class="bg"></div><div class="scrim"></div>
         ${hifiTopBarHtml()}
 
-        <div class="logo"><h1 class="display">水果突击</h1><div class="rib">灵果召唤 · 合成塔防</div></div>
+        <div class="logo"><h1 class="display">球球英雄Ⅱ</h1><div class="rib">兵营合成 · 五路攻城</div></div>
         <div class="hero-spot"></div>
 
         <div class="side-l">
@@ -410,6 +415,7 @@
               <small style="font-size:11px;font-weight:800;color:#F5C242">${boss ? 'BOSS 关' : '下一关'}</small>
               <h3 style="font-family:'ZCOOL KuaiLe';font-size:22px;color:#FFE9A8;margin:2px 0">第 ${current} 关</h3>
               <p style="font-size:12px;color:#C9B48A;font-weight:700">奖励 ${stageRewardText(current)} · ${starsText(current)}</p>
+              <p style="font-size:11px;color:#8FE0A0;font-weight:900;margin-top:3px">建议主力 Lv.${typeof recommendedHeroLevel === 'function' ? recommendedHeroLevel(current) : 1}</p>
               <p style="font-size:12px;color:#F3E3C0;font-weight:800;line-height:1.45;margin-top:6px">${stageTypeText(info.type)}${mechanic ? ' · ' + mechanic : ''}<br>${hintText(info.tutorialHint)}</p>
             </div>
             <button class="gbtn" id="campaignStartBtn" style="position:relative;z-index:1">挑战</button>
@@ -465,11 +471,37 @@
     const root = shellPage('shellLabPanel', 'shell-squad-page');
     const d = deck();
     const unlockedCount = UNIT_POOL.filter(id => isUnlocked(id)).length;
+    const commanderDefs = window.COMMANDER_DEFS || {
+      orchard_lord: { id:'orchard_lord', name:'果园领主', skill:'果园号令', desc:'兵营产兵与全军攻击加速。' },
+      berry_general: { id:'berry_general', name:'莓果将军', skill:'坚壁反攻', desc:'修复城墙并发动反攻。' },
+      juice_sage: { id:'juice_sage', name:'果汁贤者', skill:'丰收时刻', desc:'立即获得果汁并持续补给。' },
+    };
+    const commanderIds = Object.keys(commanderDefs);
     root.innerHTML = `
       <div class="hifi-screen shop-bg">
         <div class="bg"></div><div class="scrim"></div>
         ${hifiTopBarHtml()}
         <div class="hifi-scroll">
+          <div class="shead"><h2 class="display">主公</h2><span class="line"></span><span class="r">上阵 1/1</span></div>
+          <div class="team" id="commanderTeam" style="gap:8px;margin-bottom:14px">
+            ${commanderIds.map((id, index) => {
+              const def = commanderDefs[id];
+              const lv = Math.max(1, Number(shell.commanderLv[id] || 1));
+              const selected = shell.commanderId === id;
+              const cost = 60 + lv * 45;
+              const artPos = index === 1 ? '82%' : '18%';
+              return `<div class="card ${selected ? 'on' : ''}" style="--rc:${selected ? '#F5C242' : '#6f806f'};flex:1;min-height:146px;padding:6px">
+                <span class="lv">Lv${lv}</span>
+                <div style="width:56px;height:62px;margin:0 auto 3px;border-radius:12px;overflow:hidden;border:2px solid ${selected ? '#FFE9A8' : '#63756e'};background:#254a46">
+                  <img src="art/generated/commanders-v5.png" alt="${escapeHtml(def.name)}" style="width:100%;height:100%;object-fit:cover;object-position:${artPos} 42%">
+                </div>
+                <span class="nm">${escapeHtml(def.name)}</span>
+                <small style="display:block;color:#F5C242;font-weight:900;font-size:9px">${escapeHtml(def.skill)}</small>
+                <button class="gbtn blk" data-commander-select="${id}" style="padding:4px 5px;margin-top:4px;font-size:9px;min-height:22px">${selected ? '已上阵' : '上阵'}</button>
+                <button class="gbtn" data-commander-upgrade="${id}" style="padding:4px 5px;margin-top:4px;font-size:9px;min-height:22px" ${lv >= 20 ? 'disabled' : ''}>${lv >= 20 ? '满级' : `升级 ${cost}🪙`}</button>
+              </div>`;
+            }).join('')}
+          </div>
           <div class="shead"><h2 class="display">卡牌图鉴</h2><span class="line"></span><span class="r">上阵 ${d.length}/${DECK_SIZE}</span></div>
           <div class="team" id="squadDeckTeam">
             ${Array.from({ length: DECK_SIZE }, (_, i) => {
@@ -498,6 +530,23 @@
         </div>
       </div>
     `;
+    root.querySelectorAll('[data-commander-select]').forEach(btn => btn.addEventListener('click', () => {
+      shell.commanderId = btn.dataset.commanderSelect;
+      saveShell();
+      renderSquad();
+    }));
+    root.querySelectorAll('[data-commander-upgrade]').forEach(btn => btn.addEventListener('click', () => {
+      const id = btn.dataset.commanderUpgrade;
+      const lv = Math.max(1, Number(shell.commanderLv[id] || 1));
+      const cost = 60 + lv * 45;
+      if (lv >= 20) return;
+      if (Number(meta.gold || 0) < cost) { hifiToast(`金币不足，还需 ${cost - Number(meta.gold || 0)}`); return; }
+      meta.gold -= cost;
+      shell.commanderLv[id] = lv + 1;
+      saveAll();
+      hifiToast(`${commanderDefs[id].name} 升至 Lv.${lv + 1}`);
+      renderSquad();
+    }));
     const roster = root.querySelector('#hifiRoster');
     const RAR_RANK = { epic: 0, rare: 1, normal: 2 };
     const list = UNIT_POOL
@@ -1554,7 +1603,7 @@
       Object.keys(meta).forEach(k => { delete meta[k]; });
       Object.assign(meta, d);
     }
-    const fresh = { gems: 0, fragments: {}, fruitLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0, pityR_t: 0, pityE_t: 0 };
+    const fresh = { gems: 0, fragments: {}, fruitLv: {}, commanderId: 'orchard_lord', commanderLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0, pityR_t: 0, pityE_t: 0 };
     Object.keys(shell).forEach(k => { delete shell[k]; });
     Object.assign(shell, fresh);
   }
@@ -1579,7 +1628,7 @@
     const isReg = authMode === 'register';
     gate.innerHTML = `
       <div style="width:100%;max-width:330px">
-        <h1 style="font-family:'ZCOOL KuaiLe';font-size:32px;color:#FFE9A8;text-align:center;margin:0 0 2px;text-shadow:0 2px 0 #8a5a10">水果突击</h1>
+        <h1 style="font-family:'ZCOOL KuaiLe';font-size:32px;color:#FFE9A8;text-align:center;margin:0 0 2px;text-shadow:0 2px 0 #8a5a10">球球英雄Ⅱ</h1>
         <p style="text-align:center;color:#c9b78a;font-weight:700;margin:0 0 18px;font-size:12.5px">登录后开始 · 云端存档 / 对战 / 排行</p>
         <div class="ltabs">
           <button class="ltab ${!isReg ? 'on' : ''}" data-g="login">登录</button>

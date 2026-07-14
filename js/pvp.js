@@ -111,6 +111,11 @@
     return normalizeDeck(meta?.deck || DEFAULT_DECK).slice(0, DECK_SIZE);
   }
 
+  function getCommanderSnapshot() {
+    const id = window.shell && window.shell.commanderId;
+    return window.COMMANDER_DEFS && window.COMMANDER_DEFS[id] ? id : 'orchard_lord';
+  }
+
   function createRoom() {
     connect();
     const wait = setInterval(() => {
@@ -136,7 +141,7 @@
 
   function setReady(ready) {
     pvp.ready = !!ready;
-    send({ type: 'ready', ready: pvp.ready, deck: getDeckSnapshot() });
+    send({ type: 'ready', ready: pvp.ready, deck: getDeckSnapshot(), commander: getCommanderSnapshot() });
     notify();
   }
 
@@ -197,6 +202,7 @@
         seed: message.seed,
         playerIndex: pvp.playerIndex,
         decks: message.decks || [],
+        commanders: message.commanders || [],
       });
     } else if (message.type === 'snapshot') {
       applySnapshot(message.snap);
@@ -288,10 +294,11 @@
     state.enemySlots = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
     state.overflowQueue = [];
     state.enemyOverflow = 0;
-    state.playerWallHp = BASE_WALL_HP;
-    state.playerWallMax = BASE_WALL_HP;
-    state.enemyWallHp = BASE_WALL_HP;
-    state.enemyWallMax = BASE_WALL_HP;
+    const pvpWall = typeof PVP_WALL_HP === 'number' ? PVP_WALL_HP : 240;
+    state.playerWallHp = pvpWall;
+    state.playerWallMax = pvpWall;
+    state.enemyWallHp = pvpWall;
+    state.enemyWallMax = pvpWall;
     state.playerSoldiers = [];
     state.enemySoldiers = [];
     state.laneStats = emptyLaneStats();
@@ -363,6 +370,9 @@
     const decks = config.decks || [];
     const myDeck = decks[playerIndex] || getDeckSnapshot();
     const peerDeck = decks[playerIndex === 0 ? 1 : 0] || DEFAULT_DECK;
+    const commanders = config.commanders || [];
+    const myCommander = commanders[playerIndex] || getCommanderSnapshot();
+    const peerCommander = commanders[playerIndex === 0 ? 1 : 0] || 'orchard_lord';
 
     clearForPvp();
     state.mode = 'pvp';
@@ -371,10 +381,10 @@
     state.pvpSeq = 0;
     state.currentLevel = 1;
     state.levelConfig = { id: 1, isBoss: false, enemyInitLevel: 1, enemyWallHp: state.enemyWallMax, enemySpawnInterval: 9999, reward: 0, desc: '实时 PVP' };
+    state.commander = { id: myCommander, level: 1, cd: 0, maxCd: 24, active: 0 };
+    state.enemyCommander = { id: peerCommander, level: 1, cd: 0, maxCd: 24, active: 0 };
     // 服务器权威:棋盘/士兵/城墙全部由服务端快照驱动,客户端不再本地布局或跑战斗
-    // 开局在棋盘放初始球(与服务端 pvp-sim.js pvpOpening 对称),让玩家立即可见
-    pvpOpening(state.playerSlots, myDeck, true);
-    pvpOpening(state.enemySlots, peerDeck, false);
+    // 新规则从空棋盘开局，双方用相同8点果汁从 Lv1 兵营开始构筑。
 
     state.phase = 'playing';
     document.body.classList.remove('hifi-menu');
@@ -415,6 +425,13 @@
       state.playerWallHp = snap.walls.e; state.playerWallMax = snap.walls.eMax;
       state.enemyWallHp = snap.walls.p; state.enemyWallMax = snap.walls.pMax;
       state.sp = snap.sp.e; state.enemySp = snap.sp.p;
+    }
+
+    if (snap.commanders) {
+      const own = mySide === 0 ? snap.commanders.p : snap.commanders.e;
+      const peer = mySide === 0 ? snap.commanders.e : snap.commanders.p;
+      if (own) state.commander = { ...own };
+      if (peer) state.enemyCommander = { ...peer };
     }
 
     // 棋盘:我方=snapshot 里我这侧(拖拽中不重建,避免打断手感)
@@ -545,7 +562,7 @@
   }
 
   function sendLocalAction(type, payload) {
-    if (state.mode !== 'pvp' || pvp.suppress) return;
+    if (state.mode !== 'pvp' || pvp.suppress) return false;
     const action = {
       seq: ++pvp.seq,
       seed: pvp.seed,
@@ -555,7 +572,11 @@
       payload,
     };
     state.pvpSeq = pvp.seq;
-    send({ type: 'action', action });
+    return send({ type: 'action', action });
+  }
+
+  function pvpLocalCommanderSkill() {
+    return sendLocalAction('commander_skill', {});
   }
 
   function pvpLocalSummon(r, c, cost) {
@@ -746,6 +767,7 @@
     sendLocalAction,
     localSummon: pvpLocalSummon,
     localUrgent: pvpLocalUrgent,
+    localCommanderSkill: pvpLocalCommanderSkill,
   };
   window.startPvpMatch = startPvpMatch;
   window.pvpClientUpdate = pvpClientUpdate;

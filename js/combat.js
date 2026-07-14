@@ -10,9 +10,10 @@ const SIEGE_SPEED = 104;
 const FIELD_PAD = 12;
 function battleTimeLimit() {
   const k = Math.max(1, Number((state && state.currentLevel) || 1));
-  if (k <= 8) return 75;    // chapter 1-2:75s
-  if (k <= 15) return 90;   // chapter 3:90s
-  return 110;               // chapter 4+:110s
+  if (k <= 5) return 120;
+  if (k <= 10) return 135;
+  if (k <= 15) return 150;
+  return 165;
 }
 const LANE_TOLERANCE = 48;
 const SCAN_RANGE = 168;
@@ -358,7 +359,9 @@ function advanceTowardWall(s) {
 function wallDataFor(s) {
   const wallY = s.side === 'player' ? LAYOUT.enemyWallY : LAYOUT.playerWallY;
   const wallH = LAYOUT.wallH;
-  const attackY = s.side === 'player' ? wallY + wallH + 4 : wallY - 4;
+  // v5 战场与城墙之间保留了视觉缓冲带，近战接触线必须落在可移动区域内。
+  // 旧值 262/644 超出 fieldTop/fieldBottom(282/628)，导致近战永远无法攻墙。
+  const attackY = s.side === 'player' ? fieldTop() : fieldBottom();
   return { wallY, wallH, attackY };
 }
 

@@ -60,11 +60,11 @@ function applyTutorialLevelTuning(k) {
 
   state.sp = Math.max(state.sp, k === 1 ? 16 : k === 2 ? 14 : 12);
   state.enemySp = Math.max(state.enemySp || 0, k === 1 ? 6 : k === 2 ? 8 : 10);
-  state.playerWallMax = k === 1 ? 180 : k === 2 ? 150 : 130;
+  state.playerWallMax = k === 1 ? 180 : k === 2 ? 160 : 150;
   state.playerWallHp = state.playerWallMax;
-  state.enemyWallMax = k === 1 ? 86 : k === 2 ? 98 : 150;
+  state.enemyWallMax = k === 1 ? 140 : k === 2 ? 180 : 220;
   state.enemyWallHp = state.enemyWallMax;
-  state.levelConfig.enemySpawnInterval = k === 1 ? 999 : k === 2 ? 13.5 : 10.8;
+  state.levelConfig.enemySpawnInterval = k === 1 ? 14.0 : k === 2 ? 10.0 : 8.0;
   state.levelConfig.enemyWallHp = state.enemyWallMax;
   state.ballTimer = k === 1 ? 6.5 : 5.2;
   state.enemyBallTimer = k === 1 ? 999 : 6.0;
