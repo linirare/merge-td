@@ -396,6 +396,7 @@ function rangedAttackWall(s) {
     dmg, speed: 245,
     color: TYPES[s.type]?.color || '#ff6b4a',
     life: 1.0, side: s.side,
+    ownerType: s.type, ownerLevel: s.level, ownerId: s.id,
     wallHit: true,
   });
 }
@@ -457,7 +458,7 @@ function attackWall(s) {
       state.playerWallHp = Math.max(0, state.playerWallHp - dmg); state.playerWallDamageTaken += dmg;
       state.breachLane = s.laneIndex;
     }
-    state.attackFx.push({ x1: s.x - 8, y1: wall.attackY, x2: s.x + 8, y2: s.side === 'player' ? wall.wallY + 2 : wall.wallY + wall.wallH - 2, life: 0.22, maxLife: 0.22 });
+    state.attackFx.push({ x1: s.x - 8, y1: wall.attackY, x2: s.x + 8, y2: s.side === 'player' ? wall.wallY + 2 : wall.wallY + wall.wallH - 2, life: 0.36, maxLife: 0.36, attackerSide: s.side, ownerType: s.type, ownerLevel: s.level, ownerId: s.id });
     state.rings.push({ x: s.x, y: wall.attackY, r: 7, life: 0.35, maxLife: 0.35, color: THEME.gold });
     s.atkTimer = WALL_ATTACK_INTERVAL;
     state.shake = Math.max(state.shake, s.type === 'orange_cannon' ? 0.8 : 0.5); // VFX 強化:震感更明显
@@ -547,7 +548,7 @@ function attackTarget(s, target) {
     playSfx('arrow');
     let cherryAoe = false;
     if (s.type === 'cherry_bomber' && (s.level || 1) >= 4) { s._cherryShot = (s._cherryShot || 0) + 1; if (s._cherryShot % 5 === 0) cherryAoe = true; }
-    state.projectiles.push({ x: s.x, y: s.y, targetX: target.x, targetY: target.y, targetId: target.id, dmg, speed: s.type === 'blueberry_sniper' ? 315 : 245, color: TYPES[s.type]?.color || '#ff6b4a', life: 1.15, side: s.side, counterHit: !!counterText && counterMul > 1, counterMul: counterMul, ownerType: s.type, ownerLevel: s.level, slow: s.type === 'pear_frost', aoe: cherryAoe, firstHit: s.firstHit });
+    state.projectiles.push({ x: s.x, y: s.y, targetX: target.x, targetY: target.y, targetId: target.id, dmg, speed: s.type === 'blueberry_sniper' ? 315 : 245, color: TYPES[s.type]?.color || '#ff6b4a', life: 1.15, side: s.side, counterHit: !!counterText && counterMul > 1, counterMul: counterMul, ownerType: s.type, ownerLevel: s.level, ownerId: s.id, slow: s.type === 'pear_frost', aoe: cherryAoe, firstHit: s.firstHit });
     s.firstHit = false;
     return;
   }
@@ -557,7 +558,7 @@ function attackTarget(s, target) {
   if (typeof applyFruitDamage !== 'function') { target.hp -= dealt; target.hitFlash = 0.28; }
   trackDamage(s, dealt, false);
   if (s.type === 'pear_frost') { target.slowTimer = 2.2 + s.level * 0.18; target.slowMul = 0.52; }
-  state.attackFx.push({ x1: s.x, y1: s.y, x2: target.x, y2: target.y, life: 0.22, maxLife: 0.22 });
+  state.attackFx.push({ x1: s.x, y1: s.y, x2: target.x, y2: target.y, life: 0.32, maxLife: 0.32, attackerSide: s.side, ownerType: s.type, ownerLevel: s.level, ownerId: s.id, targetId: target.id, crit: counterMul >= 1.25 });
   // 克制可视化(战斗屏规范 §3):按攻击方职责配色 + 分级字号;强克制加光环 pop,受制标红
   const fxCol = typeof roleFxColor === 'function' ? roleFxColor(s.type) : THEME.gold;
   if (counterMul >= 1.25) {
@@ -702,7 +703,7 @@ function updateProjectiles() {
         } else {
           state.playerWallHp = Math.max(0, state.playerWallHp - p.dmg);
         }
-        state.attackFx.push({ x1: p.x, y1: p.y, x2: p.targetX, y2: p.targetY, life: 0.22, maxLife: 0.22 });
+        state.attackFx.push({ x1: p.x, y1: p.y, x2: p.targetX, y2: p.targetY, life: 0.36, maxLife: 0.36, attackerSide: p.side });
         state.projectiles.splice(i, 1);
       }
       continue;

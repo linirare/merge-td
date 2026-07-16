@@ -491,7 +491,7 @@
         const enemies = snapPos[enemySide] || [];
         let near = null, nearD = 9999;
         for (const e of enemies) { const d = Math.abs(e.x - tx) + Math.abs(e.y - ty); if (d < nearD) { nearD = d; near = e; } }
-        if (near && nearD < 300) state.attackFx.push({ x1: near.x, y1: near.y, x2: tx, y2: ty, life: 0.22, maxLife: 0.22, attackerSide: isMine ? 'player' : 'enemy' });
+        if (near && nearD < 300) state.attackFx.push({ x1: near.x, y1: near.y, x2: tx, y2: ty, life: 0.34, maxLife: 0.34, attackerSide: isMine ? 'enemy' : 'player' });
       }
       // 扣血数字
       if (oldHp != null && su.hp < oldHp && su.hp > 0) {

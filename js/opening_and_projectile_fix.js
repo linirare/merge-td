@@ -33,7 +33,7 @@ function patchProjectileV15() {
           } else {
             state.playerWallHp = Math.max(0, state.playerWallHp - p.dmg);
           }
-          state.attackFx.push({ x1: p.x, y1: p.y, x2: p.targetX, y2: p.targetY, life: 0.22, maxLife: 0.22 });
+          state.attackFx.push({ x1: p.x, y1: p.y, x2: p.targetX, y2: p.targetY, life: 0.36, maxLife: 0.36, attackerSide: p.side, ownerType: p.ownerType, ownerLevel: p.ownerLevel, ownerId: p.ownerId });
           state.projectiles.splice(i, 1);
         }
         continue;
@@ -87,6 +87,17 @@ function patchProjectileV15() {
             vy: (Math.random() - 0.5) * 34,
           });
         }
+        state.attackFx.push({
+          x1: p.x, y1: p.y, x2: tgt.x, y2: tgt.y,
+          life: 0.28, maxLife: 0.28,
+          attackerSide: p.side,
+          ownerType: p.ownerType,
+          ownerLevel: p.ownerLevel,
+          ownerId: p.ownerId,
+          targetId: p.targetId,
+          crit: !!p.counterHit,
+          projectileImpact: true,
+        });
         if (tgt.hp <= 0) killSoldier(tgt, p.side, dealt, p.ownerType || 'grape_archer');
         state.projectiles.splice(i, 1);
         continue;

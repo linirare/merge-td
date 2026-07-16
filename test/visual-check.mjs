@@ -9,6 +9,7 @@ const ROOT = path.join(__dirname, '..');
 const BASE = process.env.VISUAL_URL || 'http://localhost:3000';
 const NO_VISION = process.argv.includes('--no-vision');
 const STRICT = process.argv.includes('--strict');
+const CROWD_STRESS = process.argv.includes('--crowd-stress');
 const ONLY = (process.argv.find(arg => arg.startsWith('--only=')) || '').slice(7)
   .split(',').map(name => name.trim()).filter(Boolean);
 const VISUAL_TIMEOUT_MS = Number(process.env.VISUAL_TIMEOUT_MS || 120000);
@@ -180,12 +181,19 @@ async function assertBattleGeometry(page) {
     player: { x: boardX(false), y: LAYOUT.playerBoardY, w: BOARD_W, h: BOARD_H },
     grid: { rows: ROWS, cols: COLS, cell: CELL, gap: GAP },
     walls: { enemyY: LAYOUT.enemyWallY, playerY: LAYOUT.playerWallY },
+    wallBars: {
+      enemy: typeof wallBarRectV5 === 'function' ? wallBarRectV5(true) : null,
+      player: typeof wallBarRectV5 === 'function' ? wallBarRectV5(false) : null,
+    },
     operationY: LAYOUT.operationY,
+    guides: window.Battle2DGuidesV5 || null,
     commanders: {
       player: state.commander,
       enemy: state.enemyCommander,
       playerSkill: typeof commanderSkillRectV5 === 'function' ? commanderSkillRectV5(false) : null,
       enemySkill: typeof commanderSkillRectV5 === 'function' ? commanderSkillRectV5(true) : null,
+      playerPortrait: typeof commanderPortraitRectV5 === 'function' ? commanderPortraitRectV5(false) : null,
+      enemyPortrait: typeof commanderPortraitRectV5 === 'function' ? commanderPortraitRectV5(true) : null,
     },
   }));
   const { enemy, player, canvas, grid, walls, operationY } = geometry;
@@ -195,8 +203,235 @@ async function assertBattleGeometry(page) {
   if (!geometry.commanders.player || !geometry.commanders.enemy || !geometry.commanders.playerSkill || !geometry.commanders.enemySkill) {
     throw new Error(`commander system missing: ${JSON.stringify(geometry)}`);
   }
+  const authoredFrames = { enemy:{ x:64, y:86 }, player:{ x:126, y:684 } };
+  if (!geometry.guides || enemy.x !== authoredFrames.enemy.x || enemy.y !== authoredFrames.enemy.y ||
+      player.x !== authoredFrames.player.x || player.y !== authoredFrames.player.y) {
+    throw new Error(`boards do not match authored background frames: ${JSON.stringify(geometry)}`);
+  }
+  for (const key of ['playerPortrait', 'enemyPortrait']) {
+    const rect = geometry.commanders[key];
+    if (!rect || rect.x < 0 || rect.y < 0 || rect.x + rect.w > canvas.w || rect.y + rect.h > canvas.h) {
+      throw new Error(`commander portrait is outside its authored frame: ${key} ${JSON.stringify(geometry)}`);
+    }
+  }
   if (enemy.y + enemy.h >= walls.enemyY || walls.playerY >= player.y || player.y + player.h >= operationY) {
     throw new Error(`battle regions overlap: ${JSON.stringify(geometry)}`);
+  }
+  if (!geometry.wallBars.enemy || geometry.wallBars.enemy.y < enemy.y + enemy.h + 10 ||
+      !geometry.wallBars.player || geometry.wallBars.player.y + geometry.wallBars.player.h > player.y - 10) {
+    throw new Error(`wall bars crowd the authored board frames: ${JSON.stringify(geometry)}`);
+  }
+}
+
+async function assertSingleTroopRenderPath(page) {
+  const result = await page.evaluate(() => {
+    const soldier = [...(state.playerSoldiers || []), ...(state.enemySoldiers || [])].find(s => s && s.alive);
+    if (!soldier) return { error: 'no live soldier available' };
+    const before = window.RenderHooks?.beforeDrawSoldier;
+    const after = window.RenderHooks?.afterDrawSoldier;
+    const oldBeforeRun = before?.run;
+    const oldAfterRun = after?.run;
+    let beforeCalls = 0, afterCalls = 0;
+    if (before) before.run = () => { beforeCalls++; };
+    if (after) after.run = () => { afterCalls++; };
+    try { drawSoldier(soldier); }
+    finally {
+      if (before) before.run = oldBeforeRun;
+      if (after) after.run = oldAfterRun;
+      draw();
+    }
+    return { beforeCalls, afterCalls, renderer: !!drawSoldier._battle2DV5 };
+  });
+  if (result.error || !result.renderer || result.beforeCalls !== 0 || result.afterCalls !== 0) {
+    throw new Error(`soldier still uses legacy duplicate-render hooks: ${JSON.stringify(result)}`);
+  }
+}
+
+async function freezeAtNaturalAttack(page) {
+  await page.waitForFunction(() => {
+    if (typeof state === 'undefined' || state.phase !== 'playing') return false;
+    const alive = [...(state.playerSoldiers || []), ...(state.enemySoldiers || [])].filter(s => s && s.alive).length;
+    return alive >= 5 && ((state.attackFx?.length || 0) > 0 || (state.projectiles?.length || 0) > 0);
+  }, { timeout: 4500, polling: 'raf' });
+  await page.evaluate(() => { window.__freezeBattleFrame = true; });
+}
+
+async function forceCrowdStress(page) {
+  await page.evaluate(() => {
+    const types = ['watermelon_guard','banana_raider','grape_archer','orange_cannon','pear_frost','cherry_bomber'];
+    const makeSide = side => Array.from({ length:12 }, (_, i) => {
+      const lane = 1 + (i % 3);
+      const soldier = createSoldier(types[i % types.length], 2 + (i % 3));
+      soldier.id = `visual-crowd-${side}-${i}`;
+      soldier.side = side;
+      soldier.laneIndex = lane;
+      soldier.laneX = laneXByIndex(lane);
+      soldier.x = soldier.laneX + ((i % 2) ? 3 : -3);
+      soldier.y = side === 'player' ? 474 + Math.floor(i / 3) * 3 : 414 - Math.floor(i / 3) * 3;
+      soldier.mode = i % 4 === 0 ? 'backline' : 'fight';
+      soldier.battleReady = true;
+      soldier.protected = false;
+      soldier.atkTimer = soldier.speed;
+      return soldier;
+    });
+    state.playerSoldiers = makeSide('player');
+    state.enemySoldiers = makeSide('enemy');
+    state.attackFx = types.map((type, i) => ({
+      x1:105 + i * 48, y1:500 - (i % 2) * 26,
+      x2:125 + i * 45, y2:405 + (i % 3) * 22,
+      life:.32, maxLife:.32, attackerSide:i % 2 ? 'enemy' : 'player', ownerType:type,
+    }));
+    state.projectiles = ['grape_archer','orange_cannon','pear_frost'].map((type, i) => ({
+      x:160 + i * 72, y:490 - i * 25, targetX:180 + i * 70, targetY:395 + i * 18,
+      color:(TYPES[type] || {}).color, side:'player', ownerType:type,
+    }));
+    if (typeof draw === 'function') draw();
+    window.__freezeBattleFrame = true;
+  });
+  for (let i = 0; i < 18; i++) {
+    await page.waitForTimeout(20);
+    await page.evaluate(() => { if (typeof draw === 'function') draw(); });
+  }
+  await page.waitForTimeout(120);
+}
+
+async function assertCrowdFormation(page) {
+  const result = await page.evaluate(() => {
+    if (typeof window.troopFormationTargetPosV6 !== 'function') return { error:'formation target renderer missing' };
+    const units = [...state.playerSoldiers, ...state.enemySoldiers].filter(s => s && s.alive);
+    const positions = units.map(s => ({ id:s.id, ...window.troopFormationTargetPosV6(s) }));
+    let min = Infinity, pair = null;
+    for (let i = 0; i < positions.length; i++) {
+      for (let j = i + 1; j < positions.length; j++) {
+        const d = Math.hypot(positions[i].x - positions[j].x, positions[i].y - positions[j].y);
+        if (d < min) { min = d; pair = [positions[i], positions[j]]; }
+      }
+    }
+    return { count:positions.length, minDistance:min, pair };
+  });
+  if (result.error || result.count < 20 || result.minDistance < 22) {
+    throw new Error(`crowd formation still overlaps: ${JSON.stringify(result)}`);
+  }
+}
+
+async function assertFormationBoundaryCases(page) {
+  const result = await page.evaluate(() => {
+    if (typeof window.troopFormationTargetPosV6 !== 'function') return { error:'formation target renderer missing' };
+    const saved = { playerSoldiers:state.playerSoldiers, enemySoldiers:state.enemySoldiers };
+    const make = (id, laneIndex, x, y) => ({
+      id, type:'banana_raider', level:1, side:'player', laneIndex, laneX:x,
+      x, y, hp:10, maxHp:10, alive:true, battleReady:true, protected:false,
+      mode:'fight', speed:.8, atkTimer:0,
+    });
+    const check = units => {
+      state.playerSoldiers = units;
+      state.enemySoldiers = [];
+      const positions = units.map(s => ({ id:s.id, ...window.troopFormationTargetPosV6(s) }));
+      return { positions, distance:Math.hypot(positions[0].x - positions[1].x, positions[0].y - positions[1].y) };
+    };
+    let checks;
+    try {
+      checks = {
+        depthBoundary:check([make('depth-a', 2, 230, 399), make('depth-b', 2, 230, 401)]),
+        crossLane:check([make('lane-a', 1, 230, 430), make('lane-b', 2, 230, 430)]),
+      };
+    } finally {
+      state.playerSoldiers = saved.playerSoldiers;
+      state.enemySoldiers = saved.enemySoldiers;
+      if (typeof draw === 'function') draw();
+    }
+    return checks;
+  });
+  if (result.error || result.depthBoundary.distance < 22 || result.crossLane.distance < 22) {
+    throw new Error(`formation boundary collision returned: ${JSON.stringify(result)}`);
+  }
+}
+
+async function assertFormationMotionIsSmooth(page) {
+  const result = await page.evaluate(async () => {
+    if (typeof window.troopFormationTargetPosV6 !== 'function' || typeof window.troopVisualFormationPosV6 !== 'function') {
+      return { error:'formation motion hooks missing' };
+    }
+    const saved = { playerSoldiers:state.playerSoldiers, enemySoldiers:state.enemySoldiers };
+    const make = id => ({
+      id, type:'banana_raider', level:1, side:'player', laneIndex:2, laneX:230,
+      x:230, y:430, hp:10, maxHp:10, alive:true, battleReady:true, protected:false,
+      mode:'fight', speed:.8, atkTimer:0,
+    });
+    const units = [make('smooth-a'), make('smooth-b')];
+    try {
+      state.playerSoldiers = units;
+      state.enemySoldiers = [];
+      const first = units.map(s => window.troopVisualFormationPosV6(s));
+      const target = units.map(s => window.troopFormationTargetPosV6(s));
+      await new Promise(resolve => setTimeout(resolve, 70));
+      const second = units.map(s => window.troopVisualFormationPosV6(s));
+      const distance = pair => Math.hypot(pair[0].x - pair[1].x, pair[0].y - pair[1].y);
+      return { first:distance(first), second:distance(second), target:distance(target) };
+    } finally {
+      state.playerSoldiers = saved.playerSoldiers;
+      state.enemySoldiers = saved.enemySoldiers;
+      if (typeof draw === 'function') draw();
+    }
+  });
+  if (result.error || result.first > 2 || result.second <= 6 || result.second >= result.target - 2 || result.target < 22) {
+    throw new Error(`formation motion snapped instead of gliding: ${JSON.stringify(result)}`);
+  }
+}
+
+async function assertAttackFxDensityCap(page) {
+  const result = await page.evaluate(() => {
+    const saved = state.attackFx;
+    try {
+      state.attackFx = Array.from({ length:24 }, (_, i) => ({
+        x1:190 + (i % 4) * 5, y1:500 - (i % 3) * 4,
+        x2:230, y2:430,
+        life:.32, maxLife:.32, attackerSide:i % 2 ? 'enemy' : 'player', ownerType:'banana_raider',
+      }));
+      drawAttackFx();
+      return window.BattleFxDensityStatsV6;
+    } finally {
+      state.attackFx = saved;
+      if (typeof draw === 'function') draw();
+    }
+  });
+  if (!result || result.total !== 24 || result.drawn > 3 || result.skipped < 20) {
+    throw new Error(`attack FX density cap failed: ${JSON.stringify(result)}`);
+  }
+}
+
+async function assertAttackFxContrast(page) {
+  const result = await page.evaluate(() => {
+    const box = { x: 70, y: LAYOUT.fieldY + 20, w: W - 140, h: LAYOUT.fieldH - 40 };
+    const before = ctx.getImageData(box.x, box.y, box.w, box.h).data;
+    const saved = { attackFx: state.attackFx, projectiles: state.projectiles, rings: state.rings };
+    state.attackFx = Array.from({ length:6 }, (_, i) => ({
+      x1:110 + i * 45, y1:540 - (i % 2) * 34, x2:145 + i * 38, y2:390 + (i % 3) * 28,
+      life:.32, maxLife:.32, attackerSide:i % 2 ? 'enemy' : 'player',
+    }));
+    state.projectiles = Array.from({ length:4 }, (_, i) => ({
+      x:150 + i * 64, y:500 - i * 18, targetX:190 + i * 52, targetY:400 + i * 12,
+      color:i % 2 ? '#ff715f' : '#ffcf55', side:i % 2 ? 'enemy' : 'player',
+    }));
+    state.rings = Array.from({ length:4 }, (_, i) => ({
+      x:190 + i * 52, y:400 + i * 12, r:13, life:.35, maxLife:.35, color:i % 2 ? '#ff715f' : '#62e7ff',
+    }));
+    drawProjectiles();
+    drawAttackFx();
+    drawRings();
+    const after = ctx.getImageData(box.x, box.y, box.w, box.h).data;
+    let changed = 0, strong = 0;
+    for (let i = 0; i < before.length; i += 4) {
+      const delta = Math.abs(after[i] - before[i]) + Math.abs(after[i + 1] - before[i + 1]) + Math.abs(after[i + 2] - before[i + 2]);
+      if (delta > 18) changed++;
+      if (delta > 75) strong++;
+    }
+    Object.assign(state, saved);
+    draw();
+    return { changed, strong };
+  });
+  if (result.changed < 900 || result.strong < 320 || result.changed > 18000) {
+    throw new Error(`attack feedback lacks visible contrast: ${JSON.stringify(result)}`);
   }
 }
 
@@ -208,6 +443,7 @@ async function assertPvpCommanderClientFlow(page) {
       mode: state.mode, phase: state.phase, commander: state.commander, enemyCommander: state.enemyCommander,
       playerSlots: state.playerSlots, enemySlots: state.enemySlots,
       playerSoldiers: state.playerSoldiers, enemySoldiers: state.enemySoldiers,
+      attackFx: state.attackFx, projectiles: state.projectiles, rings: state.rings, fx: state.fx,
       playerWallHp: state.playerWallHp, playerWallMax: state.playerWallMax,
       enemyWallHp: state.enemyWallHp, enemyWallMax: state.enemyWallMax,
       sp: state.sp, enemySp: state.enemySp,
@@ -299,8 +535,12 @@ const SHOTS = [
   },
   {
     name: 'battle',
-    file: 'shot_battle.png',
-    setup: async page => startStage(page, 1, 3500),
+    file: CROWD_STRESS ? 'shot_battle_crowd.png' : 'shot_battle.png',
+    setup: async page => {
+      await startStage(page, 1, 2200);
+      await freezeAtNaturalAttack(page);
+      if (CROWD_STRESS) await forceCrowdStress(page);
+    },
     prompt: 'Live battle screen. Check player green/gold versus enemy red/purple readability, lane danger, damage noise, and crowded units.',
   },
   {
@@ -367,7 +607,15 @@ async function run() {
     await assertVisiblePage(page, shot.name);
     if (shot.name === 'squad') await assertCommanderFlow(page);
     if (shot.name === 'battle' || shot.name === 'boss') await assertBattleGeometry(page);
-    if (shot.name === 'battle') await assertPvpCommanderClientFlow(page);
+    if (shot.name === 'battle') {
+      await assertSingleTroopRenderPath(page);
+      await assertPvpCommanderClientFlow(page);
+      await assertAttackFxContrast(page);
+      await assertFormationBoundaryCases(page);
+      await assertFormationMotionIsSmooth(page);
+      await assertAttackFxDensityCap(page);
+      if (CROWD_STRESS) await assertCrowdFormation(page);
+    }
     if (process.env.VISUAL_DEBUG === '1' && (shot.name === 'battle' || shot.name === 'boss')) {
       const debug = await page.evaluate(() => {
         const info = el => {
