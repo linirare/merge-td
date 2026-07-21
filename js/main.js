@@ -332,14 +332,14 @@ function onGameOver(win) {
     meta.totalWins++;
 
     const isBoss = state.levelConfig.isBoss;
-    title.textContent = isBoss ? '🏆 腐坏果堡攻破！' : '🎉 水果突击胜利！';
+    title.textContent = isBoss ? '🏆 深海巨兽已净化！' : '🎉 珊瑚堡垒守住了！';
     const starsHtml = '<span class="res-stars">' + '⭐'.repeat(stars) + '<span class="res-gray">' + '☆'.repeat(3 - stars) + '</span></span>';
     const bestType = state.maxSoldierType ? (TYPES[state.maxSoldierType]?.name || '') : '';
     detail.innerHTML = `
       <div class="res-hero">${starsHtml}</div>
       <div class="res-stat-row">
         <div class="res-stat"><span class="res-num">${elapsed}</span><span class="res-lbl">秒</span></div>
-        <div class="res-stat"><span class="res-num">${Math.round(wallRatio * 100)}%</span><span class="res-lbl">果堡</span></div>
+        <div class="res-stat"><span class="res-num">${Math.round(wallRatio * 100)}%</span><span class="res-lbl">护礁</span></div>
         <div class="res-stat"><span class="res-num">${state.kills}</span><span class="res-lbl">击破</span></div>
         <div class="res-stat"><span class="res-num">${state.merges}</span><span class="res-lbl">合成</span></div>
       </div>
@@ -353,17 +353,17 @@ function onGameOver(win) {
     if (state.currentLevel >= meta.highestLevel) meta.highestLevel = state.currentLevel + 1;
     nextBtn.classList.remove('hide');
   } else {
-    title.textContent = '💀 果堡失守';
+    title.textContent = '💠 护礁结界破碎';
     const elapsed = Math.floor(state.time);
     detail.innerHTML = `
-      <div class="res-hero fail">⚔️</div>
-      <p class="res-fail-msg">腐坏水果突破了我方防线</p>
+      <div class="res-hero fail">🫧</div>
+      <p class="res-fail-msg">敌方海潮突破了我方护礁</p>
       <div class="res-stat-row">
         <div class="res-stat"><span class="res-num">${state.kills}</span><span class="res-lbl">击破</span></div>
         <div class="res-stat"><span class="res-num">${state.merges}</span><span class="res-lbl">合成</span></div>
         <div class="res-stat"><span class="res-num">${elapsed}</span><span class="res-lbl">秒</span></div>
       </div>
-      <div class="res-tip">💡 空格消耗果汁召唤水果营 · 双击急派兵救线</div>
+      <div class="res-tip">💡 消耗潮汐能召唤海灵珠 · 双击急派伙伴守住护礁</div>
       ${reportHtml()}
     `;
     // 失败去金辉

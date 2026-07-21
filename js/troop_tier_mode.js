@@ -104,8 +104,8 @@ function applyTroopTierStats(s) {
   s.maxHp = Math.round(base.hp * levelMul * (TIER_HP_MUL[tier] || 1) * hpReinforce * (role === 'tank' ? 1.10 : 1) * hpMul);
   s.hp = Math.max(1, Math.round(s.maxHp * oldRatio));
   s.atk = Math.round(base.atk * levelMul * (TIER_ATK_MUL[tier] || 1) * atkReinforce * atkMul);
-  s.siege = base.siege || 1;
-  s.armor = base.armor || 0;
+  s.siege = (typeof roleStats === 'function' ? roleStats(base.role).siege : (base.siege || 1));
+  s.armor = (typeof roleStats === 'function' ? roleStats(base.role).armor : (base.armor || 0));
   s.troopTier = tier;
   s.troopName = tierName(type, level);
   s.troopScale = TIER_SCALE[tier] || 1;

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-<title>球球英雄Ⅱ · 兵营攻城</title>
+<title>梦幻水世界</title>
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="css/style.css?v=20260713r5">
 <link rel="stylesheet" href="css/hifi_shell.css?v=20260713r5">
@@ -13,11 +13,11 @@
 <div id="rotate-hint">
   <div class="phone-rotate">📱</div>
   <p>请切换到竖屏体验</p>
-  <small>球球合成 · 兵营出兵 · 五路攻城</small>
+  <small>海灵召唤 · 合成强化 · 自由海战</small>
 </div>
 
 <div id="wrap">
-  <canvas id="game" aria-label="球球英雄二游戏画布"></canvas>
+  <canvas id="game" aria-label="梦幻水世界游戏画布"></canvas>
 </div>
 
 <div id="overlay"></div>
@@ -36,7 +36,7 @@
         <button class="ring" data-tut><span class="inner"><svg class="icon"><use href="#i-help"/></svg></span></button>
         <button class="ring" data-go="shop"><span class="inner"><svg class="icon"><use href="#i-bag"/></svg></span></button>
       </header>
-      <div class="logo"><h1 class="display">球球英雄Ⅱ</h1><div class="rib">兵营合成 · 五路攻城</div></div>
+      <div class="logo"><h1 class="display">梦幻水世界</h1><div class="rib">海灵合成 · 自由海战</div></div>
       <div class="side-l">
         <button class="ring" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">签到</span></button>
         <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg></span><span class="lbl">邮件</span></button>
@@ -55,24 +55,25 @@
   </div>
 </div>
 
-<div id="overflowPopup" class="panel hide"><div class="panel-inner"><h2>📦 待部署水果营</h2><p class="sub">点选后放到棋盘空格</p><div id="overflowList" class="overflow-list"></div><button id="btnOverflowClose" class="btn-secondary">关闭</button></div></div>
-<div id="upgradePanel" class="panel hide"><div class="panel-inner wide tech-panel"><h2>🌱 水果科技树</h2><p class="sub">果汁 <span id="upGold">0</span> · 解锁关键节点强化局内策略</p><div id="upgradeList"></div><button id="btnUpClose" class="btn-secondary">返回</button></div></div>
+<div id="overflowPopup" class="panel hide"><div class="panel-inner"><h2>📦 待部署海灵珠</h2><p class="sub">点选后放到棋盘空格</p><div id="overflowList" class="overflow-list"></div><button id="btnOverflowClose" class="btn-secondary">关闭</button></div></div>
+<div id="upgradePanel" class="panel hide"><div class="panel-inner wide tech-panel"><h2>🌊 潮汐图谱</h2><p class="sub">潮汐能 <span id="upGold">0</span> · 解锁关键节点强化局内策略</p><div id="upgradeList"></div><button id="btnUpClose" class="btn-secondary">返回</button></div></div>
 <div id="simPanel" class="panel hide"><div class="panel-inner wide sim-panel"><h2>📊 数值模拟</h2><p class="sub">快速估算 1-20 关胜率、时长和压力点</p><div id="simResult" class="sim-result">点击菜单中的“数值模拟”开始。</div><button id="btnSimClose" class="btn-secondary">关闭</button></div></div>
 <div id="resultPanel" class="panel hide"><div class="panel-inner result-card"><h2 id="resultTitle"></h2><p id="resultDetail"></p><button id="btnRetry" class="btn-primary">重打本关</button><button id="btnNext" class="btn-primary hide">下一关</button><button id="btnMenu" class="btn-secondary">回到营地</button></div></div>
 
 <div id="helpPanel" class="panel hide">
   <div class="panel-inner help-panel">
-    <h2>📖 果园战术</h2>
-    <div class="help-section"><h3>🎯 目标</h3><p>编队：从25种水果中逐步解锁，选出最多5种上阵。对局：消耗果汁召唤水果营→自动产兵→击败敌线→拆毁敌方果堡。防守失败则我方果堡被破。</p></div>
-    <div class="help-section"><h3>🖐️ 操作</h3><p><b>点空格</b>：消耗递增🧃果汁，随机召唤编队水果营。</p><p><b>拖拽同种同星</b>：合成升级（上限Lv7），属性大幅提升。</p><p><b>🥝奇异果</b>：拖到同星水果上当万能材料合成。<b>🟣百香果</b>：拖到同星目标上复制。</p><p><b>双击水果营</b>：消耗递增🧃果汁，急派兵救线。</p></div>
-    <div class="help-section"><h3>🍓 职责克制（7×7 矩阵 ±50%）</h3><p>坦克🍉🥥克突击(1.2) →被攻城克(1.3)</p><p>远程🍇🫐克前排(1.2) →被突击克(1.5)</p><p>突击🍌🍋切后排(1.5) →被前排/坦克克</p><p>攻城🍊🎃克坦克(1.3) →被突击克 &nbsp;|&nbsp; 控制🍐克突击(1.1) &nbsp;|&nbsp; 辅助🍑治疗</p></div>
-    <div class="help-section"><h3>🧃 果汁经济</h3><p>基础上限24，开局8。每5秒+1，击杀固定+1。召唤/急派费递增（最高12）。前期铺场、中期合成，关键波次要预留果汁急派救线。</p></div>
+    <h2>📖 海域战术</h2>
+    <div class="help-section"><h3>🎯 目标</h3><p>从25种海洋伙伴中选择最多5种上阵。消耗潮汐能召唤海灵珠，合成强化后自动派出伙伴，在开放海域自由交战并摧毁敌方珊瑚堡垒。</p></div>
+    <div class="help-section"><h3>🖐️ 操作</h3><p><b>点空格</b>：消耗递增潮汐能，随机召唤编队海灵珠。</p><p><b>拖拽同种同星</b>：合成升级（上限Lv7）。</p><p><b>拟态章鱼</b>可作为万能材料，<b>镜像水母</b>可复制同星目标。</p><p><b>双击海灵珠</b>：消耗潮汐能立即派出伙伴。</p></div>
+    <div class="help-section"><h3>⚔️ 自由索敌</h3><p>坦克拦截威胁，突击追击后排，远程保持距离，控制优先未受控目标，辅助跟随受伤友军，攻城伙伴在安全时直取护礁结界。</p></div>
+    <div class="help-section"><h3>🌊 潮汐能</h3><p>基础上限24，开局8，每5秒+1。每24秒一个潮汐周期；涌潮持续12秒，双方全场移动与攻击速度提高8%。</p></div>
     <div class="help-section"><h3>⭐ Lv1→Lv7成长</h3><p>Lv1-3 数值成长 | Lv4 解锁专属技能 | Lv5 技能强化+金徽章 | Lv6-7 质变，额外机制。</p></div>
     <button id="btnHelpClose" class="btn-secondary">知道了</button>
   </div>
 </div>
 
-<script src="js/config.js?v=20260713r5"></script>
+<script src="js/world_theme.js?v=20260720w2"></script>
+<script src="js/config.js?v=20260720w2"></script>
 <script src="js/layout_v56.js?v=20260713r5"></script>
 <script src="js/version_guard.js?v=20260713r5"></script>
 <script src="js/state.js?v=20260713r5"></script>
@@ -119,6 +120,8 @@
 <script src="js/build_combo_v2.js?v=20260713r15"></script>
 <script src="js/experience_flow.js?v=20260713r5"></script>
 <script src="js/commander_system_v1.js?v=20260714r1"></script>
+<script src="js/free_battle_v2.js?v=20260720w2"></script>
+<script src="js/bond_system.js?v=20260720w3"></script>
 <script src="js/battle_2d_v5.js?v=20260714r1"></script>
 </body>
 </html>

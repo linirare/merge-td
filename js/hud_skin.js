@@ -28,7 +28,7 @@ function drawInfo() {
   const mode = state.mode === 'pvp' ? 'PVP' : (state.endless ? `天梯 ${state.endlessWave || 1}` : `第 ${state.currentLevel || 1} 关`);
   const desc = state.mode === 'pvp'
     ? `房间 ${state.pvpRoomId || '----'}`
-    : (state.levelConfig?.isBoss ? '果堡 Boss' : '闯关推进');
+    : (state.levelConfig?.isBoss ? '深海 Boss' : '海域推进');
   const x = 18;
   const y = LAYOUT.enemyInfoY || 6;
 
@@ -110,7 +110,7 @@ function drawOperationResourceStripV61() {
   ctx.textBaseline = 'middle';
   ctx.font = '700 11px "Microsoft YaHei",sans-serif';
   ctx.fillStyle = '#928675';
-  ctx.fillText('果汁', x + 15, y + 14);
+  ctx.fillText('潮汐能', x + 15, y + 14);
   ctx.font = '800 20px "Nunito","Microsoft YaHei",sans-serif';
   ctx.fillStyle = canAct ? '#E9DFC9' : '#9E9290';
   ctx.fillText(String(juice), x + 56, y + 21);
@@ -128,7 +128,7 @@ function drawOperationResourceStripV61() {
   ctx.textBaseline = 'middle';
   ctx.font = '800 15px "Microsoft YaHei",sans-serif';
   ctx.fillStyle = canAct ? '#211D16' : '#A39B91';
-  ctx.fillText('召唤水果营', btn.x + btn.w * 0.43, btn.y + btn.h / 2 + 1);
+  ctx.fillText('召唤海灵珠', btn.x + btn.w * 0.43, btn.y + btn.h / 2 + 1);
 
   const badgeW = 44;
   const badgeH = 22;
@@ -197,7 +197,7 @@ function drawInfo() {
   ctx.textAlign='left'; ctx.textBaseline='middle';
   ctx.fillText(state.mode === 'pvp' ? 'PVP 竞技' : `第 ${level} 关`,x+31,y+14);
   ctx.fillStyle = '#93EBD9'; ctx.font = '800 10px "Microsoft YaHei",sans-serif';
-  ctx.fillText(state.levelConfig?.isBoss ? 'BOSS 攻坚战' : '果园前线',x+31,y+30);
+  ctx.fillText(state.levelConfig?.isBoss ? 'BOSS 攻坚战' : '开放海域',x+31,y+30);
 
   const timer = ctx.createLinearGradient(0,y,0,y+42);
   timer.addColorStop(0,'#5B3A83'); timer.addColorStop(1,'#2A1E55');
@@ -229,7 +229,7 @@ function drawOperationResourceStripV61() {
   ctx.fillStyle='#9B5EFF'; ctx.beginPath(); ctx.arc(x+23,y+h/2+2,7,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#FFF5FF'; ctx.beginPath(); ctx.arc(x+20,y+h/2-2,2.3,0,Math.PI*2); ctx.fill();
   ctx.textAlign='left'; ctx.textBaseline='middle';
-  ctx.fillStyle='#EADFFF'; ctx.font='800 10px "Microsoft YaHei",sans-serif'; ctx.fillText('果汁能量',x+40,y+12);
+  ctx.fillStyle='#EADFFF'; ctx.font='800 10px "Microsoft YaHei",sans-serif'; ctx.fillText('潮汐能',x+40,y+12);
   ctx.fillStyle='#FFFFFF'; ctx.font='900 20px "Nunito",sans-serif'; ctx.fillText(String(juice),x+72,y+26);
 
   const action=ctx.createLinearGradient(0,btn.y,0,btn.y+btn.h);
@@ -239,7 +239,7 @@ function drawOperationResourceStripV61() {
   hudPanel(btn.x,btn.y,btn.w,btn.h,10,action,canAct?'#C6FFF0':'#87909A');
   ctx.shadowBlur=0;
   ctx.fillStyle=canAct?'#053F42':'#C0C5CB'; ctx.font='900 15px "Microsoft YaHei",sans-serif';
-  ctx.textAlign='center'; ctx.fillText('召唤水果军团',btn.x+btn.w*.43,btn.y+btn.h/2+1);
+  ctx.textAlign='center'; ctx.fillText('召唤海灵伙伴',btn.x+btn.w*.43,btn.y+btn.h/2+1);
 
   const badgeX=btn.x+btn.w-49,badgeY=btn.y+5;
   hudPanel(badgeX,badgeY,42,btn.h-10,8,'rgba(6,30,43,.78)','rgba(255,255,255,.35)');

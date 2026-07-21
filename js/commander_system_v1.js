@@ -5,7 +5,7 @@
 (function installCommanderSystemV1() {
   'use strict';
 
-  const COMMANDERS = {
+  const COMMANDERS = (window.WORLD_THEME && window.WORLD_THEME.commanders) || {
     orchard_lord: {
       id: 'orchard_lord', name: '果园领主', skill: '果园号令', maxCd: 24, duration: 6,
       desc: '6秒内兵营产兵与全军攻击加速。',

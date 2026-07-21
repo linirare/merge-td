@@ -420,12 +420,18 @@
     if (mySide === 0) {
       state.playerWallHp = snap.walls.p; state.playerWallMax = snap.walls.pMax;
       state.enemyWallHp = snap.walls.e; state.enemyWallMax = snap.walls.eMax;
+      state.playerReefShield = snap.walls.pShield || 0; state.enemyReefShield = snap.walls.eShield || 0;
       state.sp = snap.sp.p; state.enemySp = snap.sp.e;
     } else {
       state.playerWallHp = snap.walls.e; state.playerWallMax = snap.walls.eMax;
       state.enemyWallHp = snap.walls.p; state.enemyWallMax = snap.walls.pMax;
+      state.playerReefShield = snap.walls.eShield || 0; state.enemyReefShield = snap.walls.pShield || 0;
       state.sp = snap.sp.e; state.enemySp = snap.sp.p;
     }
+    state.tide = snap.tide || (typeof worldTideState === 'function' ? worldTideState(snap.t) : state.tide);
+    if (snap.battlePressure) state.battlePressure = flip
+      ? { ...snap.battlePressure, player:snap.battlePressure.enemy, enemy:snap.battlePressure.player, playerBarrierDanger:snap.battlePressure.enemyBarrierDanger, enemyBarrierDanger:snap.battlePressure.playerBarrierDanger }
+      : snap.battlePressure;
 
     if (snap.commanders) {
       const own = mySide === 0 ? snap.commanders.p : snap.commanders.e;
@@ -474,7 +480,7 @@
         o._blendT = 0; o._blendDur = snapInterval;
       } else { o._fromX = null; o.x = tx; o.y = ty; }
       o.type = su.type; o.level = su.level; o.hp = su.hp; o.maxHp = su.maxHp;
-      o.mode = su.mode; o.shield = su.shield; o.alive = true;
+      o.mode = su.mode; o.target = su.target || null; o.shield = su.shield; o.alive = true;
       o.side = isMine ? 'player' : 'enemy';
       o.tx = tx; o.ty = ty;
       if (su.hit) o.hitFlash = 0.28;

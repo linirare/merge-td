@@ -20,11 +20,11 @@ function fruitRange(s) {
 }
 function fruitIsBackline(s) {
   const role = TYPES[s.type]?.role;
-  return role === 'back' || role === 'siege' || role === 'control' || role === 'support' || role === 'merge';
+  return role === 'shooter' || role === 'wildcard';
 }
 function fruitMoveSpeed(s, base) {
   const t = TYPES[s.type] || {};
-  const move = t.move || 86;
+  const move = (typeof roleStats === 'function' ? roleStats(t.role).move : (t.move || 86));
   const slow = s.slowTimer > 0 ? (s.slowMul || 0.55) : 1;
   return Math.max(base * 0.78, base * (move / 92) * slow); // 不低于基准的 78%,防慢速单位在攻城/追击时像卡住
 }
@@ -52,9 +52,10 @@ function nearestAllyOnLane(side, lane) {
   const group = side === 'player' ? state.playerSoldiers : state.enemySoldiers;
   let best = null;
   for (const s of group) {
-    if (!isCombatant(s) || s.laneIndex !== lane || s.hp >= s.maxHp) continue;
-    if (!best) best = s;
-    else if (side === 'player' ? s.y < best.y : s.y > best.y) best = s;
+    if (!isCombatant(s) || s.hp >= s.maxHp) continue;
+    const ratio = s.hp / Math.max(1, s.maxHp);
+    const bestRatio = best ? best.hp / Math.max(1, best.maxHp) : Infinity;
+    if (!best || ratio < bestRatio || (ratio === bestRatio && String(s.id) < String(best.id))) best = s;
   }
   return best;
 }
@@ -76,7 +77,7 @@ function updateFruitPassiveSkills(dt) {
       // 嘲讽:强制同路敌人锁定自己(Lv3+,Lv6+延长时间)
       const foes = s.side === 'player' ? state.enemySoldiers : state.playerSoldiers;
       for (const e of foes) {
-        if (!isCombatant(e) || e.laneIndex !== s.laneIndex || Math.abs(e.y - s.y) > 80) continue;
+        if (!isCombatant(e) || Math.hypot(e.x - s.x, e.y - s.y) > 100) continue;
         if (typeof applyStatus === 'function') applyStatus(e, s, 'provoke', s.level >= 6 ? 3.0 : 2.0);
       }
     }
@@ -109,14 +110,14 @@ function updateRollingPumpkins(dt) {
     const r = state.rollings[i];
     r.life -= dt;
     r.y += (r.side === 'player' ? -1 : 1) * r.speed * dt;
-    r.x += (r.laneX - r.x) * Math.min(1, dt * 5);
+    r.x = clamp(r.x, 24, W - 24);
     state.rings.push({ x: r.x, y: r.y, r: 3, life: 0.08, maxLife: 0.08, color: '#ff7d35' });
 
     const enemies = r.side === 'player' ? state.enemySoldiers : state.playerSoldiers;
     let hitAny = false;
     for (const e of enemies) {
-      if (!isCombatant(e) || e.laneIndex !== r.lane) continue;
-      if (Math.abs(e.y - r.y) < 22) {                 // 范围爆炸:命中半径内所有同路敌人
+      if (!isCombatant(e)) continue;
+      if (Math.hypot(e.x - r.x, e.y - r.y) < 34) {
         const dmg = Math.round(r.dmg * 0.9);
         applyFruitDamage(e, dmg, { type: 'pumpkin_roller', firstHit: false });
         if (typeof applyStatus === 'function') applyStatus(e, { type: 'pumpkin_roller' }, 'stunned', 0.6); // 南瓜爆炸眩晕
@@ -131,13 +132,9 @@ function updateRollingPumpkins(dt) {
     const hitWall = r.side === 'player' ? r.y <= wallY : r.y >= wallY;
     if (hitWall) {
       const dmg = Math.round(r.dmg * 1.35);
-      if (r.side === 'player') {
-        state.enemyWallHp = Math.max(0, state.enemyWallHp - dmg);
-        state.enemyWallDamageDealt += dmg;
-      } else {
-        state.playerWallHp = Math.max(0, state.playerWallHp - dmg);
-        state.playerWallDamageTaken += dmg;
-      }
+      if (typeof damageReefBarrier === 'function') damageReefBarrier(r.side === 'player' ? 'enemy' : 'player', dmg, { side:r.side, type:'pumpkin_roller' });
+      else if (r.side === 'player') { state.enemyWallHp = Math.max(0, state.enemyWallHp - dmg); state.enemyWallDamageDealt += dmg; }
+      else { state.playerWallHp = Math.max(0, state.playerWallHp - dmg); state.playerWallDamageTaken += dmg; }
       addFx(r.x, wallY, `南瓜爆破 -${dmg}`, '#ff7d35', 13);
       state.shake = Math.max(state.shake, 0.55);
       r.life = 0;

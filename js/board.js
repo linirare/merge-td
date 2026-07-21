@@ -228,6 +228,15 @@ function initLevel(k) {
   state.specialMerges = 0;
   state.maxSoldierAtk = 0;
   state.maxSoldierType = '';
+  state.battlePressure = { player:{power:0,count:0,siege:0,depth:0}, enemy:{power:0,count:0,siege:0,depth:0}, playerBarrierDanger:0, enemyBarrierDanger:0 };
+  state.tide = { phase:'calm', remaining:12, multiplier:1 };
+  state.playerReefShield = 0;
+  state.enemyReefShield = 0;
+  state.playerReefShieldUsed = false;
+  state.enemyReefShieldUsed = false;
+  state.playerReefShieldUntil = 0;
+  state.enemyReefShieldUntil = 0;
+  state._freeSpawnSerial = { player:0, enemy:0 };
   state.laneStats = emptyLaneStats();
   state.laneAlertCd = 0;
   state.laneAlerts = [];

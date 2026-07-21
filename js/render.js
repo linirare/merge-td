@@ -368,21 +368,95 @@ function drawRings() {
   ctx.globalAlpha = 1;
 }
 
-/* ——— 箭矢渲染 ——— */
+/* ——— 弹射物渲染:按兵种区分外观 ——— */
 function drawProjectiles() {
   for (const p of state.projectiles) {
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.rotate(Math.atan2(p.targetY - p.y, p.targetX - p.x));
-    ctx.fillStyle = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = 12;
-    ctx.beginPath();
-    ctx.moveTo(16, 0); ctx.lineTo(-6, -5); ctx.lineTo(-6, 5); ctx.closePath();
-    ctx.fill();
-    // 拖尾
-    ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-14, 0); ctx.stroke();
+    const angle = Math.atan2(p.targetY - p.y, p.targetX - p.x);
+    ctx.rotate(angle);
+
+    // 按兵种区分弹射物外观
+    const type = p.ownerType || '';
+    let radius = 7, coreColor = '#ffffff', glowColor = p.color || '#7de6ff';
+
+    if (type === 'orange_cannon') {
+      // 手枪炮手:大号橙色炮弹
+      radius = 10; coreColor = '#ff9838'; glowColor = '#ff6b2a';
+    } else if (type === 'blueberry_sniper') {
+      // 射水狙手:细长蓝色水柱
+      radius = 4; coreColor = '#4d7dff'; glowColor = '#8ab4ff';
+      ctx.fillStyle = glowColor;
+      ctx.shadowColor = glowColor; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.arc(0, 0, radius + 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = coreColor;
+      ctx.shadowBlur = 20;
+      ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.restore(); continue;
+    } else if (type === 'cherry_bomber') {
+      // 河豚炮手:红色炸弹+火花拖尾
+      radius = 8; coreColor = '#d44155'; glowColor = '#ff6b4a';
+      ctx.fillStyle = glowColor;
+      ctx.shadowColor = glowColor; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.arc(0, 0, radius + 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = coreColor;
+      ctx.shadowBlur = 18;
+      ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
+      // 闪烁火花拖尾
+      ctx.shadowBlur = 0; ctx.globalAlpha = 0.5;
+      for (let k = 0; k < 3; k++) {
+        const kx = -8 - k * 6, ky = (k - 1) * 3;
+        ctx.fillStyle = '#ffd24a';
+        ctx.beginPath(); ctx.arc(kx, ky, 2, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.shadowBlur = 0; ctx.restore(); continue;
+    } else if (type === 'pear_frost') {
+      // 冰水母法:冰蓝色菱形
+      radius = 6; coreColor = '#9be7ff'; glowColor = '#c6f0ff';
+      ctx.fillStyle = glowColor; ctx.shadowColor = glowColor; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.arc(0, 0, radius + 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = coreColor; ctx.shadowBlur = 18;
+      ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.restore(); continue;
+    } else if (type === 'grape_archer') {
+      // 乌贼射手:墨紫色带拖尾
+      radius = 6; coreColor = '#9b5cff'; glowColor = '#7b3ce0';
+    } else if (type === 'mango_arbalest') {
+      // 海马弩手:小号快速箭
+      radius = 3; coreColor = '#ffbd43'; glowColor = '#ffe07a';
+      // 多箭:画3颗小弹丸
+      for (let k = -1; k <= 1; k++) {
+        ctx.fillStyle = glowColor; ctx.globalAlpha = 0.6 - Math.abs(k) * 0.15;
+        ctx.beginPath(); ctx.arc(k * 8, k * 2, radius - Math.abs(k), 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1; ctx.fillStyle = coreColor;
+      ctx.shadowColor = glowColor; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.restore(); continue;
+    } else if (type === 'melon_shaman') {
+      // 月水母法:淡紫色弧光
+      radius = 7; coreColor = '#c8e670'; glowColor = '#e0f5a0';
+    }
+
+    // 默认发光水球渲染
+    const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, radius + 8);
+    glow.addColorStop(0, '#ffffff');
+    glow.addColorStop(0.25, glowColor);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(0, 0, radius + 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = coreColor;
+    ctx.shadowColor = glowColor; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
+
+    // 拖尾光轨
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = glowColor;
+    ctx.globalAlpha = 0.40;
+    ctx.lineWidth = radius * 0.7;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(-radius * 3.5, 0); ctx.stroke();
+
     ctx.shadowBlur = 0;
     ctx.restore();
   }
@@ -392,13 +466,13 @@ function drawProjectiles() {
 function drawAttackFx() {
   for (const a of state.attackFx) {
     const alpha = a.life / a.maxLife;
-    if (alpha < 0.22) continue;
+    if (alpha < 0.15) continue;
     ctx.save();
-    ctx.globalAlpha = Math.min(0.28, alpha * 0.46);
-    ctx.strokeStyle = a.crit ? '#ffe27a' : 'rgba(255,255,255,0.78)';
-    ctx.lineWidth = a.crit ? 2.2 : 1.25;
-    ctx.shadowColor = a.crit ? '#ffb347' : 'rgba(255,74,58,0.42)';
-    ctx.shadowBlur = a.crit ? 5 : 2;
+    ctx.globalAlpha = Math.min(0.50, alpha * 0.70);
+    ctx.strokeStyle = a.crit ? '#ffe27a' : 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = a.crit ? 3.5 : 2.2;
+    ctx.shadowColor = a.crit ? '#ffb347' : 'rgba(255,74,58,0.60)';
+    ctx.shadowBlur = a.crit ? 10 : 5;
     ctx.beginPath();
     const dx = a.x2 - a.x1;
     const dy = a.y2 - a.y1;

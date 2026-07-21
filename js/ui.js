@@ -123,7 +123,9 @@ document.getElementById('btnOverflowClose')?.addEventListener('click', () => doc
 
 /* ——— 保存/读取 meta ——— */
 const META_KEY = 'merge_td_meta_v1';
+const META_THEME_BACKUP_KEY = 'merge_td_meta_v1_pre_theme_v2';
 function saveMeta() {
+  meta.themeVersion = 2;
   meta.deck = normalizeDeck(meta.deck || DEFAULT_DECK);
   meta.unlocked = Array.isArray(meta.unlocked) && meta.unlocked.length ? meta.unlocked.map(normalizeTypeId).filter(id => TYPES[id]) : UNIT_POOL.slice();
   try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) {}
@@ -132,7 +134,9 @@ function loadMeta() {
   try {
     const raw = localStorage.getItem(META_KEY);
     if (raw) {
+      if (!localStorage.getItem(META_THEME_BACKUP_KEY)) localStorage.setItem(META_THEME_BACKUP_KEY, raw);
       const saved = JSON.parse(raw);
+      meta.themeVersion = 2;
       meta.gold = saved.gold || 0;
       meta.upgrades = saved.upgrades || {};
       meta.wallLv = saved.wallLv || 0;
@@ -151,6 +155,7 @@ function loadMeta() {
     meta.deck = normalizeDeck(DEFAULT_DECK);
     meta.unlocked = UNIT_POOL.slice();
   }
+  saveMeta();
   refreshGold();
 }
 function refreshGold() {

@@ -90,7 +90,7 @@ function patchEnemyReinforceWindowV19() {
 /* ------------------------------------------------------------
    2) 近战攻击必须贴近目标；不再阻止远程/辅助/攻城单位推进到城墙
    ------------------------------------------------------------ */
-function isMeleeRoleV19(type) { return ['tank','front','rush'].includes(roleOf(type)); }
+function isMeleeRoleV19(type) { return ['shell','spike','raider'].includes(roleOf(type)); }
 
 function patchMeleeTargetStanceV19() { attackTarget._stanceV19 = true; }
 

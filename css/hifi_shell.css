@@ -1,5 +1,5 @@
 /* ============================================================
-   水果突击 · Hi-Fi 烫金抽卡皮 · 全站独一皮肤
+   梦幻水世界 · 海晶珍珠局外皮肤
    由 ui_redesign.css(奶油玻璃)+ hifi_shell.css(烫金色)整合。
    地基规则(non-.hifi)来自 ui_redesign,无条件生效;
    烫金装饰层仍挂 .hifi 守卫(JS 已给各面板加)。
@@ -57,7 +57,7 @@ button:disabled{opacity:0.40;cursor:default}
 
 /* ---- 首页容器 ---- */
 .hifi-home{position:absolute;inset:0;overflow:hidden;font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;color:#fff;}
-.hifi-home .bg{position:absolute;inset:0;background:url('../art/bg-clean_002.jpg') center/cover;background-image:image-set(url('../art/bg-clean_002.webp') type('image/webp'),url('../art/bg-clean_002.jpg') type('image/jpeg'));background-position:center;background-size:cover;}
+.hifi-home .bg{position:absolute;inset:0;background:url('../art/generated/water-world-battlefield-v2.png') center/cover;background-position:center;background-size:cover;}
 .hifi-home .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,246,214,.06) 0%,transparent 18%,transparent 66%,rgba(40,20,6,.30) 100%);}
 
 /* ---- 顶栏 ---- */
@@ -116,7 +116,7 @@ button:disabled{opacity:0.40;cursor:default}
 
 /* 首页主视觉装饰:logo与CTA之间不显空荡(审计P2-UI) */
 .hifi-home .hero-spot{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:200px;height:200px;border-radius:50%;background:radial-gradient(circle at 48% 44%,rgba(255,233,168,.18) 0%,rgba(245,194,66,.06) 40%,transparent 70%);pointer-events:none;z-index:1;}
-.hifi-home .hero-spot::after{content:"🍉";position:absolute;inset:0;display:grid;place-items:center;font-size:72px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.35));animation:heroFloat 4s ease-in-out infinite;}
+.hifi-home .hero-spot::after{content:"🐬";position:absolute;inset:0;display:grid;place-items:center;font-size:72px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.35));animation:heroFloat 4s ease-in-out infinite;}
 @keyframes heroFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
 
 /* ============================================================
@@ -194,7 +194,7 @@ body::after{
 .hifi-screen{position:absolute;inset:0;overflow:hidden;color:#fff;font-family:'Nunito','PingFang SC','Microsoft YaHei',sans-serif;}
 .hifi-screen>.bg{position:absolute;inset:0;background-position:center;background-size:cover;}
 .hifi-screen>.scrim{position:absolute;inset:0;}
-.hifi-screen.shop-bg>.bg{background-image:url('../art/bg-hall_001.jpg');background-image:image-set(url('../art/bg-hall_001.webp') type('image/webp'),url('../art/bg-hall_001.jpg') type('image/jpeg'));}
+.hifi-screen.shop-bg>.bg{background-image:url('../art/generated/water-world-battlefield-v2.png');background-position:center;background-size:cover;}
 .hifi-screen.shop-bg>.scrim{background:linear-gradient(180deg,rgba(34,18,4,.42),rgba(22,11,3,.58));}
 .hifi .hifi-scroll{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:calc(env(safe-area-inset-top) + 60px) 14px calc(138px + env(safe-area-inset-bottom));}
@@ -280,7 +280,7 @@ body.gacha-loading #shopPanel [data-gacha]::after{content:'抽取中...';display
 .hifi .card .rc{position:absolute;top:3px;left:3px;font-size:12px;font-weight:900;padding:1px 5px;border-radius:5px;background:var(--rc);color:#20140a;font-family:'Nunito';z-index:1;}
 .hifi .card .lv{position:absolute;top:3px;right:3px;font-size:12px;font-weight:800;color:#FFE9A8;font-family:'Fredoka';}
 .hifi .card .fdisc{margin:auto;display:flex;align-items:center;justify-content:center;transform:translateX(-1px);margin-top:14px;}
-.hifi .card .nm{font-size:13px;font-weight:800;color:#F3E3C0;font-family:'ZCOOL KuaiLe';text-align:center;line-height:1.1;margin-top:auto;}
+.hifi .card .nm{font-size:15px;font-weight:800;color:#F3E3C0;font-family:'ZCOOL KuaiLe';text-align:center;line-height:1.2;margin-top:auto;}
 .hifi .card .pwr{font-size:13px;font-weight:800;color:#FFB347;font-family:'Fredoka';text-shadow:0 0 8px rgba(255,179,71,.5);margin-top:2px;}
 .hifi .card .stars{display:flex;gap:2px;margin-bottom:2px;} .hifi .card .stars .icon{width:11px;height:11px;color:var(--gold);}
 .hifi .card.lock{filter:grayscale(.75);opacity:.85;cursor:default;}
@@ -632,6 +632,65 @@ body.battle-shell-active #game{background:#10283f;border-radius:14px;}
   background:linear-gradient(180deg,rgba(42,76,111,.98),rgba(14,37,65,.98));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 5px 14px rgba(0,0,0,.42);
 }
+
+/* ============================================================
+   梦幻水世界 · 局外统一覆层
+   珍珠、海晶与珊瑚替换旧的棕金王国材质。
+   ============================================================ */
+:root{--sea-deep:#073b55;--sea-mid:#106d86;--sea-glass:#69d9df;--sea-mint:#c9fff4;--pearl:#fff8e7;--coral:#e88aaa;--coral-deep:#8a496f;}
+body{background:radial-gradient(circle at 50% 0,#197f99 0,#073b55 58%,#031f32 100%);}
+.hifi{--gold:#a7f0e5;--gold-lt:#effff9;--gold-dk:#3b98a6;--gold-dpp:#155c74;--maroon:#8a496f;--maroon-dk:#55304f;--coin:#f5cb71;--gem:#70e8f0;--ruby:#e8759c;--jade:#6ad7b6;--cream:#effff9;--paper:#d2f6f1;}
+
+.hifi-home .bg{background-image:url('../art/generated/water-world-battlefield-v3.png');}
+.hifi-home .scrim{background:linear-gradient(180deg,rgba(231,253,255,.10),transparent 25%,transparent 63%,rgba(3,42,65,.34) 100%);}
+.hifi .logo h1{color:#effff9;-webkit-text-stroke:2px #317d98;text-shadow:0 2px 0 #77d8dc,0 4px 0 #317d98,0 8px 18px rgba(1,35,55,.42);}
+.hifi .logo .rib{color:#155c74;background:linear-gradient(180deg,#effff9,#bdf5ed);border-color:#fff;box-shadow:0 3px 8px rgba(3,45,67,.28);}
+.hifi-home .hero-spot{background:radial-gradient(circle at 48% 44%,rgba(211,255,249,.42) 0%,rgba(91,214,223,.12) 42%,transparent 72%);}
+.hifi-home .hero-spot::after{filter:drop-shadow(0 8px 16px rgba(3,58,82,.28));}
+
+.hifi-screen.shop-bg>.bg,.hifi-screen.squad-bg>.bg{background-image:url('../art/generated/water-world-battlefield-v3.png');}
+.hifi-screen.campaign-bg>.bg{background-image:url('../art/generated/water-world-campaign-v1.png');}
+.hifi-screen.arena-bg>.bg{background-image:url('../art/generated/water-world-arena-v1.png');}
+.hifi-screen>.scrim{background:linear-gradient(180deg,rgba(5,55,77,.18),rgba(5,47,70,.46));}
+.hifi-screen.campaign-bg>.scrim{background:linear-gradient(180deg,rgba(236,255,251,.07),rgba(5,78,94,.40));}
+.hifi-screen.arena-bg>.scrim{background:linear-gradient(180deg,rgba(5,57,90,.12),rgba(5,42,75,.48));}
+
+.hifi .top .ring{background:radial-gradient(circle at 38% 30%,#effff9,#9ce9e5 55%,#3e9bab);border-color:#155c74;box-shadow:0 4px 8px rgba(0,46,68,.35),inset 0 2px 3px #fff,inset 0 -3px 5px rgba(21,92,116,.32);}
+.hifi .ring>.inner,.hifi .avatar .inner{background:radial-gradient(circle at 40% 34%,#428ca8,#174d70);}
+.hifi .avatar .lvl{background:var(--coral-deep);border-color:#d5fff7;color:#effff9;}
+.hifi .cchip{background:linear-gradient(180deg,rgba(10,69,91,.94),rgba(4,43,68,.96));border-color:#a7f0e5;box-shadow:inset 0 1px 2px rgba(255,255,255,.18),0 3px 6px rgba(0,42,64,.32);}
+.hifi .ring .lbl{color:#effff9;text-shadow:0 1px 0 #155c74,0 0 4px rgba(0,39,62,.55);}
+
+#bottomNav.hifi{background:linear-gradient(180deg,rgba(9,71,94,.97),rgba(4,42,67,.99));border-top-color:#8fe8e3;box-shadow:0 -4px 16px rgba(0,39,61,.42),inset 0 2px 0 rgba(222,255,250,.25);}
+#bottomNav.hifi .navtab{color:#8ac9ca;}
+#bottomNav.hifi .navtab .ic{background:radial-gradient(circle at 40% 34%,#2c8297,#104a69);border-color:#4db7c3;box-shadow:inset 0 1px 2px rgba(255,255,255,.18),inset 0 -2px 3px rgba(0,32,54,.35);}
+#bottomNav.hifi .navtab .ic .icon{color:#c3f6ef;}
+#bottomNav.hifi .navtab.active{color:#effff9;}
+#bottomNav.hifi .navtab.active .ic{background:radial-gradient(circle at 40% 34%,#75dedc,#2b91a5);border-color:#effff9;box-shadow:inset 0 1px 2px rgba(255,255,255,.42),0 0 10px rgba(147,246,237,.5);}
+#bottomNav.hifi .navtab.active .ic .icon{color:#fff;}
+#bottomNav.hifi .navmain{background:linear-gradient(180deg,#effff9,#9dece5 45%,#52bec8 62%,#26879e);border-color:#155c74;box-shadow:0 7px 0 #155c74,0 12px 20px rgba(0,33,54,.42),inset 0 2px 3px #fff,0 0 24px rgba(135,247,235,.45);}
+#bottomNav.hifi .navmain .micon,#bottomNav.hifi .navmain .txt{color:#104963;-webkit-text-stroke-color:#d7fff8;text-shadow:0 1px 0 rgba(255,255,255,.45);}
+
+.hifi .shead h2{color:#effff9;-webkit-text-stroke:1px #317d98;text-shadow:0 2px 0 #256f89,0 3px 6px rgba(0,43,64,.4);}
+.hifi .shead .line{background:linear-gradient(90deg,rgba(181,255,246,.92),transparent);}.hifi .shead .r{color:#c6f7ef;}
+.hifi .gpanel{background:linear-gradient(180deg,rgba(9,73,95,.82),rgba(4,48,73,.88));border-color:#8ee7e0;box-shadow:0 6px 16px rgba(0,40,62,.34),inset 0 1px 0 rgba(241,255,251,.28);color:#d7f7f2;}
+.hifi .gpanel::after{border-color:rgba(190,255,246,.30);}
+.hifi .gbtn{background:linear-gradient(180deg,#eafffb,#9ceae5 45%,#56bec8 62%,#2a8fa5);border-color:#155c74;box-shadow:0 5px 0 #155c74,0 8px 14px rgba(0,39,61,.30),inset 0 2px 3px #fff;color:#104963;-webkit-text-stroke:0;text-shadow:none;}
+.hifi .gbtn.blk{background:linear-gradient(180deg,#e8c5dd,#c77da6 48%,#9b577f);border-color:#653a66;box-shadow:0 5px 0 #653a66,0 8px 14px rgba(0,39,61,.28);color:#fff8fc;}
+.hifi .gbtn.gray{background:linear-gradient(180deg,#78919a,#4c6874);border-color:#3c5662;box-shadow:0 3px 0 #3c5662;color:#d7e8e9;}
+.hifi .banner{border-color:#b9f7ef;box-shadow:0 6px 16px rgba(0,40,62,.36);}.hifi .banner .cap{background:linear-gradient(transparent,rgba(4,42,69,.89));}.hifi .banner .cap h3{color:#effff9;-webkit-text-stroke:1px #317d98;text-shadow:0 2px 3px rgba(0,35,56,.7);}
+.hifi .lvnode{background:linear-gradient(160deg,rgba(32,126,143,.88),rgba(7,70,96,.94));border-color:#6acdd1;color:#d9fff8;box-shadow:0 3px 8px rgba(0,43,64,.28);}.hifi .lvnode b{color:#effff9;}.hifi .lvnode small{color:#bdeee8;}.hifi .lvnode.current{border-color:#effff9;box-shadow:0 0 12px rgba(178,255,246,.65);}.hifi .lvnode.boss{border-color:#ef9ab7;background:linear-gradient(160deg,#a75985,#56365e);}.hifi .lvnode.boss b{color:#fff1f7;}
+
+.legend-banner{background:linear-gradient(150deg,#173f72,#246b91)!important;}.legend-stage{width:100%;aspect-ratio:16/9;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 58%,rgba(161,255,245,.52),transparent 36%),linear-gradient(180deg,#1b5c8d,#0b3a68);}.legend-stage::before{content:'';position:absolute;left:8%;right:8%;bottom:14%;height:22%;border:2px solid rgba(219,255,250,.72);border-radius:50%;box-shadow:0 0 22px rgba(126,244,239,.6),inset 0 0 18px rgba(200,255,250,.35);}.legend-stage i{position:absolute;width:54px;height:54px;border-radius:50%;background-image:url('../art/generated/water-world-units-v2.png');background-size:500% 500%;border:2px solid #e8fffa;box-shadow:0 5px 14px rgba(0,20,52,.45);}.legend-stage i:nth-child(1){left:17%;top:28%;background-position:0 0;}.legend-stage i:nth-child(2){left:43%;top:16%;width:68px;height:68px;background-position:50% 25%;}.legend-stage i:nth-child(3){right:17%;top:30%;background-position:100% 50%;}
+
+/* Final exterior clean-up: action, commander and rank surfaces share the same reef palette. */
+.hifi .cta.pve{background:linear-gradient(180deg,#fff2f7,#f4b6cd 45%,#df7ca5 65%,#b95d86);border-color:#713d68;box-shadow:0 6px 0 #713d68,0 10px 16px rgba(0,40,62,.34),inset 0 2px 3px #fff,0 0 22px rgba(240,150,193,.35);}.hifi .cta.pve .t{color:#562c56;-webkit-text-stroke-color:#ffe9f4;text-shadow:0 1px 0 rgba(255,255,255,.45);}.hifi .cta.pve .s{color:#65345f;}.hifi .cta.pve:active{box-shadow:0 2px 0 #713d68;}
+.hifi .hifi-levelsel{background:rgba(6,58,82,.78);border-color:#a8f1e8;color:#eafffb;box-shadow:0 4px 10px rgba(0,35,56,.28);}
+#commanderTeam .card{background:linear-gradient(160deg,rgba(50,141,154,.92),rgba(12,74,98,.96))!important;border-color:#aaf5ed!important;box-shadow:0 3px 8px rgba(0,42,63,.35),0 0 12px -2px #9df1e7!important;}#commanderTeam .card .nm{color:#effff9;}#commanderTeam .card .lv{color:#effff9;}#commanderTeam .card .gbtn{background:linear-gradient(180deg,#eafffb,#a4e9e4 48%,#58bdc7)!important;border-color:#155c74!important;box-shadow:0 3px 0 #155c74!important;color:#104963!important;}#commanderTeam .card .gbtn.blk{background:linear-gradient(180deg,#f8e0ee,#d58bb4 48%,#a65e87)!important;border-color:#713d68!important;box-shadow:0 3px 0 #713d68!important;color:#fff8fc!important;}
+.hifi .rankbadge .medal{background:radial-gradient(circle at 40% 34%,#effff9,#9cebe6 60%,#3d9aa9);border-color:#155c74;box-shadow:0 5px 10px rgba(0,42,63,.32),inset 0 2px 3px #fff;}.hifi .rankbadge .medal .icon{color:#155c74;}.hifi .rankbadge h3{color:#effff9;}
+#campaignTrainBtn{background:linear-gradient(180deg,#7396a0,#456c79)!important;border-color:#244e5e!important;box-shadow:0 4px 0 #244e5e!important;color:#e5fbf7!important;}
+
+#resultPanel.hifi,#helpPanel.hifi{background:rgba(2,35,55,.62);}.hifi #resultPanel .result-card,#resultPanel.hifi .result-card{background:linear-gradient(180deg,#0c6280,#063a5c 54%,#042d4a);border-color:#9ff0e8;box-shadow:0 0 0 1px rgba(185,255,245,.28),0 0 40px rgba(83,224,216,.16),0 18px 40px rgba(0,20,42,.65);}.hifi #resultPanel .result-card h2,#resultPanel.hifi .result-card h2{color:#effff9;-webkit-text-stroke:1px #317d98;text-shadow:0 2px 0 #155c74,0 0 20px rgba(125,244,234,.25);}.hifi #resultPanel .res-stat,#resultPanel.hifi .res-stat{background:rgba(2,40,61,.38);border-color:rgba(190,255,246,.24);}.hifi #resultPanel .res-stat .res-num,#resultPanel.hifi .res-stat .res-num{color:#effff9;}.hifi #resultPanel .res-stat .res-lbl,#resultPanel.hifi .res-stat .res-lbl{color:#bdece8;}.hifi #resultPanel .btn-primary,#resultPanel.hifi .btn-primary{background:linear-gradient(180deg,#eafffb,#9ceae5 45%,#56bec8 62%,#2a8fa5);border-color:#155c74;box-shadow:inset 0 -3px 0 rgba(21,92,116,.35),0 5px 0 #155c74;color:#104963;}.hifi #resultPanel .btn-secondary,#resultPanel.hifi .btn-secondary{background:linear-gradient(180deg,#527b91,#284f68);border-color:#17435d;box-shadow:0 4px 0 #17435d;color:#d8f6f3;}
 .battle-shell-hud .battle-pill{color:#FFF5DA;font-size:13px;text-shadow:0 1px 0 rgba(0,0,0,.55);}
 .battle-shell-hud .battle-title b{color:#FFF4D3;font-size:15px;text-shadow:0 1px 0 rgba(0,0,0,.55);}
 .battle-shell-hud .battle-title span{color:#6EF0CE;font-size:10px;}

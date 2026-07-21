@@ -49,8 +49,8 @@
         const group = s.side === 'player' ? state.playerSoldiers : state.enemySoldiers;
         let second = null;
         for (const a of group) {
-          if (!isCombatant(a) || a === s || a.laneIndex !== s.laneIndex || a.hp >= a.maxHp) continue;
-          if (!second || a.hp < second.hp) second = a;
+          if (!isCombatant(a) || a === s || a.hp >= a.maxHp) continue;
+          if (!second || a.hp / a.maxHp < second.hp / second.maxHp) second = a;
         }
         if (second) {
           const heal = Math.round(6 + lv * 3 + s.atk * 0.35);
@@ -64,7 +64,7 @@
       if (s.type === 'strawberry_knight' && lv >= 5 && s._v70Timer <= 0) {
         const foes = s.side === 'player' ? state.enemySoldiers : state.playerSoldiers;
         for (const e of foes) {
-          if (!isCombatant(e) || Math.abs(e.laneIndex - s.laneIndex) > 1 || Math.abs(e.y - s.y) > 70) continue;
+          if (!isCombatant(e) || Math.hypot(e.x - s.x, e.y - s.y) > 82) continue;
           if (typeof applyStatus === 'function') applyStatus(e, s, 'knockback', 0, { distance: lv >= 7 ? 80 : 60 });
         }
         s._v70Timer = lv >= 7 ? 7.0 : 9.0;
@@ -74,7 +74,7 @@
       if (s.type === 'dragonfruit_warrior' && lv >= 5 && s._v70Timer <= 0) {
         const foes = s.side === 'player' ? state.enemySoldiers : state.playerSoldiers;
         for (const e of foes) {
-          if (!isCombatant(e) || e.laneIndex === s.laneIndex || Math.abs(e.laneIndex - s.laneIndex) > 1 || Math.abs(e.y - s.y) > 50) continue;
+          if (!isCombatant(e) || Math.hypot(e.x - s.x, e.y - s.y) > 70) continue;
           if (Math.random() < (lv >= 7 ? 0.45 : 0.25) && typeof applyStatus === 'function') applyStatus(e, s, 'burning', 1.5);
         }
         s._v70Timer = lv >= 7 ? 5.0 : 7.0;
@@ -87,7 +87,7 @@
 
       /* ── 芒果弩手 Lv4+:攻速随等级继续提升 ── */
       if (s.type === 'mango_arbalest' && lv >= 4) {
-        const base = 0.55; s.speed = Math.max(0.28, base - (lv - 3) * 0.04);
+        const base = 0.55; s.rate = Math.max(0.28, base - (lv - 3) * 0.04);
       }
 
       /* ── 樱桃炸弹 Lv5+:AoE 弹范围加大 ── */

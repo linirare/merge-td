@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node server/index.js",
-    "test": "npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:pvp-sim",
+    "test": "npm run test:water-world && npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:pvp-sim",
+    "test:water-world": "node test/water-world-free-combat.js",
     "pvp-server": "node server/pvp-server.js",
     "test:combat": "node test/combat-baseline.js --check",
     "test:security": "node test/server-security.js",
@@ -23,7 +24,7 @@
     "test:stage-real": "node test/stage-real-sim.js",
     "visual": "node test/visual-check.mjs",
     "test:pvp-flip": "node test/pvp-client-flip.mjs",
-    "check": "npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:progression && npm run test:pacing && npm run test:merge-pity && npm run test:wall-reach && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:ui-security && npm run test:pvp-sim",
+    "check": "npm run test:water-world && npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:progression && npm run test:pacing && npm run test:merge-pity && npm run test:wall-reach && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:ui-security && npm run test:pvp-sim",
     "check:full": "node test/full-check.js"
   },
   "dependencies": {

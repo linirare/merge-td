@@ -10,28 +10,40 @@
     barracks: new Image(),
     troops: new Image(),
     commanders: new Image(),
+    bosses: new Image(),
   };
 
-  ART.background.src = 'art/generated/battlefield-flat-2d-v5.png';
-  ART.barracks.src = 'art/generated/orb-barracks-v5.png';
-  ART.troops.src = 'art/generated/fruit-troops-v5.png';
-  ART.commanders.src = 'art/generated/commanders-portraits-v6.png';
+  ART.background.src = 'art/generated/water-world-battlefield-v3.png';
+  ART.barracks.src = 'art/generated/water-world-orbs-v2.png';
+  ART.troops.src = 'art/generated/water-world-units-v2.png';
+  ART.commanders.src = 'art/generated/water-world-commanders-v2.png';
+  ART.bosses.src = 'art/generated/water-world-bosses-v2.png';
   for (const img of Object.values(ART)) {
     img.onload = () => requestAnimationFrame(() => {
       try { if (typeof draw === 'function') draw(); } catch (_) {}
     });
   }
 
-  const BARRACK_RECTS = Array.from({ length: 5 }, (_, i) => ({
-    x: Math.round(i * 2146 / 5), y: 74, w: Math.ceil(2146 / 5), h: 536,
+  const BARRACK_RECTS = Array.from({ length: 25 }, (_, i) => ({
+    x: Math.round((i % 5) * 1254 / 5), y: Math.round(Math.floor(i / 5) * 1254 / 5), w: Math.ceil(1254 / 5), h: Math.ceil(1254 / 5),
   }));
-  const TROOP_RECTS = Array.from({ length: 5 }, (_, i) => ({
-    x: Math.round(i * 1821 / 5), y: 150, w: Math.ceil(1821 / 5), h: 548,
-  }));
-  const COMMANDER_RECTS = [
-    { x: 0, y: 280, w: 512, h: 960 },
-    { x: 512, y: 305, w: 512, h: 960 },
-  ];
+  const TROOP_RECTS = BARRACK_RECTS.map(r => ({ ...r }));
+  const COMMANDER_RECTS = Array.from({ length:3 }, (_, i) => ({ x:Math.round(i * 1823 / 3), y:0, w:Math.ceil(1823 / 3), h:864 }));
+  const BOSS_RECTS = Array.from({ length:4 }, (_, i) => ({ x:Math.round(i * 1774 / 4), y:0, w:Math.ceil(1774 / 4), h:887 }));
+  const COMMANDER_ART = {
+    // The two original atlas cells are wide half-body illustrations.  Their
+    // faces are offset inside the cells, so a centred crop cuts them off in
+    // the narrow battlefield portrait wells.
+    orchard_lord: { atlas:0, focus:.5 },
+    berry_general: { atlas:1, focus:.5 },
+    juice_sage: { atlas:2, focus:.5 },
+  };
+  const COMMANDER_FRAMES = {
+    // Independent side cards prevent commander art, the grid and the skill
+    // control from competing for the same lower-left / upper-right corner.
+    enemy: { x:405, y:87, w:58, h:112 },
+    player: { x:18, y:0, w:58, h:112 },
+  };
 
   function roundedPath(x, y, w, h, r) {
     const rr = Math.max(0, Math.min(r, w / 2, h / 2));
@@ -66,12 +78,7 @@
   }
 
   function roleIndex(type) {
-    if (type === 'watermelon_guard' || TYPES[type]?.role === 'tank') return 0;
-    if (type === 'grape_archer' || ['back','control','support'].includes(TYPES[type]?.role)) return 1;
-    if (type === 'banana_raider' || TYPES[type]?.role === 'rush') return 2;
-    if (type === 'pineapple_lancer') return 3;
-    if (type === 'orange_cannon' || TYPES[type]?.role === 'siege') return 4;
-    return 3;
+    return Math.max(0, Math.min(24, Number(TYPES[type]?.artIndex) || 0));
   }
 
   function drawAtlas(img, rects, index, x, y, w, h, rotate = 0, alpha = 1) {
@@ -88,54 +95,68 @@
     return true;
   }
 
-  function drawAtlasCover(img, rects, index, x, y, w, h, flipX = false, alpha = 1) {
+  function drawPortraitCover(img, source, frame, focus = .5) {
     if (!imageReady(img)) return false;
-    const src = rects[index] || rects[0];
-    let sx = src.x, sy = src.y, sw = src.w, sh = src.h;
-    const srcRatio = sw / sh;
-    const dstRatio = w / h;
-    if (srcRatio > dstRatio) {
-      const cropW = sh * dstRatio;
-      sx += (sw - cropW) / 2;
-      sw = cropW;
+    const src = source || { x:0, y:0, w:img.naturalWidth, h:img.naturalHeight };
+    const targetRatio = frame.w / frame.h;
+    let sw = src.w;
+    let sh = src.h;
+    if (sw / sh > targetRatio) {
+      sw = sh * targetRatio;
     } else {
-      const cropH = sw / dstRatio;
-      sy += (sh - cropH) / 2;
-      sh = cropH;
+      sh = sw / targetRatio;
     }
+    const sx = src.x + (src.w - sw) * Math.max(0, Math.min(1, focus));
+    const sy = src.y + (src.h - sh) * .18;
     ctx.save();
-    ctx.globalAlpha *= alpha;
+    roundedPath(frame.x, frame.y, frame.w, frame.h, 8);
+    ctx.clip();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.translate(x + w / 2, y + h / 2);
-    if (flipX) ctx.scale(-1, 1);
-    ctx.drawImage(img, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+    ctx.drawImage(img, sx, sy, sw, sh, frame.x, frame.y, frame.w, frame.h);
     ctx.restore();
     return true;
   }
 
-  function drawAtlasContain(img, rects, index, x, y, w, h, flipX = false, alpha = 1) {
+  // The background illustration is authored in three safe zones.  Map those
+  // zones to the live board/reef coordinates rather than forcing combat layout
+  // to match incidental pixels in a painted image.
+  function drawBattlefieldBackdrop(img) {
     if (!imageReady(img)) return false;
-    const src = rects[index] || rects[0];
-    const scale = Math.min(w / src.w, h / src.h);
-    const dw = src.w * scale;
-    const dh = src.h * scale;
-    ctx.save();
-    ctx.globalAlpha *= alpha;
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.translate(x + w / 2, y + h / 2);
-    if (flipX) ctx.scale(-1, 1);
-    ctx.drawImage(img, src.x, src.y, src.w, src.h, -dw / 2, -dh / 2, dw, dh);
-    ctx.restore();
+    const sourceW = img.naturalWidth;
+    const sourceH = img.naturalHeight;
+    const slices = [
+      { sy:0, ey:510, dy:0, eyDest:276 },
+      { sy:510, ey:1315, dy:276, eyDest:645 },
+      { sy:1315, ey:sourceH, dy:645, eyDest:H },
+    ];
+    for (const slice of slices) {
+      ctx.drawImage(img, 0, slice.sy, sourceW, slice.ey - slice.sy,
+        0, slice.dy, W, slice.eyDest - slice.dy);
+    }
     return true;
   }
 
   function sideColor(enemy) {
     return enemy
-      ? { main:'#c84e55', dark:'#6c2932', light:'#ffd1bd', cell:'#a83f48' }
-      : { main:'#2589a3', dark:'#124d63', light:'#c9f5ef', cell:'#247f98' };
+      ? {
+          main:'#d66886', dark:'#593452', light:'#ffd6df', cell:'#a95872',
+          boardTop:'rgba(92,57,102,.60)', boardBottom:'rgba(57,39,79,.68)',
+          slot:'rgba(96,57,91,.48)', slotStroke:'rgba(255,197,216,.70)'
+        }
+      : {
+          main:'#45b8c4', dark:'#15556c', light:'#d2fbf5', cell:'#338da4',
+          boardTop:'rgba(30,113,132,.58)', boardBottom:'rgba(15,76,101,.68)',
+          slot:'rgba(24,104,124,.48)', slotStroke:'rgba(184,247,240,.70)'
+        };
   }
+
+  // Keep combat coordinates stable while giving the 24px visual reef enough
+  // breathing room above the player grid.
+  function wallVisualY(enemy) {
+    return (enemy ? LAYOUT.enemyWallY : LAYOUT.playerWallY) - (enemy ? 0 : 16);
+  }
+  window.battleWallVisualYV5 = wallVisualY;
 
   function ensureCommanderState() {
     if (typeof window.ensureCommanderStateV1 === 'function') return window.ensureCommanderStateV1();
@@ -145,24 +166,12 @@
   }
 
   function commanderSkillRect(enemy) {
+    const by = enemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
     return enemy
-      ? { x: 393, y: 216, w: 42, h: 42 }
-      : { x: 56, y: 812, w: 42, h: 42 };
+      ? { x: W - 55, y: by + BOARD_H - 50, w: 42, h: 42 }
+      : { x: 24, y: by + BOARD_H - 50, w: 42, h: 42 };
   }
   window.commanderSkillRectV5 = commanderSkillRect;
-
-  function commanderPortraitRect(enemy) {
-    return enemy
-      ? { x: 382, y: 92, w: 66, h: 174 }
-      : { x: 44, y: 700, w: 66, h: 156 };
-  }
-  window.commanderPortraitRectV5 = commanderPortraitRect;
-  window.Battle2DGuidesV5 = {
-    enemyBoard: { x:64, y:86, w:BOARD_W, h:BOARD_H },
-    playerBoard: { x:126, y:684, w:BOARD_W, h:BOARD_H },
-    enemyPortrait: commanderPortraitRect(true),
-    playerPortrait: commanderPortraitRect(false),
-  };
 
   function activateCommanderSkill() {
     const activated = typeof window.activateCommanderSkillV1 === 'function'
@@ -189,13 +198,30 @@
 
   drawBackground = function drawBackground2DV5() {
     ctx.save();
-    if (!drawCover(ART.background)) {
+    if (!drawBattlefieldBackdrop(ART.background)) {
       ctx.fillStyle = '#f0d39a'; ctx.fillRect(0, 0, W, 52);
       ctx.fillStyle = '#bd5550'; ctx.fillRect(0, 52, W, 214);
       ctx.fillStyle = '#99ad49'; ctx.fillRect(0, 266, W, 382);
       ctx.fillStyle = '#378ba5'; ctx.fillRect(0, 648, W, 212);
       ctx.fillStyle = '#f0d39a'; ctx.fillRect(0, 860, W, 60);
     }
+
+    // The illustration already contains ornate castles.  Quiet the operational
+    // zones so the interactive boards read as the primary layer, while leaving
+    // the open-water battlefield bright and spacious.
+    const enemyScrim = ctx.createLinearGradient(0, 48, 0, LAYOUT.fieldY);
+    enemyScrim.addColorStop(0, 'rgba(47,19,59,.10)');
+    enemyScrim.addColorStop(.48, 'rgba(47,19,59,.28)');
+    enemyScrim.addColorStop(1, 'rgba(47,19,59,.06)');
+    ctx.fillStyle = enemyScrim;
+    ctx.fillRect(0, 48, W, Math.max(0, LAYOUT.fieldY - 48));
+
+    const playerScrim = ctx.createLinearGradient(0, LAYOUT.playerWallY - 18, 0, LAYOUT.operationY);
+    playerScrim.addColorStop(0, 'rgba(4,48,68,.06)');
+    playerScrim.addColorStop(.48, 'rgba(4,48,68,.27)');
+    playerScrim.addColorStop(1, 'rgba(4,48,68,.14)');
+    ctx.fillStyle = playerScrim;
+    ctx.fillRect(0, LAYOUT.playerWallY - 18, W, LAYOUT.operationY - LAYOUT.playerWallY + 18);
     ctx.restore();
   };
 
@@ -204,6 +230,20 @@
     const by = isEnemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
     const color = sideColor(isEnemy);
     ctx.save();
+
+    // One continuous plate makes the 3x5 grid legible as an interaction zone
+    // instead of fifteen translucent cells floating over the background art.
+    ctx.shadowColor = 'rgba(0,18,30,.25)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = isEnemy ? 2 : -2;
+    const boardGlass = ctx.createLinearGradient(0, by - 9, 0, by + BOARD_H + 9);
+    boardGlass.addColorStop(0, color.boardTop);
+    boardGlass.addColorStop(1, color.boardBottom);
+    panel(bx - 9, by - 9, BOARD_W + 18, BOARD_H + 18, 13,
+      boardGlass, color.light, 2);
+    ctx.shadowColor = 'transparent';
+    panel(bx - 5, by - 5, BOARD_W + 10, BOARD_H + 10, 10,
+      'rgba(211,250,247,.035)', 'rgba(255,255,255,.20)', .9);
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const x = bx + c * (CELL + GAP);
@@ -212,9 +252,16 @@
         const snap = !isEnemy && state.drag?.nearestSnap &&
           state.drag.nearestSnap.r === r && state.drag.nearestSnap.c === c;
         panel(x + 2, y + 2, CELL - 4, CELL - 4, 11,
-          snap ? '#f6d46b' : (ball ? 'rgba(255,247,205,.32)' : 'rgba(49,47,50,.12)'),
-          snap ? '#fff2a9' : (ball ? color.light : 'rgba(255,255,255,.24)'),
-          snap || ball ? 2 : 1);
+          snap ? '#f6d46b' : (ball ? 'rgba(255,247,218,.28)' : color.slot),
+          snap ? '#fff2a9' : (ball ? color.light : color.slotStroke),
+          snap || ball ? 2 : 1.35);
+
+        // A restrained inner highlight separates adjacent cells without adding
+        // texture or competing with the orb artwork.
+        if (!ball && !snap) {
+          panel(x + 6, y + 6, CELL - 12, CELL - 12, 8,
+            'rgba(255,255,255,.025)', 'rgba(255,255,255,.08)', .7);
+        }
         if (ball) {
           drawBall(ball, x + CELL / 2, y + CELL / 2, CELL * .43, 0, isEnemy);
           drawSlotLevelBadgeV48(x, y, ball.level || 1, isEnemy);
@@ -227,20 +274,57 @@
   drawBall = function drawBall2DV5(ball, cx, cy, radius, extraY, isEnemy) {
     const y = cy + (extraY || 0) - (ball.bounce ? Math.sin(ball.bounce * Math.PI) * 4 : 0);
     const idx = roleIndex(ball.type);
+    const role = TYPES[ball.type]?.role || '';
+    const roleColor = ({
+      tank:'#72e1c4', rush:'#ff9a8d', back:'#8fbfff', control:'#c39bff',
+      support:'#84e4ee', siege:'#ffd37b', wild:'#f29cc4'
+    })[role] || '#8debf0';
     ctx.save();
-    ctx.fillStyle = 'rgba(25,35,35,.20)';
+    ctx.fillStyle = 'rgba(8,48,64,.28)';
     ctx.beginPath();
-    ctx.ellipse(cx, y + radius * .72, radius * .65, radius * .18, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, y + radius * .78, radius * .68, radius * .20, 0, 0, Math.PI * 2);
     ctx.fill();
-    drawAtlas(ART.barracks, BARRACK_RECTS, idx, cx - radius, y - radius, radius * 2, radius * 2, 0, 1);
+
+    // The pearl must read before its detail does: a tinted sea-glass shell
+    // separates it from the grid, then the unique atlas art sits inside.
+    const glow = ctx.createRadialGradient(cx - radius * .28, y - radius * .34, 2, cx, y, radius + 5);
+    glow.addColorStop(0, 'rgba(255,255,255,.82)');
+    glow.addColorStop(.32, `${roleColor}88`);
+    glow.addColorStop(1, 'rgba(5,58,78,.78)');
+    ctx.beginPath(); ctx.arc(cx, y, radius + 3, 0, Math.PI * 2);
+    ctx.fillStyle = glow; ctx.fill();
+    ctx.strokeStyle = '#eafffb'; ctx.lineWidth = 1.7; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, y, radius + .4, 0, Math.PI * 2);
+    ctx.strokeStyle = roleColor; ctx.lineWidth = 2.3; ctx.stroke();
+
+    const artRadius = radius * 1.12;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, y, radius * .98, 0, Math.PI * 2); ctx.clip();
+    drawAtlas(ART.barracks, BARRACK_RECTS, idx, cx - artRadius, y - artRadius, artRadius * 2, artRadius * 2, 0, 1);
+    ctx.restore();
+    // 高等级海灵珠辉光(Lv4+)
+    const ballLevel = ball.level || 1;
+    if (ballLevel >= 4 && !isEnemy) {
+      ctx.save();
+      ctx.globalAlpha = 0.12 + (ballLevel - 4) * 0.04;
+      ctx.fillStyle = '#ffd24a';
+      ctx.shadowColor = '#ffd24a';
+      ctx.shadowBlur = 20 + ballLevel * 5;
+      ctx.beginPath();
+      ctx.arc(cx, y, radius * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.beginPath(); ctx.ellipse(cx - radius * .36, y - radius * .40, radius * .18, radius * .10, -.5, 0, Math.PI * 2); ctx.fill();
     if (state.phase === 'playing') {
       const level = Math.max(1, Math.min(7, ball.level || 1));
       const cd = SPAWN_COOLDOWNS[level] || SPAWN_COOLDOWNS[1] || 5;
       const pct = ball.spawnTimer <= 0 ? 1 : Math.max(0, Math.min(1, 1 - (ball.spawnTimer || 0) / cd));
-      ctx.strokeStyle = ball.spawnTimer <= 0 ? '#fff2a1' : (isEnemy ? '#ffaaa0' : '#a7eff1');
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = ball.spawnTimer <= 0 ? '#fff5bd' : (isEnemy ? '#ffb0c2' : '#b9fff6');
+      ctx.lineWidth = 2.4;
       ctx.beginPath();
-      ctx.arc(cx, y, radius + 1, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
+      ctx.arc(cx, y, radius + 5.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
       ctx.stroke();
     }
     ctx.restore();
@@ -250,17 +334,17 @@
     const lv = Math.max(1, Math.min(7, level || 1));
     const color = sideColor(isEnemy);
     ctx.save();
-    panel(x + CELL - 17, y + 3, 16, 14, 7, color.dark, color.light, 1);
-    ctx.fillStyle = '#fff8dc';
+    panel(x + CELL - 22, y + 3, 21, 16, 8, color.dark, '#effff9', 1.25);
+    ctx.fillStyle = '#effff9';
     ctx.font = '900 8px "Nunito",sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(lv), x + CELL - 9, y + 10.2);
+    ctx.fillText(`Lv${lv}`, x + CELL - 11.5, y + 11);
     ctx.restore();
   };
 
   drawField = function drawField2DV5() {
-    // Five lanes are authored into the flat background; only the center clash line is drawn.
+    // Open water: one subtle horizontal clash line, never vertical routes.
     ctx.save();
     ctx.strokeStyle = 'rgba(255,250,190,.38)';
     ctx.lineWidth = 1.5;
@@ -269,51 +353,103 @@
     ctx.moveTo(54, LAYOUT.fieldY + LAYOUT.fieldH / 2);
     ctx.lineTo(W - 54, LAYOUT.fieldY + LAYOUT.fieldH / 2);
     ctx.stroke();
+    const tide = typeof worldTideState === 'function' ? worldTideState(state.time) : { phase:'calm', remaining:12 };
+    panel(W / 2 - 51, LAYOUT.fieldY + 8, 102, 22, 11, tide.phase === 'surge' ? 'rgba(27,141,196,.82)' : 'rgba(22,79,112,.76)', 'rgba(204,249,255,.8)', 1);
+    ctx.fillStyle = '#e8fcff';
+    ctx.font = '800 10px "Microsoft YaHei",sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`${tide.phase === 'surge' ? '涌潮 +8%' : '平潮'} · ${tide.remaining}s`, W / 2, LAYOUT.fieldY + 19);
     ctx.restore();
   };
 
-  function paintWallBar(hp, maxHp, isEnemy) {
+  drawWall = function drawWall2DV5(hp, maxHp, isEnemy) {
+    const y = wallVisualY(isEnemy);
     const ratio = Math.max(0, Math.min(1, hp / Math.max(1, maxHp)));
     const color = sideColor(isEnemy);
-    const bar = wallBarRect(isEnemy);
+    const w = W - 110;
+    const x = (W - w) / 2;
+    const h = 24;
     ctx.save();
-    panel(bar.x, bar.y, bar.w, bar.h, 8, '#26363a', '#fff0bc', 1.5);
-    panel(bar.x + 3, bar.y + 3, Math.max(4, (bar.w - 6) * ratio), bar.h - 6, 5, color.main, null);
+
+    // A broad reef barrier sits exactly on the board/field boundary.  The HP
+    // track is embedded in it, so the painted castle and gameplay wall no
+    // longer read as two unrelated structures.
+    ctx.shadowColor = 'rgba(0,20,31,.5)';
+    ctx.shadowBlur = 7;
+    ctx.shadowOffsetY = isEnemy ? 3 : -3;
+    const reefGradient = ctx.createLinearGradient(0, y, 0, y + h);
+    if (isEnemy) {
+      reefGradient.addColorStop(0, '#bc718d');
+      reefGradient.addColorStop(.48, '#78506f');
+      reefGradient.addColorStop(1, '#523b60');
+    } else {
+      reefGradient.addColorStop(0, '#55b5c1');
+      reefGradient.addColorStop(.48, '#2f859a');
+      reefGradient.addColorStop(1, '#23657f');
+    }
+    ctx.beginPath();
+    ctx.moveTo(x + 8, y);
+    ctx.lineTo(x + w - 8, y);
+    ctx.lineTo(x + w, y + 7);
+    ctx.lineTo(x + w - 5, y + h);
+    ctx.lineTo(x + 5, y + h);
+    ctx.lineTo(x, y + 7);
+    ctx.closePath();
+    ctx.fillStyle = reefGradient;
+    ctx.fill();
+    ctx.strokeStyle = color.light;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.shadowColor = 'transparent';
+
+    // Sparse reef joints make the band architectural without heavy ornament.
+    ctx.strokeStyle = isEnemy ? 'rgba(255,180,211,.22)' : 'rgba(180,250,246,.22)';
+    ctx.lineWidth = 1;
+    for (let jointX = x + 28; jointX < x + w - 20; jointX += 42) {
+      ctx.beginPath();
+      ctx.moveTo(jointX, y + 3);
+      ctx.lineTo(jointX - 4, y + h - 3);
+      ctx.stroke();
+    }
+
+    const trackX = x + 42;
+    const trackW = w - 84;
+    panel(trackX, y + 6, trackW, 12, 4, 'rgba(8,24,34,.58)', 'rgba(255,255,255,.30)', 1);
+    panel(trackX + 2, y + 8, Math.max(4, (trackW - 4) * ratio), 8, 3, color.main, null);
     ctx.fillStyle = '#fff8e5';
     ctx.font = '900 9px "Nunito",sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${Math.ceil(hp)} / ${Math.ceil(maxHp)}`, W / 2, bar.y + bar.h / 2 + .5);
+    ctx.fillText(`护礁结界  ${Math.ceil(hp)} / ${Math.ceil(maxHp)}`, W / 2, y + h / 2);
+    const shield = Number(isEnemy ? state.enemyReefShield : state.playerReefShield) || 0;
+    if (shield > 0) {
+      ctx.strokeStyle = '#82f5ff'; ctx.lineWidth = 3;
+      roundedPath(x - 3, y - 3, w + 6, h + 6, 8); ctx.stroke();
+      ctx.fillStyle = '#d8fbff'; ctx.font = '900 8px "Microsoft YaHei",sans-serif';
+      ctx.textAlign = 'right'; ctx.fillText(`护礁盾 ${Math.ceil(shield)}`, x + w - 7, isEnemy ? y - 7 : y + h + 8);
+    }
     ctx.restore();
-  }
-
-  drawWall = function drawWall2DV5(hp, maxHp, isEnemy) {
-    // render.js 在小兵前调用 drawWall；这里只记录，真正血条在 drawHUD 阶段置顶绘制。
-    state._wallBarsV5 = state._wallBarsV5 || {};
-    state._wallBarsV5[isEnemy ? 'enemy' : 'player'] = { hp, maxHp };
   };
-
-  function wallBarRect(enemy) {
-    const w = 250;
-    return { x:(W - w) / 2, y:enemy ? 276 : 651, w, h:15 };
-  }
-  window.wallBarRectV5 = wallBarRect;
 
   function drawCommander(enemy) {
     ensureCommanderState();
+    const by = enemy ? LAYOUT.enemyBoardY : LAYOUT.playerBoardY;
     const stateRef = enemy ? state.enemyCommander : state.commander;
-    const rect = commanderPortraitRect(enemy);
-    const src = stateRef.id === 'berry_general' ? 1 : 0;
-    const naturalFacesLeft = src === 1;
-    const desiredFacesLeft = enemy;
-    const artH = enemy ? 118 : 106;
-    const artRect = { x:rect.x, y:rect.y, w:rect.w, h:artH };
+    // Portraits are deliberately outside of the interactive grid.
+    const frame = enemy
+      ? { ...COMMANDER_FRAMES.enemy }
+      : { ...COMMANDER_FRAMES.player, y:by + 5 };
+    const art = COMMANDER_ART[stateRef.id] || COMMANDER_ART.orchard_lord;
+    const cardColor = sideColor(enemy);
     ctx.save();
-    roundedPath(rect.x, rect.y, rect.w, rect.h, 10);
-    ctx.clip();
-    drawAtlasContain(ART.commanders, COMMANDER_RECTS, src, artRect.x, artRect.y, artRect.w, artRect.h,
-      naturalFacesLeft !== desiredFacesLeft, 1);
+    panel(frame.x - 3, frame.y - 3, frame.w + 6, frame.h + 6, 10,
+      enemy ? 'rgba(82,46,72,.72)' : 'rgba(18,91,108,.72)', cardColor.light, 1.5);
     ctx.restore();
+    if (art.image) {
+      drawPortraitCover(ART[art.image], null, frame, art.focus);
+    } else {
+      drawPortraitCover(ART.commanders, COMMANDER_RECTS[art.atlas], frame, art.focus);
+    }
 
     const skill = commanderSkillRect(enemy);
     const ready = stateRef.cd <= 0;
@@ -366,9 +502,6 @@
 
   drawHUD = function drawHud2DV5() {
     if (state.phase !== 'playing' && state.phase !== 'paused') return;
-    const walls = state._wallBarsV5 || {};
-    if (walls.enemy) paintWallBar(walls.enemy.hp, walls.enemy.maxHp, true);
-    if (walls.player) paintWallBar(walls.player.hp, walls.player.maxHp, false);
     const y = LAYOUT.operationY;
     const x = 70;
     const w = W - 140;
@@ -388,7 +521,7 @@
     ctx.fillStyle = '#d4f3e9';
     ctx.font = '700 9px "Microsoft YaHei",sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText('\u679c\u6c41', x + 41, y + 17);
+    ctx.fillText('潮汐能', x + 41, y + 17);
     ctx.fillStyle = '#fff8e2';
     ctx.font = '900 19px "Nunito",sans-serif';
     ctx.font = '900 16px "Nunito",sans-serif';
@@ -397,7 +530,7 @@
     ctx.fillStyle = canAct ? '#573a12' : '#e1e5e3';
     ctx.font = '900 13px "Microsoft YaHei",sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('\u53ec\u5524\u7403\u7403', btn.x + btn.w * .43, btn.y + btn.h / 2);
+    ctx.fillText('召唤海灵珠', btn.x + btn.w * .43, btn.y + btn.h / 2);
     panel(btn.x + btn.w - 42, btn.y + 5, 36, btn.h - 10, 8, '#4a3b25', null);
     ctx.fillStyle = '#fff1b0';
     ctx.font = '900 11px "Nunito",sans-serif';
@@ -405,373 +538,170 @@
     ctx.restore();
   };
 
-  function troopPairAngle(a, b) {
-    const ids = [String(a.id || ''), String(b.id || '')].sort();
-    const key = `${ids[0]}|${ids[1]}`;
-    let hash = 2166136261;
-    for (let i = 0; i < key.length; i++) hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
-    return ((hash >>> 0) % 6283) / 1000;
-  }
-
-  function troopFormationTargetPos(s) {
-    const nodes = [...(state.playerSoldiers || []), ...(state.enemySoldiers || [])]
-      .filter(u => u && u.alive)
-      .map(u => {
-        const y = Number(typeof battleVisualYV59 === 'function' ? battleVisualYV59(u) : u.y || 0);
-        return { unit:u, baseX:Number(u.x || 0), baseY:y, x:Number(u.x || 0), y };
-      });
-    const rootIndex = nodes.findIndex(node => node.unit === s);
-    if (rootIndex < 0) {
-      return { x:Number(s.x || 0), y:Number(typeof battleVisualYV59 === 'function' ? battleVisualYV59(s) : s.y || 0) };
-    }
-
-    // Organic visual avoidance: nearby units repel each other a little. There
-    // are no rows, columns or lane buckets, so the crowd keeps a battle-like silhouette.
-    const desiredDistance = 31;
-    const maxOffset = 34;
-    for (let pass = 0; pass < 7; pass++) {
-      const deltas = nodes.map(() => ({ x:0, y:0 }));
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          let dx = nodes[i].x - nodes[j].x;
-          let dy = nodes[i].y - nodes[j].y;
-          let dist = Math.hypot(dx, dy);
-          if (dist >= desiredDistance) continue;
-          if (dist < .01) {
-            const angle = troopPairAngle(nodes[i].unit, nodes[j].unit);
-            const sign = String(nodes[i].unit.id) <= String(nodes[j].unit.id) ? 1 : -1;
-            dx = Math.cos(angle) * sign;
-            dy = Math.sin(angle) * sign;
-            dist = 1;
-          }
-          const push = (desiredDistance - dist) * .5;
-          const ux = dx / dist, uy = dy / dist;
-          deltas[i].x += ux * push; deltas[i].y += uy * push;
-          deltas[j].x -= ux * push; deltas[j].y -= uy * push;
-        }
-      }
-      for (let i = 0; i < nodes.length; i++) {
-        nodes[i].x += deltas[i].x;
-        nodes[i].y += deltas[i].y;
-        const ox = nodes[i].x - nodes[i].baseX;
-        const oy = nodes[i].y - nodes[i].baseY;
-        const offset = Math.hypot(ox, oy);
-        if (offset > maxOffset) {
-          nodes[i].x = nodes[i].baseX + ox / offset * maxOffset;
-          nodes[i].y = nodes[i].baseY + oy / offset * maxOffset;
-        }
-      }
-    }
-
-    const target = nodes[rootIndex];
-    return {
-      x:Math.max(26, Math.min(W - 26, target.x)),
-      y:Math.max(LAYOUT.fieldY + 18, Math.min(LAYOUT.fieldY + LAYOUT.fieldH - 32, target.y)),
-    };
-  }
-  function troopVisualFormationPos(s) {
-    const target = troopFormationTargetPos(s);
-    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    if (!Number.isFinite(s._visualFormationX) || !Number.isFinite(s._visualFormationY)) {
-      s._visualFormationX = Number(s.x || target.x);
-      s._visualFormationY = Number(typeof battleVisualYV59 === 'function' ? battleVisualYV59(s) : s.y || target.y);
-      s._visualFormationAt = now;
-      return { x:s._visualFormationX, y:s._visualFormationY };
-    }
-    const dt = Math.max(0, Math.min(.05, (now - Number(s._visualFormationAt || now)) / 1000));
-    s._visualFormationAt = now;
-    const dx = target.x - s._visualFormationX;
-    const dy = target.y - s._visualFormationY;
-    const dist = Math.hypot(dx, dy);
-    if (dist <= .25) {
-      s._visualFormationX = target.x;
-      s._visualFormationY = target.y;
-    } else if (dt > 0) {
-      const maxStep = 150 * dt;
-      const step = Math.min(dist, maxStep);
-      s._visualFormationX += dx / dist * step;
-      s._visualFormationY += dy / dist * step;
-    }
-    return { x:s._visualFormationX, y:s._visualFormationY };
-  }
-  window.troopFormationTargetPosV6 = troopFormationTargetPos;
-  window.troopVisualFormationPosV6 = troopVisualFormationPos;
-
-  function troopAttackKind(type) {
-    const role = (TYPES[type] || {}).role || '';
-    if (type === 'orange_cannon' || type === 'cherry_bomber' || role === 'siege') return 'cannon';
-    if (type === 'pear_frost' || role === 'control') return 'frost';
-    if (role === 'tank') return 'shield';
-    if (role === 'rush') return 'rush';
-    if (role === 'back' || role === 'support') return 'arrow';
-    return 'slash';
-  }
-
   function drawTroopSprite(s) {
     if (!s?.alive) return;
     const enemy = s.side === 'enemy';
-    const vis = troopVisualFormationPos(s);
+    const baseY = typeof battleVisualYV59 === 'function' ? battleVisualYV59(s) : s.y;
+    const vis = typeof battleVisualPosV59 === 'function' ? battleVisualPosV59(s, 18) : { x:s.x, y:baseY };
     const tier = typeof battleUnitTierKeyV59 === 'function' ? battleUnitTierKeyV59(s) : 'small';
-    const tierScale = ({small:.94,large:1.02,elite:1.10,advanced:1.18,legendary:1.26})[tier] || 1;
-    const height = 48 * tierScale * (s._boss ? 1.28 : 1);
-    const width = height * .68;
-    const x = vis.x;
-    const y = vis.y - height * .68;
+    const tierScale = ({small:1,large:1.08,elite:1.16,advanced:1.23,legendary:1.32})[tier] || 1;
+    const height = 58 * tierScale * (s._boss ? 1.22 : 1);
+    const width = height * .82;
+    const seed = String(s.id || s.type).split('').reduce((n,ch) => ((n*31)+ch.charCodeAt(0))>>>0, 7);
+    const x = vis.x + ((seed % 5) - 2) * 2.8;
+    // Sprites are top-anchored inside their atlas cells.  At the edge lanes
+    // their logical centre can be valid while the visible body still crosses a
+    // wall, so clamp the rendered centre to the playable field before anchoring.
+    const renderCenterY = Math.max(
+      LAYOUT.fieldY + height * .72,
+      Math.min(LAYOUT.fieldY + LAYOUT.fieldH - height * .36, vis.y)
+    );
+    const y = renderCenterY - height * .68;
     const hpRatio = Math.max(0, Math.min(1, (s.hp || 0) / Math.max(1, s.maxHp || 1)));
+    const role = TYPES[s.type]?.role; // 品类,全局可用
     const color = sideColor(enemy);
     ctx.save();
     if (typeof isInvisible === 'function' && isInvisible(s)) ctx.globalAlpha = .42;
     ctx.fillStyle = enemy ? 'rgba(142,40,49,.25)' : 'rgba(24,115,133,.25)';
     ctx.beginPath();
-    ctx.ellipse(x, vis.y + 2, width * .36, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, renderCenterY + 2, width * .36, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    const attackWindow = Math.min(.18, Math.max(.08, Number(s.speed || .8) * .24));
-    const attackPulse = ['fight','siege','backline'].includes(s.mode) && Number(s.atkTimer || 0) > Number(s.speed || 0) - attackWindow
-      ? Math.max(0, Math.min(1, (Number(s.atkTimer || 0) - (Number(s.speed || 0) - attackWindow)) / attackWindow))
-      : 0;
-    const lean = (enemy ? -1 : 1) * attackPulse * .055;
-    drawAtlas(ART.troops, TROOP_RECTS, roleIndex(s.type), x - width / 2, y, width, height, lean, 1);
-    if ((s.hitFlash || 0) > 0.02) {
+    if (s._boss) drawAtlas(ART.bosses, BOSS_RECTS, s._bossArtIndex || 0, x - width * .72, y - height * .24, width * 1.44, height * 1.38, 0, 1);
+    else drawAtlas(ART.troops, TROOP_RECTS, roleIndex(s.type), x - width / 2, y, width, height, 0, 1);
+
+    // hitFlash 受击闪白/金:在精灵上方叠加光晕层
+    if ((s.hitFlash || 0) > 0) {
       ctx.save();
-      ctx.filter = 'brightness(2.1) saturate(.35)';
-      drawAtlas(ART.troops, TROOP_RECTS, roleIndex(s.type), x - width / 2, y, width, height, lean,
-        Math.min(.78, .28 + s.hitFlash * 1.6));
+      const flashIntensity = Math.min(1, (s.hitFlash || 0) * 4.0);
+      ctx.globalAlpha = flashIntensity;
+      const isCritFlash = s._critHit; // 暴击时金色闪
+      if (role === 'shell') {
+        // 甲壳兵:受击时金色盾形闪
+        ctx.fillStyle = '#ffd24a';
+        ctx.strokeStyle = '#fff2a9';
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#ffd24a';
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.ellipse(x - width * .12, renderCenterY - height * .22, width * .60, height * .55, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else if (isCritFlash) {
+        // 暴击:金色超大闪+辉光
+        ctx.fillStyle = '#ffd24a';
+        ctx.shadowColor = '#ffb347';
+        ctx.shadowBlur = 30;
+        ctx.beginPath();
+        ctx.ellipse(x, renderCenterY - height * .22, width * .62, height * .58, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.ellipse(x, renderCenterY - height * .22, width * .54, height * .50, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // 扩散环:暴击时更大更金
+      const ringR = height * (0.50 + (1 - flashIntensity) * 0.3);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = Math.min(isCritFlash ? 0.85 : 0.7, (s.hitFlash || 0) * (isCritFlash ? 3.5 : 2.5));
+      ctx.strokeStyle = isCritFlash ? '#ffb347' : '#fff8e0';
+      ctx.lineWidth = isCritFlash ? 4 : 3;
+      ctx.beginPath();
+      ctx.arc(x, renderCenterY - height * .22, ringR, 0, Math.PI * 2);
+      ctx.stroke();
       ctx.restore();
     }
-    if (hpRatio < .985 || s._boss || (s.shield || 0) > 0) {
+    // 暴击标记用完即弃
+    if (s._critHit && s.hitFlash < 0.05) s._critHit = false;
+
+    if (hpRatio < 0.95) {
       const bw = Math.max(28, width * .9);
       panel(x - bw / 2, y - 6, bw, 5, 3, '#273338', '#fff0bd', .7);
       panel(x - bw / 2 + 1, y - 5, Math.max(3, (bw - 2) * hpRatio), 3, 2, hpRatio > .35 ? color.main : '#e94e45', null);
     }
     if (s._boss && typeof drawBossBadgeV59 === 'function') drawBossBadgeV59(s, x, y - 25, 104);
-    if ((s.reinforceStacks || 0) > 0) {
-      panel(x + width * .18, y - 3, 17, 14, 7, '#fff8df', color.dark, 1);
-      ctx.fillStyle = color.dark;
-      ctx.font = '900 8px "Nunito",sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`+${s.reinforceStacks}`, x + width * .18 + 8.5, y + 4);
+
+    // 品类特效:游骑兵移动拖尾
+    if (TYPES[s.type]?.role === 'raider' && s.mode === 'fight') {
+      ctx.save();
+      ctx.globalAlpha = 0.12;
+      ctx.strokeStyle = '#ffd24a';
+      ctx.lineWidth = 1.5;
+      for (let t = 0; t < 3; t++) {
+        const ox = (t - 1) * 6 + (seed % 5) * 2;
+        const oy = (t - 1) * 4;
+        ctx.beginPath();
+        ctx.moveTo(x + ox, renderCenterY + oy);
+        ctx.lineTo(x + ox - 14, renderCenterY + oy + (s.side === 'player' ? 6 : -6)); // 修正方向:移动方向反了
+        ctx.stroke();
+      }
+      ctx.restore();
     }
+
+    // 品类特效:枪刺兵攻击突刺线
+    if (TYPES[s.type]?.role === 'spike' && s.mode === 'fight' && (s.hitFlash || 0) > 0.15) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.5, (s.hitFlash || 0) * 1.5);
+      ctx.strokeStyle = '#ffb547';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([4, 6]);
+      const dir = s.side === 'player' ? -1 : 1;
+      ctx.beginPath();
+      ctx.moveTo(x, renderCenterY);
+      ctx.lineTo(x + dir * 18, renderCenterY + dir * 16);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 高等级辉光(Lv5+)已移除(视觉噪音>收益)
+    // 射手射程指示已移除(看不见)
+    // 受控标记已移除(状态图标❄️💫已有)
+    // 品类标签:兵脚下小图标
+    const roleIcons = { shell:'🛡️', spike:'🔱', shooter:'🎯', raider:'⚡', wildcard:'🌀' };
+    const roleIcon = roleIcons[TYPES[s.type]?.role] || '';
+    if (roleIcon) {
+      ctx.save();
+      ctx.font = '8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(roleIcon, x, renderCenterY + 2); // 品类emoji(无底)
+      ctx.restore();
+    }
+
+    // 状态图标:头顶 emoji 排成一行
+    if (s.statusEffects) {
+      const se = s.statusEffects;
+      let icons = [];
+      if (se.frozen?.timer > 0) icons.push('❄️');
+      if (se.burning?.timer > 0) icons.push('🔥');
+      if (se.stunned?.timer > 0) icons.push('💫');
+      if (se.slowed?.timer > 0) icons.push('🐢');
+      if (se.invisible?.timer > 0) icons.push('👻');
+      if (se.provoke?.timer > 0) icons.push('😡');
+      if (se.weakened?.timer > 0) icons.push('😵');
+      if (icons.length > 0) {
+        ctx.save();
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        const iconW = 12;
+        const startX = x - (icons.length - 1) * iconW / 2;
+        for (let i = 0; i < icons.length; i++) {
+          ctx.fillText(icons[i], startX + i * iconW, y - 14);
+        }
+        ctx.restore();
+      }
+    }
+
     ctx.restore();
   }
 
   drawSoldier = function drawSoldier2DV5(s) {
-    // v5 是完整替换渲染。旧 Hook 会再次绘制程序小人，造成贴图与旧角色重叠。
+    if (window.RenderHooks?.beforeDrawSoldier) window.RenderHooks.beforeDrawSoldier.run(ctx, s);
     drawTroopSprite(s);
+    if (window.RenderHooks?.afterDrawSoldier) window.RenderHooks.afterDrawSoldier.run(ctx, s);
   };
   drawSoldier._battle2DV5 = true;
-
-  drawProjectiles = function drawProjectiles2DV5() {
-    for (const p of state.projectiles || []) {
-      const angle = Math.atan2(p.targetY - p.y, p.targetX - p.x);
-      const ux = Math.cos(angle), uy = Math.sin(angle);
-      const color = p.color || (p.side === 'player' ? '#7de8ff' : '#ff786b');
-      const kind = troopAttackKind(p.ownerType);
-      ctx.save();
-      ctx.globalAlpha = .96;
-      ctx.lineCap = 'round';
-      ctx.shadowColor = color;
-      ctx.shadowBlur = kind === 'cannon' ? 10 : 5;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = kind === 'cannon' ? 7 : kind === 'frost' ? 4 : 3.5;
-      ctx.beginPath();
-      ctx.moveTo(p.x - ux * (kind === 'cannon' ? 18 : 24), p.y - uy * (kind === 'cannon' ? 18 : 24));
-      ctx.lineTo(p.x + ux * 5, p.y + uy * 5);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      if (kind === 'cannon') {
-        ctx.fillStyle = '#462b20';
-        ctx.strokeStyle = '#ffd26a';
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 6.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#fff1a1';
-        ctx.beginPath(); ctx.arc(p.x - 2, p.y - 2, 2, 0, Math.PI * 2); ctx.fill();
-      } else if (kind === 'frost') {
-        ctx.translate(p.x, p.y); ctx.rotate(angle + Math.PI / 4);
-        ctx.fillStyle = '#d9fbff'; ctx.strokeStyle = '#65cfff'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.rect(-4.5, -4.5, 9, 9); ctx.fill(); ctx.stroke();
-      } else {
-        ctx.strokeStyle = '#fff7d6';
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.moveTo(p.x - ux * 13, p.y - uy * 13);
-        ctx.lineTo(p.x + ux * 9, p.y + uy * 9);
-        ctx.stroke();
-        ctx.translate(p.x + ux * 8, p.y + uy * 8); ctx.rotate(angle);
-        ctx.fillStyle = '#fff7d6';
-        ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-4, -3.5); ctx.lineTo(-2, 0); ctx.lineTo(-4, 3.5); ctx.closePath(); ctx.fill();
-      }
-      ctx.restore();
-    }
-  };
-
-  function troopVisualPointForId(id, fallbackX, fallbackY) {
-    if (!id) return { x:fallbackX, y:fallbackY };
-    const unit = [...(state.playerSoldiers || []), ...(state.enemySoldiers || [])]
-      .find(s => s && s.alive && s.id === id);
-    if (!unit || !Number.isFinite(unit._visualFormationX) || !Number.isFinite(unit._visualFormationY)) {
-      return { x:fallbackX, y:fallbackY };
-    }
-    return { x:unit._visualFormationX, y:unit._visualFormationY };
-  }
-
-  drawAttackFx = function drawAttackFx2DV5() {
-    const effects = [...(state.attackFx || [])].sort((a, b) => {
-      const score = fx => {
-        const kind = fx.kind || troopAttackKind(fx.ownerType);
-        const lifeRatio = Number(fx.life || 0) / Math.max(.001, Number(fx.maxLife || fx.life || 1));
-        return (fx.crit ? 6 : 0) + (kind === 'cannon' ? 3 : 0) + (fx.projectileImpact ? 1 : 0) + lifeRatio;
-      };
-      return score(b) - score(a);
-    });
-    const density = new Map();
-    let drawn = 0, skipped = 0;
-    for (const a of effects) {
-      const t = Math.max(0, Math.min(1, a.life / Math.max(.001, a.maxLife || a.life || 1)));
-      if (t <= .03) continue;
-      const start = a.projectileImpact
-        ? { x:a.x1, y:a.y1 }
-        : troopVisualPointForId(a.ownerId, a.x1, a.y1);
-      const end = troopVisualPointForId(a.targetId, a.x2, a.y2);
-      const x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y;
-      const playerAttack = a.attackerSide === 'player' || (a.attackerSide == null && y2 <= y1);
-      const kind = a.kind || troopAttackKind(a.ownerType);
-      const regionKey = `${Math.floor(Number(x2 || 0) / 100)}:${Math.floor(Number(y2 || 0) / 84)}`;
-      const regionCount = density.get(regionKey) || 0;
-      const regionalLimit = a.crit || kind === 'cannon' ? 3 : 2;
-      if ((regionCount >= regionalLimit || drawn >= 10) && !a.crit) {
-        skipped++;
-        continue;
-      }
-      density.set(regionKey, regionCount + 1);
-      drawn++;
-      const densityAlpha = regionCount === 0 ? 1 : regionCount === 1 ? .72 : .52;
-      const color = a.crit ? '#ffe36a' : (kind === 'frost' ? '#87e9ff' : (playerAttack ? '#62e7ff' : '#ff715f'));
-      const dx = x2 - x1, dy = y2 - y1;
-      const d = Math.max(1, Math.hypot(dx, dy));
-      const nx = -dy / d, ny = dx / d;
-      const facing = Math.atan2(dy, dx);
-      ctx.save();
-      ctx.globalAlpha = (.34 + t * .66) * densityAlpha;
-      ctx.lineCap = 'round';
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 7;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = a.crit ? 5.5 : 3.6;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.quadraticCurveTo((x1 + x2) / 2 + nx * 8, (y1 + y2) / 2 + ny * 8, x2, y2);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#fff9df';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(x1 + dx * .24, y1 + dy * .24);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-      if (kind === 'rush') {
-        ctx.strokeStyle = '#ffe9a6';
-        ctx.lineWidth = 2.6;
-        ctx.beginPath();
-        ctx.moveTo(x1 + nx * 7, y1 + ny * 7);
-        ctx.quadraticCurveTo((x1 + x2) / 2 - nx * 7, (y1 + y2) / 2 - ny * 7, x2 + nx * 7, y2 + ny * 7);
-        ctx.stroke();
-      }
-      // 近战距离很短，单靠连线不明显；在攻击者一侧增加明确的挥击弧。
-      ctx.strokeStyle = color;
-      ctx.lineWidth = a.crit ? 5 : 3.2;
-      ctx.globalAlpha = (.42 + t * .58) * densityAlpha;
-      ctx.beginPath();
-      ctx.arc(x1, y1, 13 + Math.min(9, d * .12), facing - .9, facing + .42);
-      ctx.stroke();
-      ctx.translate(x2, y2);
-      ctx.rotate(facing);
-      ctx.strokeStyle = kind === 'frost' ? '#dffcff' : '#fff5b5';
-      ctx.lineWidth = kind === 'cannon' ? 3 : 2.2;
-      const rays = kind === 'cannon' ? 10 : kind === 'shield' ? 5 : kind === 'frost' ? 8 : 6;
-      for (let i = 0; i < rays; i++) {
-        const angle = i * Math.PI * 2 / rays;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(angle) * 3, Math.sin(angle) * 3);
-        ctx.lineTo(Math.cos(angle) * ((kind === 'cannon' ? 12 : 8) + 7 * t), Math.sin(angle) * ((kind === 'cannon' ? 12 : 8) + 7 * t));
-        ctx.stroke();
-      }
-      if (kind === 'shield') {
-        ctx.strokeStyle = playerAttack ? '#bcecff' : '#ffc0ad';
-        ctx.lineWidth = 3.5;
-        ctx.beginPath(); ctx.arc(0, 0, 14 + 5 * t, -1.15, 1.15); ctx.stroke();
-      } else if (kind === 'cannon') {
-        ctx.fillStyle = 'rgba(255,190,72,.28)';
-        ctx.beginPath(); ctx.arc(0, 0, 10 + 7 * (1 - t), 0, Math.PI * 2); ctx.fill();
-      } else if (kind === 'frost') {
-        ctx.rotate(Math.PI / 4);
-        ctx.strokeStyle = '#dffcff'; ctx.lineWidth = 1.6;
-        ctx.strokeRect(-7, -7, 14, 14);
-      }
-      ctx.restore();
-    }
-    window.BattleFxDensityStatsV6 = { total:effects.length, drawn, skipped, regions:density.size };
-  };
-
-  drawRings = function drawRings2DV5() {
-    for (const ring of state.rings || []) {
-      const t = Math.max(0, Math.min(1, ring.life / Math.max(.001, ring.maxLife || ring.life || 1)));
-      const color = ring.color || '#ffe45a';
-      const shortImpact = (ring.maxLife || 0) <= .4;
-      ctx.save();
-      ctx.globalAlpha = .18 + t * .68;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2 + t * 1.2;
-      if (shortImpact) {
-        // 短命中只画四向火花，避免每个小兵脚下出现像残留 UI 一样的红色圆圈。
-        ctx.lineWidth = 1.8;
-        for (let i = 0; i < 4; i++) {
-          const angle = Math.PI / 4 + i * Math.PI / 2;
-          ctx.beginPath();
-          ctx.moveTo(ring.x + Math.cos(angle) * ring.r * .35, ring.y + Math.sin(angle) * ring.r * .35);
-          ctx.lineTo(ring.x + Math.cos(angle) * ring.r * .9, ring.y + Math.sin(angle) * ring.r * .9);
-          ctx.stroke();
-        }
-      } else {
-        ctx.beginPath();
-        ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-  };
-
-  drawFx = function drawFx2DV5() {
-    for (const f of state.fx || []) {
-      const t = Math.max(0, Math.min(1, f.life / Math.max(.001, f.maxLife || f.life || 1)));
-      const particle = Number.isFinite(f.vx) || Number.isFinite(f.vy);
-      const y = particle ? f.y : f.y - (1 - t) * 24;
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, .2 + t * .95);
-      if (particle) {
-        ctx.fillStyle = f.color || '#fff4b0';
-        ctx.beginPath();
-        ctx.arc(f.x, y, Math.max(1.5, (Number(f.size) || 6) * .34), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        continue;
-      }
-      const text = String(f.text || '');
-      const damage = /-\s*\d+/.test(text);
-      const size = Math.max(damage ? 13 : 10, Math.min(damage ? 18 : 15, Number(f.size) || 12));
-      ctx.font = `900 ${size}px "Microsoft YaHei",sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      if (f.priority === 'build') {
-        const tw = ctx.measureText(text).width;
-        panel(f.x - tw / 2 - 9, y - size, tw + 18, size + 10, 8, 'rgba(34,45,43,.82)', '#ffe39a', 1);
-      }
-      ctx.lineWidth = damage ? 4 : 3;
-      ctx.strokeStyle = 'rgba(37,25,20,.86)';
-      ctx.strokeText(text, f.x, y);
-      ctx.fillStyle = damage ? '#fff3a5' : (f.color || '#ffffff');
-      ctx.fillText(text, f.x, y);
-      ctx.restore();
-    }
-  };
 })();

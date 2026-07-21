@@ -18,6 +18,7 @@ const ROOT = path.join(__dirname, '..');
 
 // 决定战斗结果的引擎链(index.html 加载顺序;纯视觉包装 juice*.js 省略)
 const FILES = [
+  'js/world_theme.js',
   'js/config.js',
   'js/layout_v56.js',
   'js/state.js',
@@ -33,6 +34,7 @@ const FILES = [
   'js/dynamic_difficulty_v64.js',
   'js/opening_and_projectile_fix.js',
   'js/skill_system_v70.js',
+  'js/free_battle_v2.js',
 ];
 
 const ENGINE_CODE = FILES.map(f => `\n/* ==== ${f} ==== */\n` + fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
@@ -65,18 +67,15 @@ const DRIVER = `
   // 复刻 main.js 的出兵(归一化:不带养成 mul),稳定 id 供快照对齐
   function spawnFromBall(ball, r, c, side, forced) {
     const group = side === 'player' ? state.playerSoldiers : state.enemySoldiers;
-    if (!forced && globalThis.__pvp._laneLock[side][c] > 0) return null;
     if (group.filter(s => s.alive).length >= MAXS) return null;
     const center = slotCenter(r, c, side === 'enemy');
     const soldier = createSoldier(ball.type, ball.level);
     const n = ++globalThis.__pvp._spawn[side];
-    const offsetPattern = [-6, 0, 6, -3, 3];
-    const offset = offsetPattern[(n - 1) % offsetPattern.length];
-    soldier.x = center.x + offset;
+    soldier.x = freeSpawnX(ball.type, n, side, c);
     soldier.y = center.y;
     soldier.side = side;
-    soldier.laneIndex = c;
-    soldier.laneX = BOARD_X + c * (CELL + GAP) + CELL / 2 + offset * 0.45;
+    soldier.laneIndex = 0;
+    soldier.laneX = soldier.x;
     soldier.mode = 'deploy';
     soldier.target = null;
     soldier.battleReady = false;
@@ -115,7 +114,6 @@ const DRIVER = `
     _spawn: { player: 0, enemy: 0 },
     _actions: { player: 0, enemy: 0 },
     _decks: { player: DEFAULT_DECK.slice(), enemy: DEFAULT_DECK.slice() },
-    _laneLock: { player: Array(COLS).fill(0), enemy: Array(COLS).fill(0) },
     _commanders: { player: makeCommander('orchard_lord'), enemy: makeCommander('orchard_lord') },
     _result: null,
 
@@ -145,7 +143,6 @@ const DRIVER = `
         player: (typeof normalizeDeck === 'function' ? normalizeDeck(deckA || DEFAULT_DECK) : (deckA || DEFAULT_DECK)).slice(),
         enemy: (typeof normalizeDeck === 'function' ? normalizeDeck(deckB || DEFAULT_DECK) : (deckB || DEFAULT_DECK)).slice(),
       };
-      this._laneLock = { player: Array(COLS).fill(0), enemy: Array(COLS).fill(0) };
       this._commanders = { player: makeCommander(commanderA), enemy: makeCommander(commanderB) };
       this._result = null;
     },
@@ -217,7 +214,6 @@ const DRIVER = `
         state.enemySp = Math.min(cap, (state.enemySp || 0) + 1);
       }
       for (const sideName of ['player', 'enemy']) {
-        for (let lane = 0; lane < COLS; lane++) this._laneLock[sideName][lane] = Math.max(0, this._laneLock[sideName][lane] - dt);
         const commander = this._commanders[sideName];
         commander.cd = Math.max(0, commander.cd - dt);
         commander.active = Math.max(0, commander.active - dt);
@@ -253,24 +249,9 @@ const DRIVER = `
         }
       }
 
-      const laneCounts = (arr) => Array.from({ length: COLS }, (_, lane) => arr.filter(s => s && s.alive && s.laneIndex === lane).length);
-      const beforePlayer = laneCounts(state.playerSoldiers);
-      const beforeEnemy = laneCounts(state.enemySoldiers);
       updateCombat();
-      const afterPlayer = laneCounts(state.playerSoldiers);
-      const afterEnemy = laneCounts(state.enemySoldiers);
-      for (let lane = 0; lane < COLS; lane++) {
-        if (beforeEnemy[lane] > 0 && afterEnemy[lane] === 0 && afterPlayer[lane] > 0) this._laneLock.enemy[lane] = Math.max(this._laneLock.enemy[lane], 4.5);
-        if (beforePlayer[lane] > 0 && afterPlayer[lane] === 0 && afterEnemy[lane] > 0) this._laneLock.player[lane] = Math.max(this._laneLock.player[lane], 4.5);
-      }
       // 敌军一旦贴墙，该路普通补兵暂缓；玩家仍可花果汁“急派”救线。
       // 这给清线成功的一方形成真实破墙窗口，避免无限门口续兵。
-      for (const soldier of state.enemySoldiers) {
-        if (soldier && soldier.alive && reachedWall(soldier)) this._laneLock.player[soldier.laneIndex] = Math.max(this._laneLock.player[soldier.laneIndex], 1.2);
-      }
-      for (const soldier of state.playerSoldiers) {
-        if (soldier && soldier.alive && reachedWall(soldier)) this._laneLock.enemy[soldier.laneIndex] = Math.max(this._laneLock.enemy[soldier.laneIndex], 1.2);
-      }
 
       if (state.playerWallHp <= 0 && !this._result) this._result = { winner: 1, reason: 'wall', duration: Math.floor(state.time) };
       else if (state.enemyWallHp <= 0 && !this._result) this._result = { winner: 0, reason: 'wall', duration: Math.floor(state.time) };
@@ -291,7 +272,7 @@ const DRIVER = `
       const ser = (s) => ({
         id: s.id, side: s.side === 'enemy' ? 1 : 0, type: s.type, level: s.level,
         x: Math.round(s.x * 10) / 10, y: Math.round(s.y * 10) / 10,
-        hp: Math.round(s.hp), maxHp: Math.round(s.maxHp), mode: s.mode,
+        hp: Math.round(s.hp), maxHp: Math.round(s.maxHp), target: s.target || null, mode: s.mode,
         shield: Math.round(s.shield || 0), hit: s.hitFlash > 0 ? 1 : 0, face: s._faceDir || 0,
       });
       const serBoard = (slots) => slots.map(row => row.map(b => (b ? { type: b.type, level: b.level, sp: Math.round((b.spawnTimer || 0) * 100) / 100 } : null)));
@@ -299,7 +280,7 @@ const DRIVER = `
         t: Math.round(state.time * 100) / 100,
         phase: state.phase,
         result: this._result,
-        walls: { p: Math.round(state.playerWallHp), pMax: state.playerWallMax, e: Math.round(state.enemyWallHp), eMax: state.enemyWallMax },
+        walls: { p: Math.round(state.playerWallHp), pMax: state.playerWallMax, pShield:Math.round(state.playerReefShield||0), e: Math.round(state.enemyWallHp), eMax: state.enemyWallMax, eShield:Math.round(state.enemyReefShield||0) },
         sp: { p: Math.round(state.sp || 0), e: Math.round(state.enemySp || 0) },
         boards: { p: serBoard(state.playerSlots), e: serBoard(state.enemySlots) },
         commanders: {
@@ -307,6 +288,8 @@ const DRIVER = `
           e: { ...this._commanders.enemy, cd: Math.round(this._commanders.enemy.cd * 100) / 100, active: Math.round(this._commanders.enemy.active * 100) / 100 },
         },
         soldiers: [...state.playerSoldiers.filter(s => s.alive), ...state.enemySoldiers.filter(s => s.alive)].map(ser),
+        tide: worldTideState(state.time),
+        battlePressure: state.battlePressure,
       };
     },
   };

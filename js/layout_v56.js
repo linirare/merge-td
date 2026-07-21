@@ -6,16 +6,19 @@
   if (typeof LAYOUT === 'undefined') return;
 
   LAYOUT.recalc = function (_w, h) {
-    // 坐标直接匹配 battlefield-flat-2d-v5.png 内已经绘制好的框位。
-    // 战斗逻辑区域保持 270..640，不因 UI 对齐改变既有移动/攻墙数值。
-    const enemyBoardY = 86;
-    const enemyWallY = 260;
-    const fieldY = 270;
-    const fieldH = 370;
-    const playerWallY = 648;
-    const playerBoardY = 684;
-    const operationY = 864;
-    const operationH = Math.max(44, h - operationY - 8);
+    // The red board's painted inner well begins below its decorative top rim.
+    // y=58 puts the interactive cells over that rim.  Leave an 8px visual
+    // inset inside the painted well so the cells do not touch its top edge.
+    const enemyBoardY = 88;
+    // These coordinates remain simulation boundaries.  The renderer applies
+    // its own small visual inset for the lower reef band.
+    const enemyWallY = 276;
+    const operationH = 54;
+    const operationY = h - operationH - 8;
+    const playerBoardY = operationY - BOARD_H - 10;
+    const playerWallY = playerBoardY - 28;
+    const fieldY = enemyWallY + 32;
+    const fieldH = Math.max(220, playerWallY - fieldY - 8);
 
     Object.assign(LAYOUT, {
       topBarY: 5,

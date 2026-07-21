@@ -12,15 +12,13 @@
    纯 PVE 内容,不动 combat baseline(基线 harness 不加载本文件)。
    ============================================================ */
 (function installBossV63() {
-  return; // 去Boss:禁用整个命名Boss层(不再刷Boss大怪/护盾/炮击/双生/召唤;代码保留可回退)
   const BOSS_LEVEL_UNIT = 8; // 仅用于渲染放大;数值单独覆盖
 
   const BOSS_DEFS = {
-    5:  [{ kind: 'melon_king',   base: 'watermelon_guard', name: '腐坏西瓜王', hp: 600, atk: 16 }],
-    10: [{ kind: 'durian_cannon', base: 'orange_cannon',   name: '腐坏榴莲炮', hp: 520, atk: 22 }],
-    15: [{ kind: 'twin_shell',   base: 'coconut_guard',    name: '腐坏双生·壳', hp: 520, atk: 14, lane: 1 },
-         { kind: 'twin_blade',   base: 'lemon_assassin',   name: '腐坏双生·刃', hp: 360, atk: 30, lane: 3 }],
-    20: [{ kind: 'fruit_king',   base: 'pumpkin_roller',   name: '腐坏果王',   hp: 900, atk: 26 }],
+    5:  [{ kind: 'melon_king', base: 'coconut_guard', name: '巨蛤', hp: 600, atk: 16, artIndex:0 }],
+    10: [{ kind: 'durian_cannon', base: 'banana_raider', name: '海鳗', hp: 520, atk: 22, artIndex:1 }],
+    15: [{ kind: 'twin_shell', base: 'blueberry_sniper', name: '深海鮟鱇', hp: 700, atk: 24, artIndex:2 }],
+    20: [{ kind: 'fruit_king', base: 'pumpkin_roller', name: '远古章鱼', hp: 900, atk: 26, artIndex:3 }],
   };
 
   function bossDefsFor(k) {
@@ -30,10 +28,10 @@
   }
 
   function bossHintFor(k) {
-    if (k === 5) return 'Boss机制：护盾，带攻城破盾';
-    if (k === 10) return 'Boss机制：炮击，分散站位';
-    if (k === 15) return 'Boss机制：双路压力，保留救线';
-    if (k === 20) return 'Boss机制：召唤光环，先清小怪';
+    if (k === 5) return '巨蛤：珍珠护盾，带攻城伙伴破盾';
+    if (k === 10) return '海鳗：双刃横扫，分散站位';
+    if (k === 15) return '深海鮟鱇：深渊诱光，保护辅助';
+    if (k === 20) return '远古章鱼：召唤潮群，先清小怪';
     return 'Boss机制：稳住前排再攻城';
   }
 
@@ -44,14 +42,14 @@
     s.name = cfg.name;
     s._boss = true;
     s._bossKind = cfg.kind;
+    s._bossArtIndex = cfg.artIndex || 0;
     s.hp = s.maxHp = Math.round(cfg.hp * scale);
     s.atk = Math.round(cfg.atk * scale);
     s.armor = (s.armor || 0) + 6;
     s.siege = Math.max(s.siege || 1, 1.3);
-    const lane = typeof cfg.lane === 'number' ? cfg.lane : 2;
-    s.laneIndex = lane;
-    s.laneX = laneXByIndex(lane);
-    s.x = s.laneX;
+    s.laneIndex = 0;
+    s.x = typeof freeSpawnX === 'function' ? freeSpawnX(cfg.base, k, 'enemy', 0) : W / 2;
+    s.laneX = s.x;
     s.y = LAYOUT.enemyWallY + LAYOUT.wallH + 10;
     s.alive = true;
     s.battleReady = true;
@@ -82,9 +80,10 @@
           b._bossTimer = 0;
           const dmg = Math.round(b.atk * 1.5);
           let hit = 0;
-          for (const p of state.playerSoldiers) {
+          const victims = state.playerSoldiers.filter(p => p && p.alive).sort((a,b) => String(a.id).localeCompare(String(b.id)));
+          for (const p of victims) {
             if (hit >= 4) break;
-            if (p && p.alive && Math.abs((p.laneIndex ?? 2) - 2) <= 1) {
+            if (p && p.alive) {
               if (typeof applyFruitDamage === 'function') applyFruitDamage(p, dmg, { type: 'orange_cannon', firstHit: false });
               else p.hp -= dmg;
               if (p.hp <= 0 && typeof killSoldier === 'function') killSoldier(p, 'enemy', dmg, 'orange_cannon');
@@ -110,8 +109,8 @@
             if (!spawned) {
               // 降级:超过 MAX_SOLDIERS 或 spawnSoldierFromBall 不可用时直接造
               const m = createSoldier('banana_raider', 3);
-              m.side = 'enemy'; m.laneIndex = lanes[i]; m.laneX = laneXByIndex(lanes[i]);
-              m.x = m.laneX; m.y = b.y + 12; m.alive = true; m.battleReady = true; m.protected = false; m.mode = 'march';
+              m.side = 'enemy'; m.laneIndex = 0; m.x = typeof freeSpawnX === 'function' ? freeSpawnX(m.type, i + 1, 'enemy', lanes[i]) : b.x + (i - 1) * 28; m.laneX = m.x;
+              m.y = b.y + 12; m.alive = true; m.battleReady = true; m.protected = false; m.mode = 'march';
               state.enemySoldiers.push(m);
             }
           }

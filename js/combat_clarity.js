@@ -170,7 +170,10 @@ function drawCleanSoldierBody(s) {
 function patchCleanSoldierDraw() {
   if (window.RenderHooks && window.RenderHooks.afterDrawSoldier && !window.RenderHooks._combatClaritySoldier) {
     window.RenderHooks.afterDrawSoldier.use((ctxArg, s) => {
-      if (typeof drawSoldier === 'function' && drawSoldier._stickmanV61) return;
+      // Battle2DV5 already draws the authored troop sprite.  The clarity body is
+      // the legacy procedural unit, so drawing it afterwards creates a second,
+      // hand-drawn soldier on top of the atlas art.
+      if (typeof drawSoldier === 'function' && (drawSoldier._stickmanV61 || drawSoldier._battle2DV5)) return;
       if (s && s.squadMode) drawCleanSoldierBody(s);
     }, 10);
     window.RenderHooks._combatClaritySoldier = true;
@@ -234,18 +237,18 @@ function patchFxDensity() {
     const isCombatKeyword = combatWords.some(word => str.includes(word));
     const crowded = activeFieldFxCount() > 16;
 
-    if (isRawDamage && rawDamageValue < 20) return null;
-    if (isLowValueDamage && now - (bucket.lastTiny || 0) < 0.24) return null;
-    if (isRawDamage && crowded) return null;
-    if (isRawDamage && now - (bucket.lastRaw || 0) < 0.18) return null;
+    if (isRawDamage && rawDamageValue < 8) return null;
+    if (isLowValueDamage && now - (bucket.lastTiny || 0) < 0.20) return null;
+    if (isRawDamage && crowded && rawDamageValue < 15) return null;
+    if (isRawDamage && now - (bucket.lastRaw || 0) < 0.10) return null;
     if (isCombatKeyword && now - (bucket.lastKeyword || 0) < 0.20) return null;
 
     if (isLowValueDamage) bucket.lastTiny = now;
     if (isRawDamage) bucket.lastRaw = now;
     if (isCombatKeyword) bucket.lastKeyword = now;
 
-    const nextSize = isRawDamage ? Math.min(size, 10) : Math.min(size, isCombatKeyword ? 13 : 12);
-    const nextLife = isRawDamage ? 0.46 : Math.min(life, 0.72);
+    const nextSize = isRawDamage ? Math.min(size, 12) : Math.min(size, isCombatKeyword ? 14 : 13);
+    const nextLife = isRawDamage ? 0.60 : Math.min(life, 0.85);
     return oldAddFx(x, y, text, color, nextSize, nextLife);
   };
   addFx._combatClarityPatched = true;

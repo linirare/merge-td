@@ -9,8 +9,8 @@
    (Boss 墙 HP 覆盖 combat_pacing 的 0.68/0.78 折扣)。
    ============================================================ */
 (function installDynamicDifficultyV64() {
-  const STAGE_ATK_RATE = 0.04;
-  const STAGE_HP_RATE = 0.08;
+  const STAGE_ATK_RATE = 0.12;
+  const STAGE_HP_RATE = 0.20;
 
   function enemyPveStatMultipliers() {
     const stageLevel = Math.max(1, Number(state.levelConfig && state.levelConfig.enemyInitLevel || 1));

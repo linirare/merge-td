@@ -5,6 +5,8 @@
    ============================================================ */
 (function installProductShellV65() {
   const SHELL_KEY = 'merge_td_product_shell_v1';
+  const SHELL_BACKUP_KEY = 'merge_td_product_shell_v1_pre_theme_v2';
+  const META_BACKUP_KEY = 'merge_td_meta_v1_pre_theme_v2';
   const DAILY_GOLD = 50;
   const DAILY_GEMS = 5;
   const GACHA_COST_1 = 5;
@@ -21,7 +23,7 @@
   const tabs = [
     { id: 'home', icon: '🏡', label: '首页' },
     { id: 'battle', icon: '🚩', label: '闯关' },
-    { id: 'upgrade', icon: '🍉', label: '阵容' },
+    { id: 'upgrade', icon: '🐚', label: '阵容' },
     { id: 'shop', icon: '🛒', label: '商城' },
     { id: 'arena', icon: '🏆', label: '竞技' },
   ];
@@ -40,7 +42,8 @@
   const RANK_TABS = [['power', '战力榜'], ['stage', '关卡榜'], ['ladder', '竞技榜']];
   const RAR_KEY = { epic: 'T0', rare: 'T1', normal: 'T2' };
   const RAR_COLOR = { epic: '#FF6B35', rare: '#5B9FE0', normal: '#8FE0A0' };
-  const ROLE_ZH = { tank: '坦克', back: '远程', rush: '突击', front: '前排', siege: '攻城', control: '控制', support: '辅助', merge: '合成' };
+  const RAR_COST = { epic: 5, rare: 3, normal: 2 }; // 参考三国4阶品质4档费用
+  const ROLE_ZH = { shell: '甲壳兵', spike: '枪刺兵', shooter: '射手', raider: '游骑兵', wildcard: '万能' };
   const LV_KEY = { 4: '解锁技能', 5: '强化·金徽', 6: '质变', 7: '满级质变' };
   const SKILL_ZH = { shield: '周期护盾', first_shield: '首战护盾', rapid: '连射', snipe: '狙击', dash: '突进', first_crit: '首击暴击', anti_rush: '反突击', siege: '攻城', death_roll: '死亡爆炸', slow: '减速/冰冻', heal: '治疗', wildcard: '万能合成', copy: '复制', charge: '冲锋', immune: '免伤', burn: '点燃', stealth: '隐身首击', aoe: '范围炸弹', weaken: '削弱', sp_regen: '回能提速', kill_sp: '击杀回能', sp_refund: '操作返能', sp_bank: '储蓄产能', sp_discount: '操作减费' };
 
@@ -50,10 +53,16 @@
   }
 
   function loadShell() {
-    const base = { gems: 0, fragments: {}, fruitLv: {}, commanderId: 'orchard_lord', commanderLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0, pityR_t: 0, pityE_t: 0 };
+    const base = { themeVersion: 2, gems: 0, fragments: {}, fruitLv: {}, commanderId: 'orchard_lord', commanderLv: {}, ladderBest: 0, lastDaily: '', pityR: 0, pityE: 0, pityR_t: 0, pityE_t: 0 };
     try {
       const raw = localStorage.getItem(SHELL_KEY);
-      if (raw) return Object.assign(base, JSON.parse(raw));
+      if (raw) {
+        if (!localStorage.getItem(SHELL_BACKUP_KEY)) localStorage.setItem(SHELL_BACKUP_KEY, raw);
+        const oldMeta = localStorage.getItem('merge_td_meta_v1');
+        if (oldMeta && !localStorage.getItem(META_BACKUP_KEY)) localStorage.setItem(META_BACKUP_KEY, oldMeta);
+        const parsed = JSON.parse(raw);
+        return Object.assign(base, typeof migrateWorldThemeSave === 'function' ? migrateWorldThemeSave(parsed) : parsed, { themeVersion:2 });
+      }
     } catch (e) {}
     return base;
   }
@@ -86,6 +95,7 @@
   }
 
   function ensureShellData() {
+    shell.themeVersion = 2;
     shell.gems = Number(shell.gems || 0);
     shell.fragments = shell.fragments || {};
     shell.fruitLv = shell.fruitLv || {};
@@ -139,7 +149,7 @@
   }
 
   function fruit(id) {
-    return TYPES[id] || { icon: '🍏', name: id || '水果', role: 'front', desc: '' };
+    return TYPES[id] || { icon: '🐚', name: id || '海洋伙伴', role: 'front', desc: '' };
   }
 
   function fruitIcon(id) {
@@ -158,7 +168,7 @@
   }
 
   function fruitName(id) {
-    return fruit(id).name || id || '水果';
+    return fruit(id).name || id || '海洋伙伴';
   }
 
   function roleText(id) {
@@ -208,17 +218,17 @@
 
   function hintText(key) {
     return ({
-      merge_pair: '合成同类水果营，优先做出 Lv2 主力。',
-      hold_frontline: '前排要站住路线，别让敌人直接压到果堡。',
-      urgent_dispatch: '危急路线双击高等级水果营，急派士兵救线。',
+      merge_pair: '合成同类海灵珠，优先做出 Lv2 主力。',
+      hold_frontline: '坦克会主动拦截靠近珊瑚堡垒的敌人。',
+      urgent_dispatch: '危急时双击高等级海灵珠，立即派出伙伴增援。',
       lane_pressure: '观察哪一路压力最高，优先补前排或控制。',
       break_shield_with_siege: '护盾 Boss 怕攻城火力，带橙子炮压盾。',
       counter_rush: '突击敌人多时，用前排和控制拖住节奏。',
-      bring_siege: '敌方果堡更厚，阵容里需要攻城单位。',
-      farm_juice: '资源关要控果汁节奏，不要一次铺空。',
+      bring_siege: '敌方珊瑚堡垒更厚，阵容里需要攻城单位。',
+      farm_juice: '资源关要控制潮汐能节奏，不要一次铺空。',
       protect_backline: '后排输出要有前排保护，别让刺客贴脸。',
       avoid_midline_stack: '炮击 Boss 会惩罚扎堆，分散三路推进。',
-      control_counter: '控制单位能打断高压路线，适合防快攻。',
+      control_counter: '控制单位能打断高威胁目标，适合防快攻。',
       burst_before_roll: '冲锋单位成型前，集中爆发先处理。',
       focus_support: '先打治疗和辅助，避免敌方越拖越强。',
       anti_assassin_front: '刺客多时，前排轮换比纯输出更重要。',
@@ -317,11 +327,11 @@
     nav.className = 'shell-hidden hifi';
     // 烫金风底栏:中间"对战"凸起,沿用里子既有 5 tab 与 showTab 路由
     const navItems = [
-      { id: 'shop',    icon: 'i-bag',    label: '商城' },
-      { id: 'upgrade', icon: 'i-cards',  label: '阵容' },
-      { id: 'home',    icon: 'i-sword',  label: '对战', main: true },
-      { id: 'arena',   icon: 'i-vs',     label: '竞技' },
-      { id: 'rank',    icon: 'i-trophy', label: '排行' },
+      { id: 'shop',    icon: 'i-bag',    label: '海市' },
+      { id: 'upgrade', icon: 'i-cards',  label: '编队' },
+      { id: 'home',    icon: 'i-sword',  label: '海战', main: true },
+      { id: 'arena',   icon: 'i-vs',     label: '潮汐' },
+      { id: 'rank',    icon: 'i-trophy', label: '潮榜' },
     ];
     nav.innerHTML = navItems.map(t => t.main
       ? `<button class="navtab navmain" data-tab="${t.id}"><svg class="micon"><use href="#${t.icon}"/></svg><span class="txt">${t.label}</span><span class="shine"></span></button>`
@@ -359,7 +369,7 @@
         <div class="bg"></div><div class="scrim"></div>
         ${hifiTopBarHtml()}
 
-        <div class="logo"><h1 class="display">球球英雄Ⅱ</h1><div class="rib">兵营合成 · 五路攻城</div></div>
+        <div class="logo"><h1 class="display">梦幻水世界</h1><div class="rib">海灵合成 · 自由海战</div></div>
         <div class="hero-spot"></div>
 
         <div class="side-l">
@@ -375,7 +385,7 @@
         <button class="hifi-levelsel" id="hifiLevelSel">☰ 选关 · 第${lv}关</button>
         <div class="homecta">
           <button class="cta pve" id="hifiPve"><svg class="micon"><use href="#i-sword"/></svg><span class="txtcol"><span class="t">开始对战</span><span class="s">闯关 · 第${lv}关</span></span><span class="shine"></span></button>
-          <button class="cta pvp" id="hifiPvp"><svg class="micon"><use href="#i-vs"/></svg><span class="txtcol"><span class="t">开始竞技</span><span class="s">PVP · 论剑</span></span><span class="shine"></span></button>
+          <button class="cta pvp" id="hifiPvp"><svg class="micon"><use href="#i-vs"/></svg><span class="txtcol"><span class="t">潮汐竞技</span><span class="s">PVP · 海域对决</span></span><span class="shine"></span></button>
         </div>
       </div>
     `;
@@ -405,11 +415,11 @@
     const info = stageInfo(current);
     const mechanic = bossMechanicText(info.bossMechanic);
     root.innerHTML = `
-      <div class="hifi-screen shop-bg">
+      <div class="hifi-screen campaign-bg">
         <div class="bg"></div><div class="scrim"></div>
         ${hifiTopBarHtml()}
         <div class="hifi-scroll">
-          <div class="shead"><h2 class="display">果园远征</h2><span class="line"></span></div>
+          <div class="shead"><h2 class="display">${WORLD_THEME.chapters[Math.min(3, Math.floor((current - 1) / 5))]}</h2><span class="line"></span></div>
           <div class="gpanel" style="display:flex;align-items:center;gap:12px">
             <div style="flex:1;position:relative;z-index:1">
               <small style="font-size:11px;font-weight:800;color:#F5C242">${boss ? 'BOSS 关' : '下一关'}</small>
@@ -437,7 +447,7 @@
       const btn = document.createElement('button');
       btn.className = `lvnode${lv === current ? ' current' : ''}${isBoss ? ' boss' : ''}${open ? '' : ' locked'}`;
       btn.disabled = !open;
-      btn.innerHTML = `<b>${isBoss ? '🏰' : '🍓'} ${lv}</b><small>${open ? lvTag + ' · ' + starsText(lv) : '未解锁'}</small>`;
+      btn.innerHTML = `<b>${isBoss ? '🐙' : '🐚'} ${lv}</b><small>${open ? lvTag + ' · ' + starsText(lv) : '未解锁'}</small>`;
       if (open) btn.addEventListener('click', () => startCampaign(lv));
       map.appendChild(btn);
     }
@@ -455,7 +465,10 @@
   function hifiDisc(id, size) {
     const t = fruit(id);
     const col = t.color || '#F5C242';
-    return `<span class="fdisc" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 1.15)}px">${t.icon || '🍏'}</span>`;
+    const artIndex = Math.max(0, Math.min(24, Number(t.artIndex) || 0));
+    const artX = (artIndex % 5) * 25;
+    const artY = Math.floor(artIndex / 5) * 25;
+    return `<span class="fdisc" role="img" aria-label="${escapeHtml(t.name)}" style="width:${size}px;height:${size}px;background-color:${col};background-image:url('art/generated/water-world-units-v2.png');background-size:500% 500%;background-position:${artX}% ${artY}%;background-repeat:no-repeat"></span>`;
   }
   function roleZh(r) { return ROLE_ZH[r] || r || '单位'; }
   function skillZh(t) { return SKILL_ZH[t.skill] || '专属技能'; }
@@ -471,29 +484,26 @@
     const root = shellPage('shellLabPanel', 'shell-squad-page');
     const d = deck();
     const unlockedCount = UNIT_POOL.filter(id => isUnlocked(id)).length;
-    const commanderDefs = window.COMMANDER_DEFS || {
-      orchard_lord: { id:'orchard_lord', name:'果园领主', skill:'果园号令', desc:'兵营产兵与全军攻击加速。' },
-      berry_general: { id:'berry_general', name:'莓果将军', skill:'坚壁反攻', desc:'修复城墙并发动反攻。' },
-      juice_sage: { id:'juice_sage', name:'果汁贤者', skill:'丰收时刻', desc:'立即获得果汁并持续补给。' },
-    };
+    const commanderDefs = window.COMMANDER_DEFS || WORLD_THEME.commanders;
     const commanderIds = Object.keys(commanderDefs);
     root.innerHTML = `
-      <div class="hifi-screen shop-bg">
+      <div class="hifi-screen squad-bg">
         <div class="bg"></div><div class="scrim"></div>
         ${hifiTopBarHtml()}
         <div class="hifi-scroll">
-          <div class="shead"><h2 class="display">主公</h2><span class="line"></span><span class="r">上阵 1/1</span></div>
+          <div class="shead"><h2 class="display">海域领航员</h2><span class="line"></span><span class="r">上阵 1/1</span></div>
           <div class="team" id="commanderTeam" style="gap:8px;margin-bottom:14px">
             ${commanderIds.map((id, index) => {
               const def = commanderDefs[id];
               const lv = Math.max(1, Number(shell.commanderLv[id] || 1));
               const selected = shell.commanderId === id;
               const cost = 60 + lv * 45;
-              const artPos = index === 1 ? '82%' : '18%';
+              const portraitSrc = 'art/generated/water-world-commanders-v2.png';
+              const artPos = id === 'berry_general' ? '50%' : id === 'juice_sage' ? '100%' : '0%';
               return `<div class="card ${selected ? 'on' : ''}" style="--rc:${selected ? '#F5C242' : '#6f806f'};flex:1;min-height:146px;padding:6px">
                 <span class="lv">Lv${lv}</span>
                 <div style="width:56px;height:62px;margin:0 auto 3px;border-radius:12px;overflow:hidden;border:2px solid ${selected ? '#FFE9A8' : '#63756e'};background:#254a46">
-                  <img src="art/generated/commanders-v5.png" alt="${escapeHtml(def.name)}" style="width:100%;height:100%;object-fit:cover;object-position:${artPos} 42%">
+                  <span role="img" aria-label="${escapeHtml(def.name)}" style="display:block;width:100%;height:100%;background-image:url('${portraitSrc}');background-repeat:no-repeat;background-size:300% 100%;background-position:${artPos} 50%"></span>
                 </div>
                 <span class="nm">${escapeHtml(def.name)}</span>
                 <small style="display:block;color:#F5C242;font-weight:900;font-size:9px">${escapeHtml(def.skill)}</small>
@@ -524,9 +534,13 @@
             <div style="text-align:center"><div style="font-family:Fredoka;font-weight:700;font-size:24px;color:#8FE0A0">Lv.${highestLevel()}</div><small style="font-size:11px;color:#C9B48A;font-weight:800">指挥官</small></div>
           </div>
           <div class="ctabs">
-            ${[['all', '全部'], ['tank', '坦克'], ['back', '远程'], ['rush', '突击'], ['siege', '攻城'], ['support', '辅助']].map(([k, label]) => `<button class="ctab ${squadFilter === k ? 'on' : ''}" data-filter="${k}">${label}</button>`).join('')}
+            ${[['all', '全部'], ['shell', '甲壳兵'], ['spike', '枪刺兵'], ['shooter', '射手'], ['raider', '游骑兵']].map(([k, label]) => `<button class="ctab ${squadFilter === k ? 'on' : ''}" data-filter="${k}">${label}</button>`).join('')}
           </div>
           <div class="roster" id="hifiRoster"></div>
+          <div id="hifiBondDisplay" style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,.25);border-radius:10px;border:1px solid rgba(245,194,66,.2)">
+            <small style="color:#C9B48A;font-weight:700">海域羁绊</small>
+            <div id="hifiBondList" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+          </div>
         </div>
       </div>
     `;
@@ -573,6 +587,18 @@
     root.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => { squadFilter = btn.dataset.filter; renderSquad(); }));
     root.querySelectorAll('.card:not(.lock)[data-detail]').forEach(el => el.addEventListener('click', () => openCardDetail(el.dataset.detail)));
     root.querySelectorAll('[data-undeck]').forEach(el => el.addEventListener('click', (e) => { e.stopPropagation(); const a = deck(); const id = el.dataset.undeck; if (a.includes(id)) { meta.deck = a.filter(x => x !== id); if (meta.deck.length === 0) meta.deck = DEFAULT_DECK.slice(0, 1); saveMeta(); renderSquad(); } }));
+    // 羁绊显示:检查当前编队
+    const bondList = document.getElementById('hifiBondList');
+    if (bondList && typeof window.BONDS !== 'undefined') {
+      const deckIds = d || [];
+      const active = window.BONDS.filter(b => {
+        const matchCount = b.units.filter(id => deckIds.includes(id)).length;
+        return matchCount >= 2;
+      });
+      bondList.innerHTML = active.length
+        ? active.map(b => `<span style="background:rgba(245,194,66,.15);color:#F5C242;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px">${b.name}: ${b.desc}</span>`).join('')
+        : '<span style="color:#8a7a5a;font-size:11px">编队中2个以上同羁绊单位可激活</span>';
+    }
     root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => { hidePanels(); document.getElementById('helpPanel')?.classList.remove('hide'); }));
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
     refreshResourceNumbers();
@@ -605,7 +631,7 @@
       + `<div class="ctabs">${[['attr', '属性·技能'], ['grow', '等级成长']].map(([k, l]) => `<button class="ctab ${detailTab === k ? 'on' : ''}" data-ctab="${k}">${l}</button>`).join('')}</div>`
       + `<div id="hifiCardTabBody"></div>`
       + `<div id="hifiCardActions" style="display:flex;gap:10px;margin-top:14px"></div>`
-      + `<div class="srcnote">英雄等级 Lv1-20,每级+40%攻血。同名水果局内合成升级(★1-7,×1~5倍)。</div>`;
+      + `<div class="srcnote">伙伴等级 Lv1-20,每级+40%攻血。同名海灵珠局内合成升级(★1-7,×1~5倍)。</div>`;
     renderCardTab(detailTab);
     renderCardActions(id);
     body.querySelectorAll('.ctab[data-ctab]').forEach(b => b.addEventListener('click', () => { detailTab = b.dataset.ctab; renderCardDetail(id); }));
@@ -624,12 +650,13 @@
       h = `<div class="sec"><h4><svg class="icon"><use href="#i-sword"/></svg>当前属性(英雄Lv${lv}·+${heroPct}%)</h4><div class="statrow">`
         + `<div class="s"><svg class="icon" style="color:#EF4444"><use href="#i-sword"/></svg>攻击<b>${Math.round(t.atk * atkMul)}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#2FBF71"><use href="#i-heart"/></svg>血量<b>${Math.round(t.hp * hpMul)}</b></div>`
-        + `<div class="s"><svg class="icon" style="color:#9AA6B2"><use href="#i-shield"/></svg>护甲<b>${t.armor || 0}</b></div>`
-        + `<div class="s"><svg class="icon" style="color:#38C6E8"><use href="#i-refresh"/></svg>间隔<b>${t.speed}s</b></div>`
-        + `<div class="s"><svg class="icon" style="color:#F5C242"><use href="#i-flame"/></svg>攻城<b>×${t.siege.toFixed(2)}</b></div>`
-        + `<div class="s"><svg class="icon" style="color:#FF8C00"><use href="#i-star"/></svg>战力<b>${Math.round((t.atk + t.hp) * heroMul(lv))}</b></div>`
-        + `<div class="s"><svg class="icon" style="color:#7AC7E3"><use href="#i-search"/></svg>射程<b>${({melee:'近战',mid:'中程',far:'远程',long:'超远程',support:'支援'})[t.range] || t.range}</b></div>`
-        + `<div class="s"><svg class="icon" style="color:#E8B84B"><use href="#i-speed"/></svg>移速<b>${t.move || '-'}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#38C6E8"><use href="#i-refresh"/></svg>间隔<b>${t.rate}s</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#7AC7E3"><use href="#i-search"/></svg>射程<b>${({melee:"近战",mid:"中程",far:"远程",long:"超远程",support:"支援"})[t.range] || t.range}</b></div>`
+        + `<div class="s"><svg class="icon" style="color:#C77BE8"><use href="#i-vs"/></svg>职责<b style="font-size:13px">${roleZh(t.role)}</b></div></div>`
+        + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 ${t.atk}攻/${t.hp}血 · ${
+          typeof roleStats === "function" ? roleStats(t.role).armor : "?"}甲/×${
+          typeof roleStats === "function" ? roleStats(t.role).siege.toFixed(2) : "?"}攻城/移${
+          typeof roleStats === "function" ? roleStats(t.role).move : "?"}</p></div>`
         + `<div class="s"><svg class="icon" style="color:#C77BE8"><use href="#i-vs"/></svg>职责<b style="font-size:13px">${roleZh(t.role)}</b></div></div>`
         + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 攻${t.atk}/血${t.hp} × ${heroPct}% 英雄等级加成</p></div>`
         + `<div class="sec"><h4><svg class="icon"><use href="#i-flame"/></svg>专属技能 · ${skillZh(t)}</h4><div class="skillbox"><div class="nm">${skillZh(t)}</div><p>${t.desc || ''}</p></div></div>`;
@@ -715,10 +742,10 @@
         <div class="bg"></div><div class="scrim"></div>
         ${hifiTopBarHtml()}
         <div class="hifi-scroll">
-          <div class="shead"><h2 class="display">山货集市</h2><span class="line"></span></div>
+          <div class="shead"><h2 class="display">海螺集市</h2><span class="line"></span></div>
           <div class="banner">
-            <img src="art/banner-gacha_001.jpg" alt="卡池">
-            <div class="cap"><h3>缤纷水果祭 · 基础卡池</h3><div class="rar">
+            <img src="art/generated/water-world-orbs-v2.png" alt="海螺祈愿卡池">
+            <div class="cap"><h3>深海祈愿 · 基础卡池</h3><div class="rar">
               ${GACHA_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
             </div></div>
           </div>
@@ -727,9 +754,9 @@
             <button class="gbtn ${canG10 ? '' : 'gray'}" id="hifiGacha10"><span class="display">十连 ×10</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${GACHA_COST_10} · 稀保底</small></button>
           </div>
           <div class="shead" style="margin-top:20px"><h2 class="display" style="font-size:20px">🎯 精英卡池 T0-T2</h2><span class="line"></span></div>
-          <div class="banner" style="background:linear-gradient(160deg,#2a1a2e,#1a1020)">
-            <div style="width:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:64px;gap:12px;background:linear-gradient(160deg,#3a1a3e,#1a0820)">🫒<span style="font-size:40px">⚔️</span>🍒</div>
-            <div class="cap"><h3 style="color:#FF6B35">传说英雄集结</h3><div class="rar">
+          <div class="banner legend-banner">
+            <div class="legend-stage"><i></i><i></i><i></i></div>
+            <div class="cap"><h3>深渊伙伴回响</h3><div class="rar">
               ${T0T2_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
             </div></div>
           </div>
@@ -739,12 +766,12 @@
           </div>
           <div class="gpanel pack">
             <div class="pic"><svg class="icon"><use href="#i-flame"/></svg></div>
-            <div class="info"><h4>全体攻击强化</h4><p>全部水果攻击科技 +1 级</p></div>
+            <div class="info"><h4>全体攻击强化</h4><p>全部伙伴攻击图谱 +1 级</p></div>
             <button class="gbtn ${canAtk ? '' : 'gray'}" id="hifiPackAtk" style="min-height:44px;padding:10px 14px">180🪙</button>
           </div>
           <div class="gpanel pack">
             <div class="pic" style="background:radial-gradient(circle at 40% 34%,#8ABF90,#2E7A44)"><svg class="icon" style="color:#0d3a1e"><use href="#i-shield"/></svg></div>
-            <div class="info"><h4>果堡+果汁礼包</h4><p>果堡加固 +1 · 果汁泵 +1</p></div>
+            <div class="info"><h4>护礁+潮汐礼包</h4><p>护礁结界加固 +1 · 潮汐泵 +1</p></div>
             <button class="gbtn ${canFort ? '' : 'gray'}" id="hifiPackFort" style="min-height:44px;padding:10px 14px">150🪙</button>
           </div>
         </div>
@@ -779,18 +806,18 @@
     const best = shell.ladderBest || 0;
     const power = typeof computePower === 'function' ? computePower() : 0;
     root.innerHTML = `
-      <div class="hifi-screen shop-bg">
+      <div class="hifi-screen arena-bg">
         <div class="bg"></div><div class="scrim"></div>
         ${hifiTopBarHtml()}
         <div class="hifi-scroll">
-          <div class="shead"><h2 class="display">论剑台</h2><span class="line"></span></div>
+          <div class="shead"><h2 class="display">潮汐竞技场</h2><span class="line"></span></div>
           <div class="gpanel">
             <div class="rankbadge">
               <div class="medal"><svg class="icon"><use href="#i-crown"/></svg></div>
               <div style="flex:1">
                 <h3 class="display">${arenaRankName(best)}</h3>
                 <div style="display:flex;align-items:center;gap:8px;margin-top:4px;font-weight:800;font-size:13px;color:#C9B48A">战力 <b style="color:#FFCB3D;font-family:Fredoka">${power}</b></div>
-                <div style="display:flex;align-items:center;gap:8px;margin-top:4px;font-weight:800;font-size:13px;color:#C9B48A">天梯最好 <b style="color:#8FE0A0;font-family:Fredoka">${best}</b> 波</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:4px;font-weight:800;font-size:13px;color:#C9B48A">潮汐记录 <b style="color:#8FE0A0;font-family:Fredoka">${best}</b> 波</div>
               </div>
             </div>
           </div>
@@ -830,7 +857,7 @@
     document.getElementById('rankPanel')?.classList.add('hifi');
     const root = shellPage('rankPanel', 'shell-rank-page');
     const power = typeof computePower === 'function' ? computePower() : 0;
-    const myName = escapeHtml((window.account && account.user && account.user.nickname) || '果园园长');
+    const myName = escapeHtml((window.account && account.user && account.user.nickname) || '海域领航员');
     const myScore = rankTab === 'power' ? power : (rankTab === 'stage' ? highestLevel() : (shell.ladderBest || 0));
     root.innerHTML = `
       <div class="hifi-screen shop-bg">
@@ -891,10 +918,10 @@
   let authMode = 'login';
   let tutStep = 0;
   const TUT_STEPS = [
-    { ic: 'i-leaf', t: '出战召唤', p: '点底部「出战」消耗果汁 SP,在你的棋盘上召唤水果。' },
-    { ic: 'i-cards', t: '拖拽合成', p: '把两个相同水果拖到一起合成升级(上限 Lv7),越高越强。' },
-    { ic: 'i-vs', t: '职责克制', p: '坦克/远程/突击/攻城/控制 相互克制(7×7 矩阵),搭配阵容更稳。' },
-    { ic: 'i-shield', t: '拆敌堡', p: '水果变士兵冲向 5 条兵线,打空敌方城墙即胜利!同时守住我堡别被破。' },
+    { ic: 'i-leaf', t: '出战召唤', p: '点底部「出战」消耗潮汐能,在棋盘上召唤海灵珠。' },
+    { ic: 'i-cards', t: '拖拽合成', p: '把两个相同海灵珠拖到一起合成升级(上限 Lv7),越高越强。' },
+    { ic: 'i-vs', t: '职责克制', p: '甲壳兵→射手→枪刺兵→游骑兵→甲壳兵,四类克制。同编队羁绊激活后战场自动加成。' },
+    { ic: 'i-shield', t: '拆敌堡', p: '伙伴进入开放海域自由交战,打空敌方护礁结界即胜利。暴击(10%×2)与羁绊加成让关键时刻更刺激。' },
   ];
 
   function ensureSheet() {
@@ -963,7 +990,7 @@
       <div class="pf-top">
         <div class="pf-av"><svg class="icon"><use href="#i-user"/></svg></div>
         <div style="flex:1">
-          <input class="linput" id="pfName" value="${escapeHtml(u.nickname || '果园园长')}" maxlength="12" style="margin-bottom:6px">
+          <input class="linput" id="pfName" value="${escapeHtml(u.nickname || '海域领航员')}" maxlength="12" style="margin-bottom:6px">
           <div class="uid">UID ${u.uid || '--------'}</div>
         </div>
       </div>
@@ -1283,7 +1310,7 @@
     console.log('[deck] startCampaign entry meta.deck:', JSON.stringify(meta.deck), 'meta.unlocked:', JSON.stringify(meta.unlocked));
     const raw = typeof normalizeDeckNoFill === 'function' ? normalizeDeckNoFill(meta.deck) : (meta.deck || []);
     if (raw.length < DECK_SIZE) {
-      hifiToast(`需要上阵全部${DECK_SIZE}个水果（当前${raw.length}个）`);
+      hifiToast(`需要上阵全部${DECK_SIZE}个海洋伙伴（当前${raw.length}个）`);
       return;
     }
     if (typeof syncProgressUnlocks === 'function') syncProgressUnlocks(meta);
