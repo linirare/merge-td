@@ -22,6 +22,7 @@ const ROOT = path.join(__dirname, '..');
 // 最小"结局决定链" + ai.js(敌方 AI),按 index.html 加载顺序。
 // 渲染/UI/DOM 文件一律不载(无头不需要,且会拖 canvas 依赖)。
 const FILES = [
+  'js/world_theme.js',
   'js/config.js',
   'js/layout_v56.js',
   'js/state.js',
@@ -41,6 +42,7 @@ const FILES = [
   'js/juice_economy.js',
   'js/commander_system_v1.js',
   'js/build_combo_v2.js',
+  'js/free_battle_v2.js',
 ];
 
 function mulberry32(seed) {

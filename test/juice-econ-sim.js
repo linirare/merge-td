@@ -72,6 +72,7 @@ const SCENARIOS = {
 };
 
 const FILES = [
+  'js/world_theme.js',
   'js/config.js',
   'js/layout_v56.js',
   'js/state.js',
@@ -86,6 +87,7 @@ const FILES = [
   'js/status_engine_v61.js',
   'js/boss_v63.js',
   'js/dynamic_difficulty_v64.js',
+  'js/free_battle_v2.js',
 ];
 
 /* ---- helpers (same as stage-real-sim) ---- */

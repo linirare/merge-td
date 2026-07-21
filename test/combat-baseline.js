@@ -32,6 +32,7 @@ const BASELINE = path.join(__dirname, 'combat-baseline.json');
 // (juice.js / juice_absorb_v16.js) are omitted: they wrap-and-delegate and
 // never change damage math, so outcomes are identical without them.
 const FILES = [
+  'js/world_theme.js',
   'js/config.js',
   'js/layout_v56.js',
   'js/state.js',
@@ -45,6 +46,7 @@ const FILES = [
   'js/status_engine_v61.js',
   'js/boss_v63.js',
   'js/dynamic_difficulty_v64.js',
+  'js/free_battle_v2.js',
 ];
 
 function mulberry32(seed) {

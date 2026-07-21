@@ -198,8 +198,15 @@ async function assertBattleGeometry(page) {
   }));
   const { enemy, player, canvas, grid, walls, operationY } = geometry;
   if (grid.rows !== 3 || grid.cols !== 5) throw new Error(`battle grid must be 3x5: ${JSON.stringify(geometry)}`);
+  if (enemy.y !== 88 || player.y !== 676) throw new Error(`battle board calibration regressed: ${JSON.stringify(geometry)}`);
   if (enemy.w !== player.w || enemy.h !== player.h) throw new Error(`enemy/player boards differ: ${JSON.stringify(geometry)}`);
   if (enemy.x + player.x + enemy.w !== canvas.w) throw new Error(`boards are not horizontally mirrored: ${JSON.stringify(geometry)}`);
+  const wallRenderH = 24;
+  const enemyBoardGap = walls.enemyY - (enemy.y + enemy.h);
+  const playerBoardGap = player.y - (walls.playerY + wallRenderH);
+  if (enemyBoardGap < 12 || playerBoardGap < 10) {
+    throw new Error(`battlefield wall overlaps a board: ${JSON.stringify({ ...geometry, enemyBoardGap, playerBoardGap })}`);
+  }
   if (!geometry.commanders.player || !geometry.commanders.enemy || !geometry.commanders.playerSkill || !geometry.commanders.enemySkill) {
     throw new Error(`commander system missing: ${JSON.stringify(geometry)}`);
   }

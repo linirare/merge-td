@@ -4,7 +4,7 @@ const vm = require('vm');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const files = ['js/config.js', 'js/layout_v56.js', 'js/state.js', 'js/hooks.js', 'js/board.js', 'js/combat.js'];
+const files = ['js/world_theme.js', 'js/config.js', 'js/layout_v56.js', 'js/state.js', 'js/hooks.js', 'js/board.js', 'js/combat.js', 'js/free_battle_v2.js'];
 const code = files.map(file => fs.readFileSync(path.join(root, file), 'utf8')).join('\n');
 const sandbox = {
   console, Math, JSON,

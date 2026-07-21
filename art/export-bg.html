@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>导出战场底图</title></head>
+<body style="margin:0;background:#000;">
+<canvas id="c" width="480" height="920"></canvas>
+<script>
+const W=480,H=920,ctx=c.getContext('2d');
+
+function rrect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+
+// === 1. 暗深底色 ===
+const sky=ctx.createLinearGradient(0,0,0,H);
+sky.addColorStop(0,'#120d08');
+sky.addColorStop(0.28,'#1a1410');
+sky.addColorStop(0.50,'#221a13');
+sky.addColorStop(0.72,'#1a1410');
+sky.addColorStop(1,'#100a06');
+ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+// === 2. 战场中段底色 ===
+const field=ctx.createLinearGradient(0,280,0,600);
+field.addColorStop(0,'rgba(26,18,10,0.3)');
+field.addColorStop(0.5,'rgba(42,30,18,0.6)');
+field.addColorStop(1,'rgba(30,20,12,0.3)');
+ctx.fillStyle=field;ctx.fillRect(0,280,W,320);
+
+// === 3. 透视网格线 ===
+const vx=W/2,vy=340;
+for(let i=1;i<10;i++){
+  const t=i/10;
+  const spread=20+t*160;
+  ctx.strokeStyle=`rgba(245,194,66,${0.03+t*0.04})`;
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(vx,vy);ctx.lineTo(vx-spread,580);
+  ctx.moveTo(vx,vy);ctx.lineTo(vx+spread,580);
+  ctx.stroke();
+}
+
+// 水平网格线
+for(let i=0;i<6;i++){
+  const y=320+i*52;
+  ctx.strokeStyle=`rgba(245,194,66,${0.03+i*0.01})`;
+  ctx.lineWidth=0.5;
+  ctx.beginPath();ctx.moveTo(20,y);ctx.lineTo(W-20,y);ctx.stroke();
+}
+
+// === 4. 敌方区域暗化 ===
+const enemy=ctx.createLinearGradient(0,0,0,280);
+enemy.addColorStop(0,'rgba(10,6,3,0.7)');
+enemy.addColorStop(0.6,'rgba(20,12,6,0.4)');
+enemy.addColorStop(1,'rgba(0,0,0,0)');
+ctx.fillStyle=enemy;ctx.fillRect(0,0,W,280);
+
+// 敌方城墙隐约轮廓
+ctx.fillStyle='rgba(40,28,16,0.6)';
+ctx.fillRect(70,256,W-140,18);
+ctx.fillStyle='rgba(60,40,20,0.4)';
+for(let i=0;i<10;i++)ctx.fillRect(72+i*33,248,18,8);
+
+// 岩浆裂纹
+ctx.strokeStyle='rgba(200,60,20,0.25)';ctx.lineWidth=1.5;
+for(let i=0;i<5;i++){
+  const sx=80+Math.random()*320, sy=260+Math.random()*15;
+  ctx.beginPath();ctx.moveTo(sx,sy);
+  ctx.lineTo(sx+(Math.random()-0.5)*40,sy+4+Math.random()*8);
+  ctx.lineTo(sx+(Math.random()-0.5)*60,sy+10+Math.random()*10);
+  ctx.stroke();
+}
+
+// === 5. 战场尘埃粒子 ===
+for(let i=0;i<80;i++){
+  const x=40+Math.random()*400, y=290+Math.random()*300;
+  const a=0.03+Math.random()*0.08, r=1+Math.random()*2;
+  ctx.fillStyle=`rgba(245,194,66,${a})`;
+  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+}
+
+// === 6. 底部暖金光 ===
+const glow=ctx.createRadialGradient(W/2,H+60,20,W/2,H-40,280);
+glow.addColorStop(0,'rgba(245,194,66,0.35)');
+glow.addColorStop(0.4,'rgba(200,150,60,0.18)');
+glow.addColorStop(0.7,'rgba(180,130,50,0.05)');
+glow.addColorStop(1,'rgba(0,0,0,0)');
+ctx.fillStyle=glow;ctx.fillRect(0,550,W,370);
+
+// === 7. 我方城墙隐约轮廓 ===
+ctx.fillStyle='rgba(55,40,22,0.5)';
+ctx.fillRect(70,586,W-140,16);
+ctx.fillStyle='rgba(80,55,28,0.35)';
+for(let i=0;i<10;i++)ctx.fillRect(72+i*33,580,18,6);
+
+// === 8. 微噪点纹理 ===
+const imgData=ctx.getImageData(0,0,W,H);
+for(let i=0;i<imgData.data.length;i+=4){
+  const noise=(Math.random()-0.5)*8;
+  imgData.data[i]=Math.min(255,Math.max(0,imgData.data[i]+noise));
+  imgData.data[i+1]=Math.min(255,Math.max(0,imgData.data[i+1]+noise));
+  imgData.data[i+2]=Math.min(255,Math.max(0,imgData.data[i+2]+noise));
+}
+ctx.putImageData(imgData,0,0);
+
+// === 9. 四角压暗（vignette） ===
+const vig=ctx.createRadialGradient(W/2,H/2,W*0.3,W/2,H/2,W*0.75);
+vig.addColorStop(0,'rgba(0,0,0,0)');
+vig.addColorStop(1,'rgba(0,0,0,0.55)');
+ctx.fillStyle=vig;ctx.fillRect(0,0,W,H);
+
+// === 自动下载 ===
+c.toBlob(b=>{
+  const a=document.createElement('a');
+  a.download='battlefield-bg.png';
+  a.href=URL.createObjectURL(b);
+  a.click();
+  document.body.innerHTML='<p style="color:#F5C242;text-align:center;padding:40px;font:16px sans-serif">已触发下载 battlefield-bg.png<br><small>如未弹出请允许下载</small></p>';
+});
+</script>
+</body>
+</html>

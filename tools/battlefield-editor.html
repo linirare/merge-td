@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>战场布局编辑器 · 水果突击</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font:14px "PingFang SC","Microsoft YaHei",sans-serif;background:#0d0a07;color:#d4c4a0;display:flex;height:100vh;overflow:hidden}
+/* 左侧 Canvas */
+#stage{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+canvas{border-radius:8px;box-shadow:0 0 30px rgba(245,194,66,0.12)}
+/* 右侧面板 */
+#panel{width:300px;background:#181410;border-left:1px solid rgba(245,194,66,0.15);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+#panel h2{font-size:16px;color:#F5C242;margin-bottom:4px}
+#panel h3{font-size:13px;color:#a09070;margin:8px 0 4px;border-top:1px solid rgba(255,255,255,0.06);padding-top:8px}
+.row{display:flex;align-items:center;gap:8px}
+.row label{width:90px;font-size:12px;color:#8a7a5a;flex-shrink:0}
+.row input{flex:1;width:60px;background:#221c14;border:1px solid rgba(245,194,66,0.2);color:#d4c4a0;padding:4px 8px;border-radius:4px;font:13px monospace;text-align:right}
+.row input:focus{outline:none;border-color:#F5C242}
+.row input.active{border-color:#F5C242;background:#2a2218}
+.row .unit{font-size:11px;color:#5a4a3a;width:16px}
+.btn{display:block;width:100%;padding:10px;border:none;border-radius:6px;font:14px sans-serif;font-weight:600;cursor:pointer;text-align:center}
+.btn-primary{background:linear-gradient(135deg,#b8860b,#F5C242);color:#1a1008}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-secondary{background:rgba(255,255,255,0.06);color:#a09070;border:1px solid rgba(255,255,255,0.1)}
+.btn-secondary:hover{background:rgba(255,255,255,0.1)}
+#exportBox{background:#0d0a07;border:1px solid rgba(245,194,66,0.2);border-radius:6px;padding:10px;font:11px monospace;color:#a09070;white-space:pre;max-height:200px;overflow:auto;display:none}
+.hint{font-size:11px;color:#5a4a3a;line-height:1.5}
+.seg{display:flex;gap:4px}
+.seg button{flex:1;padding:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#8a7a5a;border-radius:4px;cursor:pointer;font-size:11px}
+.seg button.active{background:rgba(245,194,66,0.12);border-color:#F5C242;color:#F5C242}
+</style>
+</head>
+<body>
+
+<div id="stage"><canvas id="c"></canvas></div>
+
+<div id="panel">
+  <h2>⚙ 战场布局编辑器</h2>
+  <p class="hint">拖拽左侧彩色把手调整区域边界<br>或直接输入数值按回车</p>
+
+  <h3>📐 棋盘参数</h3>
+  <div class="row"><label>列数 COLS</label><input id="COLS" value="5"><span class="unit"></span></div>
+  <div class="row"><label>行数 ROWS</label><input id="ROWS" value="3"><span class="unit"></span></div>
+  <div class="row"><label>格子 CELL</label><input id="CELL" value="64"><span class="unit">px</span></div>
+  <div class="row"><label>间距 GAP</label><input id="GAP" value="6"><span class="unit">px</span></div>
+  <div class="row"><label>棋盘X BOARD_X</label><input id="BOARD_X" value="68"><span class="unit">px(auto)</span></div>
+
+  <h3>📍 Y坐标</h3>
+  <div class="row"><label>顶栏底部</label><input id="topBarEnd" value="62"><span class="unit"></span></div>
+  <div class="row"><label>敌方棋盘Y</label><input id="enemyBoardY" value="62"><span class="unit"></span></div>
+  <div class="row"><label>敌方城墙Y</label><input id="enemyWallY" value="272"><span class="unit"></span></div>
+  <div class="row"><label>城墙高度</label><input id="wallH" value="20"><span class="unit">px</span></div>
+  <div class="row"><label>战场区Y</label><input id="fieldY" value="300"><span class="unit"></span></div>
+  <div class="row"><label>战场高度</label><input id="fieldH" value="282"><span class="unit">px</span></div>
+  <div class="row"><label>我方城墙Y</label><input id="playerWallY" value="590"><span class="unit"></span></div>
+  <div class="row"><label>我方棋盘Y</label><input id="playerBoardY" value="634"><span class="unit"></span></div>
+  <div class="row"><label>操作条Y</label><input id="operationY" value="846"><span class="unit"></span></div>
+
+  <h3>🖱 操作模式</h3>
+  <div class="seg">
+    <button class="active" data-mode="drag">拖拽边界</button>
+    <button data-mode="board">拖棋盘</button>
+    <button data-mode="cell">放棋子</button>
+  </div>
+
+  <button class="btn btn-primary" id="btnExport">📋 导出配置代码</button>
+  <button class="btn btn-secondary" id="btnReset">↺ 恢复默认</button>
+  <div id="exportBox"></div>
+</div>
+
+<script>
+// ========== 常量 ==========
+let COLS=5, ROWS=3, CELL=64, GAP=6;
+let BOARD_W, BOARD_H, BOARD_X;
+let LAYOUT;
+
+function calcBoard(){ BOARD_W=COLS*CELL+(COLS-1)*GAP; BOARD_H=ROWS*CELL+(ROWS-1)*GAP; BOARD_X=Math.round((480-BOARD_W)/2); }
+calcBoard();
+
+const DEFAULTS = {
+  topBarEnd:62, enemyBoardY:62, enemyWallY:272, wallH:20,
+  fieldY:300, fieldH:282, playerWallY:590, playerBoardY:634, operationY:846
+};
+LAYOUT = {...DEFAULTS};
+
+// ========== Canvas缩放 ==========
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+const W=480, H=920;
+
+function recalcScale(){
+  const vw=window.innerWidth||document.documentElement.clientWidth||1024;
+  const vh=window.innerHeight||document.documentElement.clientHeight||768;
+  const vs=Math.min((vw-340)/W, (vh-20)/H, 0.75);
+  return Math.max(0.25, vs); // 最小25%缩放
+}
+let VS=recalcScale();
+c.width=W; c.height=H; c.style.width=W*VS+'px'; c.style.height=H*VS+'px';
+
+// 鼠标坐标转换
+function canvasPos(e){ const r=c.getBoundingClientRect(); return {x:(e.clientX-r.left)/VS, y:(e.clientY-r.top)/VS}; }
+
+// ========== 面板同步 ==========
+const inputs={};
+['COLS','ROWS','CELL','GAP','topBarEnd','enemyBoardY','enemyWallY','wallH','fieldY','fieldH','playerWallY','playerBoardY','operationY'].forEach(id=>{
+  inputs[id]=document.getElementById(id);
+  inputs[id].addEventListener('change',()=>applyInputs());
+  inputs[id].addEventListener('focus',()=>inputs[id].classList.add('active'));
+  inputs[id].addEventListener('blur',()=>inputs[id].classList.remove('active'));
+});
+
+function readInput(id,def){ const v=parseInt(inputs[id].value); return isNaN(v)?def:v; }
+function syncInputs(){
+  inputs.COLS&&(inputs.COLS.value=COLS); inputs.ROWS.value=ROWS; inputs.CELL.value=CELL; inputs.GAP.value=GAP;
+  inputs.topBarEnd.value=LAYOUT.topBarEnd; inputs.enemyBoardY.value=LAYOUT.enemyBoardY;
+  inputs.enemyWallY.value=LAYOUT.enemyWallY; inputs.wallH.value=LAYOUT.wallH;
+  inputs.fieldY.value=LAYOUT.fieldY; inputs.fieldH.value=LAYOUT.fieldH;
+  inputs.playerWallY.value=LAYOUT.playerWallY; inputs.playerBoardY.value=LAYOUT.playerBoardY;
+  inputs.operationY.value=LAYOUT.operationY;
+  inputs.BOARD_X.value=BOARD_X;
+}
+
+function applyInputs(){
+  COLS=readInput('COLS',5); ROWS=readInput('ROWS',3); CELL=readInput('CELL',64); GAP=readInput('GAP',6);
+  calcBoard();
+  LAYOUT.topBarEnd=readInput('topBarEnd',62); LAYOUT.enemyBoardY=readInput('enemyBoardY',62);
+  LAYOUT.enemyWallY=readInput('enemyWallY',272); LAYOUT.wallH=readInput('wallH',20);
+  LAYOUT.fieldY=readInput('fieldY',300); LAYOUT.fieldH=readInput('fieldH',282);
+  LAYOUT.playerWallY=readInput('playerWallY',590); LAYOUT.playerBoardY=readInput('playerBoardY',634);
+  LAYOUT.operationY=readInput('operationY',846);
+  draw(); syncInputs();
+}
+syncInputs();
+
+// ========== 棋子预览数据 ==========
+let enemyCells=[], playerCells=[]; // {r,c,typeKey}
+function initCells(){
+  enemyCells=[]; playerCells=[];
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    if(Math.random()<0.35) enemyCells.push({r,c});
+    if(Math.random()<0.35) playerCells.push({r,c});
+  }
+}
+initCells();
+
+// ========== 绘制 ==========
+function rrect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+
+function drawBoardAt(by, cells, color, alpha){
+  const baseAlpha = alpha || 0.06;
+  ctx.fillStyle=color.replace('0.06',String(baseAlpha));
+  rrect(0, by, W, BOARD_H, 8); ctx.fill();
+  ctx.strokeStyle=color.replace('0.06','0.25'); ctx.lineWidth=1.2; ctx.setLineDash([4,4]);
+  rrect(0, by, W, BOARD_H, 8); ctx.stroke(); ctx.setLineDash([]);
+
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const x=BOARD_X+c*(CELL+GAP), y=by+r*(CELL+GAP);
+    ctx.fillStyle=(r+c)%2===0?color.replace('0.06','0.04'):color.replace('0.06','0.08');
+    rrect(x,y,CELL,CELL,6); ctx.fill();
+    // 棋子预览
+    const cell=cells.find(e=>e.r===r&&e.c===c);
+    if(cell){
+      ctx.fillStyle=color.replace('0.06','0.35');
+      ctx.beginPath(); ctx.arc(x+CELL/2, y+CELL/2, CELL*0.32, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font=`${Math.round(CELL*0.2)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('⚔', x+CELL/2, y+CELL/2+1);
+    }
+  }
+  // 标签
+  ctx.font='bold 13px "PingFang SC","Microsoft YaHei",sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=color.replace('0.06','0.7'); ctx.fillText(by===LAYOUT.enemyBoardY?'敌方棋盘':'我方棋盘', W/2, by+BOARD_H/2);
+}
+
+function drawWall(y, color){
+  ctx.fillStyle='rgba(90,72,50,0.35)'; rrect(BOARD_X, y, BOARD_W, LAYOUT.wallH, 3); ctx.fill();
+  ctx.strokeStyle=color; ctx.lineWidth=1.5; rrect(BOARD_X, y, BOARD_W, LAYOUT.wallH, 3); ctx.stroke();
+  ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillStyle=color;
+  ctx.fillText(y===LAYOUT.enemyWallY?'敌方城墙':'我方城墙', W/2, y+LAYOUT.wallH/2+4);
+}
+
+function drawField(){
+  const fy=LAYOUT.fieldY, fh=LAYOUT.fieldH;
+  ctx.fillStyle='rgba(100,200,255,0.05)'; rrect(6, fy, W-12, fh, 6); ctx.fill();
+  ctx.strokeStyle='rgba(100,200,255,0.15)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  rrect(6, fy, W-12, fh, 6); ctx.stroke(); ctx.setLineDash([]);
+  // 透视线
+  for(let i=0;i<6;i++){
+    const t=i/6, spread=30+t*150;
+    ctx.strokeStyle=`rgba(255,200,100,${0.03+t*0.04})`; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(W/2, fy+fh*0.2);
+    ctx.lineTo(W/2-spread, fy+fh); ctx.moveTo(W/2, fy+fh*0.2); ctx.lineTo(W/2+spread, fy+fh); ctx.stroke();
+  }
+  ctx.font='bold 14px "PingFang SC","Microsoft YaHei",sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle='rgba(100,200,255,0.6)'; ctx.fillText('战场区', W/2, fy+fh/2);
+  ctx.font='10px sans-serif'; ctx.fillStyle='rgba(100,200,255,0.25)';
+  ctx.fillText(fy+' → '+(fy+fh)+'  ('+fh+'px)', W/2, fy+fh/2+16);
+}
+
+function drawHandle(y, color, label, side='right'){
+  const h=16, w=60, sx=side==='right'?W-w-8:8;
+  ctx.fillStyle=`rgba(0,0,0,0.7)`; rrect(sx, y-h/2, w, h, 4); ctx.fill();
+  ctx.strokeStyle=color; ctx.lineWidth=2; rrect(sx, y-h/2, w, h, 4); ctx.stroke();
+  ctx.font='bold 10px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=color; ctx.fillText(label+' '+y, sx+w/2, y);
+  // 拖动提示
+  ctx.font='9px sans-serif'; ctx.textAlign='right';
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  if(side==='right') ctx.fillText('⟷ 拖动', sx-4, y);
+  else ctx.fillText('拖动 ⟷', sx+w+4, y);
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // 背景
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#100c08'); bg.addColorStop(0.5,'#1e1810'); bg.addColorStop(1,'#0a0604');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // 棋盘
+  drawBoardAt(LAYOUT.enemyBoardY, enemyCells, 'rgba(255,70,50,0.06)');
+  drawWall(LAYOUT.enemyWallY, 'rgba(255,100,50,0.6)');
+  drawField();
+  drawWall(LAYOUT.playerWallY, 'rgba(80,255,100,0.6)');
+  drawBoardAt(LAYOUT.playerBoardY, playerCells, 'rgba(80,255,100,0.06)');
+
+  // 操作条
+  ctx.fillStyle='rgba(245,194,66,0.06)'; ctx.fillRect(0,LAYOUT.operationY,W,46);
+  ctx.strokeStyle='rgba(245,194,66,0.2)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,LAYOUT.operationY); ctx.lineTo(W,LAYOUT.operationY); ctx.stroke();
+  ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='rgba(245,194,66,0.5)';
+  ctx.fillText('操作条',W/2,LAYOUT.operationY+24);
+
+  // 拖拽把手
+  drawHandle(LAYOUT.enemyBoardY, 'rgba(255,70,50,0.8)', '敌棋盘▾');
+  drawHandle(LAYOUT.enemyWallY, 'rgba(255,120,60,0.8)', '敌墙▾');
+  drawHandle(LAYOUT.fieldY, 'rgba(100,200,255,0.8)', '战场▾');
+  drawHandle(LAYOUT.fieldY+LAYOUT.fieldH, 'rgba(100,200,255,0.8)', '战场▴');
+  drawHandle(LAYOUT.playerWallY, 'rgba(80,255,100,0.8)', '我墙▾');
+  drawHandle(LAYOUT.playerBoardY, 'rgba(80,255,100,0.8)', '我棋盘▾');
+  drawHandle(LAYOUT.operationY, 'rgba(245,194,66,0.8)', '操作条▾');
+
+  // 棋盘拖动把手
+  if(mode==='board'){
+    ctx.strokeStyle='rgba(255,228,90,0.5)'; ctx.lineWidth=2; ctx.setLineDash([6,3]);
+    rrect(BOARD_X-4, LAYOUT.enemyBoardY-4, BOARD_W+8, BOARD_H+8, 6); ctx.stroke();
+    rrect(BOARD_X-4, LAYOUT.playerBoardY-4, BOARD_W+8, BOARD_H+8, 6); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font='11px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='rgba(255,228,90,0.6)';
+    ctx.fillText('⟲ 拖拽棋盘调整布局',W/2, H-10);
+  }
+  if(mode==='cell'){
+    ctx.font='11px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='rgba(255,228,90,0.6)';
+    ctx.fillText('点击格子放置/移除棋子预览',W/2, H-10);
+  }
+}
+
+// ========== 交互 ==========
+let mode='drag'; // drag | board | cell
+let dragging=null; // {key, startY, origValue} or 'enemyBoard'|'playerBoard' with offset
+let dragStart=null;
+
+document.querySelectorAll('#panel .seg button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#panel .seg button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); mode=btn.dataset.mode; draw();
+  });
+});
+
+// 拖拽把手命中检测
+const HANDLES=[
+  {key:'enemyBoardY', y:()=>LAYOUT.enemyBoardY, color:'rgba(255,70,50,0.8)'},
+  {key:'enemyWallY', y:()=>LAYOUT.enemyWallY, color:'rgba(255,120,60,0.8)'},
+  {key:'fieldY', y:()=>LAYOUT.fieldY, color:'rgba(100,200,255,0.8)'},
+  {key:'fieldEnd', y:()=>LAYOUT.fieldY+LAYOUT.fieldH, color:'rgba(100,200,255,0.8)'},
+  {key:'playerWallY', y:()=>LAYOUT.playerWallY, color:'rgba(80,255,100,0.8)'},
+  {key:'playerBoardY', y:()=>LAYOUT.playerBoardY, color:'rgba(80,255,100,0.8)'},
+  {key:'operationY', y:()=>LAYOUT.operationY, color:'rgba(245,194,66,0.8)'},
+];
+
+function hitHandle(mx,my){
+  if(mode!=='drag') return null;
+  for(const h of HANDLES){
+    const yy=h.y(), hw=70, hh=18;
+    const sx=W-hw-8;
+    if(mx>=sx-20 && mx<=sx+hw && my>=yy-hh/2 && my<=yy+hh/2) return h;
+  }
+  return null;
+}
+
+function hitBoard(mx, my){
+  if(mode==='board') return null; // board模式拖整个棋盘
+  if(mode!=='cell') return null;
+  for(const board of[{y:LAYOUT.enemyBoardY, cells:enemyCells},{y:LAYOUT.playerBoardY, cells:playerCells}]){
+    if(my>=board.y && my<=board.y+BOARD_H){
+      const col=Math.floor((mx-BOARD_X)/(CELL+GAP));
+      const row=Math.floor((my-board.y)/(CELL+GAP));
+      if(col>=0 && col<COLS && row>=0 && row<ROWS){
+        const cx=BOARD_X+col*(CELL+GAP), cy=board.y+row*(CELL+GAP);
+        if(mx>=cx && mx<=cx+CELL && my>=cy && my<=cy+CELL) return {board, row, col};
+      }
+    }
+  }
+  return null;
+}
+
+c.addEventListener('mousedown',e=>{
+  const {x,y}=canvasPos(e);
+  if(mode==='drag'){
+    dragging=hitHandle(x,y);
+    if(dragging) dragStart={y, orig:LAYOUT[dragging.key]??(LAYOUT.fieldY+LAYOUT.fieldH)};
+  }else if(mode==='board'){
+    dragging={type:'board'};
+    dragStart={y, enemyBoardY:LAYOUT.enemyBoardY, playerBoardY:LAYOUT.playerBoardY};
+  }else if(mode==='cell'){
+    const hit=hitBoard(x,y);
+    if(hit){
+      const idx=hit.board.cells.findIndex(e=>e.r===hit.row&&e.c===hit.col);
+      if(idx>=0) hit.board.cells.splice(idx,1);
+      else hit.board.cells.push({r:hit.row, c:hit.col});
+      draw();
+    }
+  }
+});
+c.addEventListener('mousemove',e=>{
+  if(!dragging) return;
+  const {x,y}=canvasPos(e);
+  if(mode==='drag' && dragging.key){
+    const dy=y-dragStart.y;
+    let newVal=Math.round(dragStart.orig+dy);
+    newVal=Math.max(10, Math.min(H-30, newVal));
+    if(dragging.key==='fieldEnd'){
+      LAYOUT.fieldH=Math.max(80, newVal-LAYOUT.fieldY);
+    }else if(dragging.key==='fieldY'){
+      const oldEnd=LAYOUT.fieldY+LAYOUT.fieldH;
+      LAYOUT.fieldY=newVal;
+      LAYOUT.fieldH=Math.max(80, oldEnd-LAYOUT.fieldY);
+    }else{
+      LAYOUT[dragging.key]=newVal;
+    }
+    syncInputs(); draw();
+  }else if(mode==='board' && dragging.type==='board'){
+    const dy=Math.round(y-dragStart.y);
+    LAYOUT.enemyBoardY=Math.max(10, dragStart.enemyBoardY+dy);
+    LAYOUT.playerBoardY=Math.max(LAYOUT.fieldY+LAYOUT.fieldH+30, dragStart.playerBoardY+dy);
+    syncInputs(); draw();
+  }
+});
+c.addEventListener('mouseup',()=>{ dragging=null; dragStart=null; });
+c.addEventListener('mouseleave',()=>{ dragging=null; dragStart=null; });
+
+// Touch
+c.addEventListener('touchstart',e=>{e.preventDefault();c.dispatchEvent(new MouseEvent('mousedown',{clientX:e.touches[0].clientX,clientY:e.touches[0].clientY}));});
+c.addEventListener('touchmove',e=>{e.preventDefault();c.dispatchEvent(new MouseEvent('mousemove',{clientX:e.touches[0].clientX,clientY:e.touches[0].clientY}));});
+c.addEventListener('touchend',e=>{c.dispatchEvent(new MouseEvent('mouseup'));});
+
+// ========== 导出 ==========
+document.getElementById('btnExport').addEventListener('click',()=>{
+  const code=`/* === 复制以下代码替换 config.js 中对应部分 === */
+const W = 480, H = 920;
+const ROWS = ${ROWS}, COLS = ${COLS};
+const CELL = ${CELL}, GAP = ${GAP};
+const BOARD_W = COLS * CELL + (COLS - 1) * GAP;
+const BOARD_H = ROWS * CELL + (ROWS - 1) * GAP;
+const BOARD_X = (W - BOARD_W) / 2;
+
+const LAYOUT = {
+  enemyInfoY: 6,
+  enemyBoardY: ${LAYOUT.enemyBoardY},
+  enemyWallY:  ${LAYOUT.enemyWallY},
+  wallH:       ${LAYOUT.wallH},
+  fieldY:      ${LAYOUT.fieldY},
+  fieldH:      ${LAYOUT.fieldH},
+  playerWallY: ${LAYOUT.playerWallY},
+  operationY:  ${LAYOUT.operationY},
+  playerBoardY:${LAYOUT.playerBoardY},
+  bottomY:     ${LAYOUT.operationY + 48},
+};`;
+  const box=document.getElementById('exportBox');
+  box.style.display='block'; box.textContent=code;
+  navigator.clipboard.writeText(code).then(()=>{alert('已复制到剪贴板!');}).catch(()=>{});
+});
+
+document.getElementById('btnReset').addEventListener('click',()=>{
+  COLS=5; ROWS=3; CELL=64; GAP=6;
+  calcBoard();
+  Object.assign(LAYOUT, DEFAULTS);
+  initCells();
+  syncInputs(); draw();
+});
+
+window.addEventListener('resize',()=>{
+  const ns=Math.min((window.innerWidth-340)/W, (window.innerHeight-20)/H, 0.75);
+  c.style.width=W*ns+'px'; c.style.height=H*ns+'px';
+});
+
+draw();
+</script>
+</body>
+</html>

@@ -9,6 +9,8 @@ Use case: stylized-concept
 Asset type: final runtime background plate for a portrait 2D mobile merge-defense battle screen
 Primary request: Design a clean premium pure-2D battlefield for a sequel inspired by the information structure of competitive orb-merging tower-defense games. The gameplay loop is orb barracks merge -> barracks deploy troops -> troops fight in five lanes -> break enemy wall. This must be a practical 480×920 gameplay background, not concept art.
 Exact layout: portrait 480:920. Top HUD safe band from y=0 to 48. Enemy deployment board band from y=58 to 230. Enemy wall band from y=238 to 258. Central five-lane battlefield from y=270 to 640. Player wall band from y=648 to 668. Player deployment board band from y=676 to 848. Bottom command bar safe band from y=858 to 920. The top enemy board and bottom player board must be EXACTLY the same width and height and visually mirrored. Leave a clean vertical portrait recess at the far right of the enemy board and a matching recess at the far left of the player board for commander character portraits. Keep the center of both board bands empty for a 5-column by 3-row interactive grid.
+
+Runtime calibration: the shipped illustration's red board inner well begins around y=78 (rather than the requested y=58); the runtime starts the interactive grid at y=88 to preserve an 8px inset. Its enemy stone wall is painted lower, beginning around y=276. The runtime aligns the wall HP overlay and battlefield start to those painted landmarks; do not restore the old coordinates unless the background plate is regenerated to the original specification.
 Composition: perfectly front-on flat 2D screen layout, no camera depth, no foreshortening, no vanishing point, no perspective. Enemy board uses muted warm coral-red; player board uses deep turquoise-blue; central battlefield uses desaturated warm green with five subtle vertical lane stripes. Two slim symmetrical stone-and-wood walls separate the field from the boards. Side borders use simple orchard leaves and flat banners only. Functional symmetry and negative space are more important than decoration.
 Style/medium: polished commercial 2D mobile-game background illustration, clean vector-like cel shading, crisp controlled outlines, broad flat color shapes, minimal two-tone shading, restrained highlights, readable at phone size. Original fruit-kingdom theme. It should look authored by one 2D game UI art team, not like AI fantasy painting.
 Lighting/mood: cheerful daylight represented through flat color blocks; no realistic lighting, no volumetric effects, no rendered materials.
@@ -59,3 +61,10 @@ Constraints: no text, no labels, no numbers, no UI frames, no extra people, no w
 Avoid: 2.5D, 3D, clay, painterly rendering, realistic portrait, glossy plastic, giant chibi head, sticker border, over-detailed costume, photorealism.
 No grain, no dirty texture, no random speckles, no messy background, no harsh glow, no checkerboard pattern, no tiling artifacts, no digital ripples.
 ```
+## 梦幻水世界 v2
+
+- `water-world-battlefield-v2.png`：无纵向路线的开放海域、上下珊瑚堡垒与全宽护礁结界。
+- `water-world-orbs-v2.png`：按 `WORLD_THEME.units.artIndex` 排列的 5×5 海灵珠图集。
+- `water-world-units-v2.png`：按相同顺序排列的 25 个唯一海洋伙伴战斗图集。
+- `water-world-commanders-v2.png`：海豚领航员、帝王蟹将军、鹦鹉螺贤者三格主将图集。
+- `water-world-bosses-v2.png`：巨蛤、海鳗、深海鮟鱇、远古章鱼四格 Boss 图集。
