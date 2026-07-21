@@ -654,9 +654,9 @@
         + `<div class="s"><svg class="icon" style="color:#7AC7E3"><use href="#i-search"/></svg>射程<b>${({melee:"近战",mid:"中程",far:"远程",long:"超远程",support:"支援"})[t.range] || t.range}</b></div>`
         + `<div class="s"><svg class="icon" style="color:#C77BE8"><use href="#i-vs"/></svg>职责<b style="font-size:13px">${roleZh(t.role)}</b></div></div>`
         + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 ${t.atk}攻/${t.hp}血 · ${
-          typeof roleStats === "function" ? roleStats(t.role).armor : "?"}甲/×${
-          typeof roleStats === "function" ? roleStats(t.role).siege.toFixed(2) : "?"}攻城/移${
-          typeof roleStats === "function" ? roleStats(t.role).move : "?"}</p></div>`
+          t.armor != null ? t.armor : roleStats(t.role).armor}甲/×${
+          t.siege != null ? t.siege : Number(roleStats(t.role).siege).toFixed(2)}攻城/移${
+          t.move != null ? t.move : roleStats(t.role).move}</p></div>`
         + `<div class="s"><svg class="icon" style="color:#C77BE8"><use href="#i-vs"/></svg>职责<b style="font-size:13px">${roleZh(t.role)}</b></div></div>`
         + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 攻${t.atk}/血${t.hp} × ${heroPct}% 英雄等级加成</p></div>`
         + `<div class="sec"><h4><svg class="icon"><use href="#i-flame"/></svg>专属技能 · ${skillZh(t)}</h4><div class="skillbox"><div class="nm">${skillZh(t)}</div><p>${t.desc || ''}</p></div></div>`;
@@ -1655,7 +1655,7 @@
     const isReg = authMode === 'register';
     gate.innerHTML = `
       <div style="width:100%;max-width:330px">
-        <h1 style="font-family:'ZCOOL KuaiLe';font-size:32px;color:#FFE9A8;text-align:center;margin:0 0 2px;text-shadow:0 2px 0 #8a5a10">球球英雄Ⅱ</h1>
+        <h1 style="font-family:'ZCOOL KuaiLe';font-size:32px;color:#FFE9A8;text-align:center;margin:0 0 2px;text-shadow:0 2px 0 #8a5a10">梦幻水世界</h1>
         <p style="text-align:center;color:#c9b78a;font-weight:700;margin:0 0 18px;font-size:12.5px">登录后开始 · 云端存档 / 对战 / 排行</p>
         <div class="ltabs">
           <button class="ltab ${!isReg ? 'on' : ''}" data-g="login">登录</button>

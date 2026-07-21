@@ -8,7 +8,7 @@
   const BUILD_COMPONENTS = {
     fire: ['back', 'rush', 'siege'],
     line: ['tank', 'front', 'control'],
-    engine: ['support', 'merge'],
+    engine: ['support', 'merge', 'econ'],
   };
 
   const TEXT = {
@@ -30,11 +30,11 @@
     const t = TYPES && TYPES[typeId];
     if (!t) return '';
     const tags = Array.isArray(t.tags) ? t.tags : [];
-    if (tags.includes('econ')) return 'engine';
-    const role = t.role || '';
     for (const key of Object.keys(BUILD_COMPONENTS)) {
-      if (BUILD_COMPONENTS[key].includes(role)) return key;
+      if (BUILD_COMPONENTS[key].some(tag => tags.includes(tag))) return key;
     }
+    const role = t.role || '';
+    if (role === 'wildcard') return 'engine';
     return '';
   }
 

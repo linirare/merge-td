@@ -78,7 +78,7 @@ function addSkillShieldV17(s, amount) {
   s.skillShield += Math.max(0, Math.round(amount || 0));
 }
 function isBackValueTargetV17(target) {
-  return isRoleV17(target, ['back','support','siege','control']);
+  return isRoleV17(target, ['shooter','wildcard']);
 }
 function nearbyEnemiesV17(s, radius = 64, sameLane = true) {
   return enemyGroupV17(s.side)
@@ -95,6 +95,22 @@ function closestAllyV17(s, radius = 72) {
     .filter(o => o.d <= radius)
     .sort((a,b) => a.d - b.d)[0]?.a || null;
 }
+/* ——— 技能 VFX 分类调度：根据 skillType 返回统一 VFX 参数 ——— */
+function getSkillVfx(typeId) {
+  const st = (typeof SKILL_TYPE_MAP !== 'undefined' ? SKILL_TYPE_MAP[typeId] : null) || 'single-projectile';
+  return (typeof SKILL_VFX !== 'undefined' ? SKILL_VFX[st] : null) || { ringColor: null, ringRadius: 0, sparkCount: 0, label: null };
+}
+function skillBurstByTypeV17(x, y, typeId, strong = false) {
+  const vfx = getSkillVfx(typeId);
+  const color = vfx.ringColor || TYPES[typeId]?.color || THEME.gold;
+  const label = vfx.label || '';
+  if (typeof addJuiceShockV16 === 'function') addJuiceShockV16(x, y, color, strong ? 42 : vfx.ringRadius + 14, strong ? 0.40 : 0.28, strong ? 4 : 3);
+  else if (vfx.ringRadius > 0 || strong) state.rings.push({ x, y, r: strong ? 13 : Math.max(4, vfx.ringRadius), life: 0.28, maxLife: 0.28, color });
+  if (typeof addJuiceSparkV16 === 'function') addJuiceSparkV16(x, y, color, strong ? 12 : vfx.sparkCount, strong ? 72 : 48, strong ? 3.2 : 2.4);
+  if (label && typeof addJuiceTextV16 === 'function') addJuiceTextV16(x, y - 28, label, color, strong ? 16 : 13, 0.50);
+  else if (label) addFx(x, y - 24, label, color, strong ? 14 : 12);
+}
+
 function visualSkillBurstV17(x, y, color, label = '', strong = false) {
   if (typeof addJuiceShockV16 === 'function') addJuiceShockV16(x, y, color, strong ? 42 : 26, strong ? 0.40 : 0.28, strong ? 4 : 3);
   else state.rings.push({ x, y, r: strong ? 13 : 8, life: 0.28, maxLife: 0.28, color });
@@ -157,7 +173,7 @@ function patchFruitPassiveSkillsV17() {
         s.skillTimer = (s.skillTimer || 0) - dt;
         if (s.skillTimer <= 0) {
           const rank = skillRankV17(s.level);
-          const nearRush = enemyGroupV17(s.side).some(e => isCombatant(e) && e.laneIndex === s.laneIndex && isRoleV17(e, ['rush']) && Math.abs(e.y - s.y) < 100);
+          const nearRush = enemyGroupV17(s.side).some(e => isCombatant(e) && e.laneIndex === s.laneIndex && isRoleV17(e, ['raider']) && Math.abs(e.y - s.y) < 100);
           const pct = [0, 0.12, 0.16, 0.18, 0.20][rank] || 0.12;
           const counterMul = rank >= 3 && nearRush ? 1.35 : 1;
           const shield = Math.round(s.maxHp * pct * counterMul);
@@ -198,11 +214,13 @@ function patchFruitPassiveSkillsV17() {
         if (s.skillTimer <= 0) {
           const ally = nearestAllyOnLane(s.side, s.laneIndex);
           if (ally) {
-            const heal = Math.round(8 + s.level * 5 + s.atk * 0.55);
+            let heal = Math.round(8 + s.level * 5 + s.atk * 0.55);
+            if (s._bondHealBoost) heal = Math.round(heal * (1 + s._bondHealBoost));
+            if (ally._bondHealReceived) heal = Math.round(heal * (1 + ally._bondHealReceived));
             ally.hp = Math.min(ally.maxHp, ally.hp + heal);
             s.damageDone = (s.damageDone || 0) + heal;
             if (s.side === 'player') state.damageByType[s.type] = (state.damageByType[s.type] || 0) + heal;
-            state.rings.push({ x: ally.x, y: ally.y, r: 6, life: 0.25, maxLife: 0.25, color: '#ff9fbd' });
+            state.rings.push({ x: ally.x, y: ally.y, r: 6, life: 0.25, maxLife: 0.25, color: '#53E77B' });
           }
           s.skillTimer = Math.max(1.8, 4.4 - s.level * 0.22);
         }

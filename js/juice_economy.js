@@ -125,11 +125,11 @@
     // PVE 受控随机：前两次召唤先建立“前排 + 输出”基本阵型，避免经济球开局造成胜负两极化。
     const summonIndex = Math.max(0, Math.floor(Number(state.summonActionCount || 0)));
     if (summonIndex === 0) {
-      const fronts = list.filter(id => TYPES[id] && TYPES[id].role === 'tank');
+      const fronts = list.filter(id => TYPES[id]?.tags?.includes('tank'));
       if (fronts.length) return fronts[Math.floor(Math.random() * fronts.length)];
     }
     if (summonIndex === 1) {
-      const damage = list.filter(id => TYPES[id] && ['back', 'siege', 'rush'].includes(TYPES[id].role));
+      const damage = list.filter(id => TYPES[id]?.tags?.some(t => ['back', 'siege', 'rush'].includes(t)));
       if (damage.length) return damage[Math.floor(Math.random() * damage.length)];
     }
     if (Number(state._summonsWithoutPair || 0) >= 2) {

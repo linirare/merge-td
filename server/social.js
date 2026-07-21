@@ -95,9 +95,12 @@ function mountSocial(app) {
     if (!task_id) return res.status(400).json({ error: 'task_id required' });
     const t = db.prepare('SELECT * FROM tasks WHERE id=?').get(task_id);
     if (!t) return res.status(404).json({ error: 'task not found' });
-    // 审计S5:用原子UPDATE同时推进度+标记完成,避免并发双领奖励
-    db.prepare('INSERT OR IGNORE INTO user_tasks (uid,task_id,progress) VALUES (?,?,0)').run(req.uid, task_id);
-    const upResult = db.prepare('UPDATE user_tasks SET progress=progress+? WHERE uid=? AND task_id=? AND completed=0').run(delta || 1, req.uid, task_id);
+    // 审计S6:每任务每秒最多提交一次,防客户端批量刷进度
+    const now = Date.now();
+    const lastRow = db.prepare('SELECT last_progress_at FROM user_tasks WHERE uid=? AND task_id=?').get(req.uid, task_id);
+    if (lastRow && lastRow.last_progress_at && (now - lastRow.last_progress_at) < 1000) return res.json({ ok: true, throttled: true });
+    db.prepare('INSERT OR IGNORE INTO user_tasks (uid,task_id,progress,last_progress_at) VALUES (?,?,0,?)').run(req.uid, task_id, now);
+    const upResult = db.prepare('UPDATE user_tasks SET progress=progress+?, last_progress_at=? WHERE uid=? AND task_id=? AND completed=0').run(delta || 1, now, req.uid, task_id);
     if (upResult.changes === 0) return res.json({ ok: true, progress: t.target, already: true }); // 已完成,不再操作
     // 审计P2-17:用原子UPDATE同时检查进度+标记完成,避免SELECT→UPDATE之间的竞态
     const done = db.prepare('UPDATE user_tasks SET completed=1 WHERE uid=? AND task_id=? AND completed=0 AND progress>=?').run(req.uid, task_id, t.target);
@@ -123,6 +126,9 @@ function mountSocial(app) {
     if (!a) return res.status(404).json({ error: 'achievement not found' });
     const exists = db.prepare('SELECT * FROM user_achievements WHERE uid=? AND achv_id=?').get(req.uid, achv_id);
     if (exists) return res.json({ ok: false, msg: 'already unlocked' });
+    // 审计S7:成就解锁频率限制 — 上次解锁 >= 10 秒前才允许
+    const recent = db.prepare("SELECT (strftime('%s','now') - strftime('%s',unlocked_at)) AS sec FROM user_achievements WHERE uid=? ORDER BY unlocked_at DESC LIMIT 1").get(req.uid);
+    if (recent && recent.sec < 10) return res.json({ ok: false, msg: 'rate_limit' });
     db.prepare('INSERT INTO user_achievements (uid,achv_id) VALUES (?,?)').run(req.uid, achv_id);
     const r = safeRewardJson(a.reward_json);
     db.prepare('UPDATE users SET diamonds=diamonds+? WHERE uid=?').run(r.gems || 0, req.uid);
@@ -132,12 +138,21 @@ function mountSocial(app) {
   /* ========== 通行证 ========== */
   app.get('/api/battlepass', authMiddleware, (req, res) => res.json(db.prepare('SELECT * FROM battle_pass WHERE uid=?').get(req.uid) || { tier: 0, exp: 0, premium: 0 }));
   app.post('/api/battlepass/exp', authMiddleware, (req, res) => {
-    const exp = clampInt((req.body || {}).exp, 1, 500, 0); if (!exp) return res.json({ ok: false });
+    const exp = clampInt((req.body || {}).exp, 1, 10, 0); if (!exp) return res.json({ ok: false });
     db.prepare('INSERT OR IGNORE INTO battle_pass (uid,season,tier,exp) VALUES (?,?,0,0)').run(req.uid, 'S1');
-    const bp = db.prepare('SELECT tier,exp FROM battle_pass WHERE uid=?').get(req.uid);
-    let lv = bp.tier, xp = bp.exp + exp;
-    while (xp >= 100) { xp -= 100; lv++; }
-    db.prepare('UPDATE battle_pass SET tier=?,exp=? WHERE uid=?').run(Math.min(30, lv), xp, req.uid);
+    // 审计S8:每日通行证经验上限 300(≈3级封顶),防一次性刷满
+    const today = new Date().toISOString().slice(0, 10);
+    const bp = db.prepare('SELECT tier,exp,exp_date,exp_today FROM battle_pass WHERE uid=?').get(req.uid);
+    if (bp && bp.exp_date === today && (bp.exp_today || 0) >= 300) return res.json({ ok: true, capped: true, tier: bp.tier, exp: bp.exp });
+    const expToday = bp && bp.exp_date === today ? (bp.exp_today || 0) + exp : exp;
+    const capped = Math.min(300, expToday);
+    const added = capped - (bp && bp.exp_date === today ? (bp.exp_today || 0) : 0);
+    let lv = bp ? bp.tier : 0, xp = bp ? bp.exp : 0;
+    if (added > 0) {
+      xp += added;
+      while (xp >= 100) { xp -= 100; lv++; }
+      db.prepare('UPDATE battle_pass SET tier=?,exp=?,exp_date=?,exp_today=? WHERE uid=?').run(Math.min(30, lv), xp, today, capped, req.uid);
+    }
     res.json({ tier: Math.min(30, lv), exp: xp });
   });
   app.post('/api/battlepass/buy', authMiddleware, (req, res) => {

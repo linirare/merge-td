@@ -20,16 +20,22 @@ function clearTargetReferences(deadId) {
   const all = [...(state.playerSoldiers || []), ...(state.enemySoldiers || [])];
   for (const u of all) if (u && u.target === deadId) u.target = null;
 }function v15IsBackRole(s) {
-  const role = v15Role(s?.type);
-  return role === 'back' || role === 'support' || role === 'control' || role === 'siege';
+  const type = s?.type;
+  const tags = TYPES[type]?.tags;
+  if (Array.isArray(tags) && (tags.includes('back') || tags.includes('siege') || tags.includes('control') || tags.includes('support'))) return true;
+  const role = v15Role(type);
+  return role === 'shooter' || role === 'wildcard';
 }
 function v15FrontAlly(side, lane) {
   const group = side === 'player' ? state.playerSoldiers : state.enemySoldiers;
   let best = null;
   for (const s of group) {
     if (!isCombatant(s) || s.laneIndex !== lane) continue;
-    const role = v15Role(s.type);
-    if (role === 'merge' || role === 'support' || role === 'back' || role === 'control' || role === 'siege') continue;
+    const type = s.type;
+    const tags = TYPES[type]?.tags;
+    if (tags?.includes('merge') || tags?.includes('back') || tags?.includes('siege') || tags?.includes('control') || tags?.includes('support')) continue;
+    const role = v15Role(type);
+    if (role === 'wildcard' || role === 'shooter') continue;
     if (!best) best = s;
     else if (side === 'player' ? s.y < best.y : s.y > best.y) best = s;
   }
@@ -88,14 +94,18 @@ function patchBattleReportV15() {
     const enemyType = dangerLane >= 0 ? dominantEnemyType(dangerLane) : null;
     const unlocked = typeof progressUnlocked === 'function' ? progressUnlocked(meta) : activeDeck();
     const recommendType = enemyType ? (bestCounterForEnemy(enemyType, activeDeck()) || bestCounterForEnemy(enemyType, unlocked)) : null;
-    const deckRoles = new Set((activeDeck() || []).map(id => TYPES[id]?.role).filter(Boolean));
+    const deckTypes = (activeDeck() || []).map(id => TYPES[id]).filter(Boolean);
+    const hasTag = tag => deckTypes.some(t => t.tags && t.tags.includes(tag));
     const missingRoles = [];
-    if (!deckRoles.has('tank')) missingRoles.push('前排');
-    if (!deckRoles.has('back') && !deckRoles.has('rush')) missingRoles.push('输出');
-    if (!deckRoles.has('siege')) missingRoles.push('攻城');
-    if (!deckRoles.has('control')) missingRoles.push('控制');
-    if (!deckRoles.has('support') && state.currentLevel >= 8) missingRoles.push('辅助');
-    const rolePick = role => (unlocked || []).find(id => TYPES[id]?.role === role) || '';
+    if (!hasTag('tank')) missingRoles.push('前排');
+    if (!hasTag('back') && !hasTag('rush')) missingRoles.push('输出');
+    if (!hasTag('siege')) missingRoles.push('攻城');
+    if (!hasTag('control')) missingRoles.push('控制');
+    if (!hasTag('support') && state.currentLevel >= 8) missingRoles.push('辅助');
+    const rolePick = (role, tag) => (unlocked || []).find(id => {
+      const t = TYPES[id];
+      return t && (t.role === role || (t.tags && t.tags.includes(tag)));
+    }) || '';
     const bossTip = ({
       shield: 'Boss机制：护盾期用攻城单位破盾，别只堆普攻。',
       artillery: 'Boss机制：炮击会惩罚中路扎堆，三路分散推进。',
@@ -107,7 +117,7 @@ function patchBattleReportV15() {
     if (state.enemyWallDamageDealt > 0) tips.push(`攻城伤害：${Math.round(state.enemyWallDamageDealt)}`);
     if (!win && dangerLane >= 0) tips.push(`被突破路线：第${dangerLane + 1}路`);
     if (!win && recommendType && enemyType) tips.push(`建议：补 ${TYPES[recommendType].name}，职责克制 ${TYPES[enemyType].name}`);
-    if (!win && missingRoles.length) tips.push(`阵容缺口：${missingRoles.slice(0, 3).join(' / ')}${rolePick('tank') ? `，可试 ${TYPES[rolePick('tank')].name}` : ''}${rolePick('siege') ? `、${TYPES[rolePick('siege')].name}` : ''}`);
+    if (!win && missingRoles.length) tips.push(`阵容缺口：${missingRoles.slice(0, 3).join(' / ')}${rolePick('shell', 'tank') ? `，可试 ${TYPES[rolePick('shell', 'tank')].name}` : ''}${rolePick('', 'siege') ? `、${TYPES[rolePick('', 'siege')].name}` : ''}`);
     if (!win && bossTip) tips.push(bossTip);
     if (!win && state.playerWallDamageTaken > state.enemyWallDamageDealt) tips.push('升级方向：先升前排血量和果堡，再补主力攻击。');
     else if (!win) tips.push('升级方向：优先升本局主力攻击，攻城关同步升攻城单位。');

@@ -176,6 +176,9 @@ try { db.exec('ALTER TABLE announcements ADD COLUMN rewards_json TEXT DEFAULT "{
 try { db.exec('ALTER TABLE chat_logs ADD COLUMN source TEXT DEFAULT "rest"'); } catch(e) {}
 try { db.exec('ALTER TABLE users ADD COLUMN ladder_rank TEXT DEFAULT "新手"'); } catch(e) {}
 try { db.exec('ALTER TABLE users ADD COLUMN ladder_score INTEGER DEFAULT 0'); } catch(e) {}
+try { db.exec("ALTER TABLE user_tasks ADD COLUMN last_progress_at INTEGER DEFAULT 0"); } catch(e) {}
+try { db.exec("ALTER TABLE battle_pass ADD COLUMN exp_date TEXT DEFAULT ''"); } catch(e) {}
+try { db.exec("ALTER TABLE battle_pass ADD COLUMN exp_today INTEGER DEFAULT 0"); } catch(e) {}
 
 // 索引(消除全表扫描:邮件按 uid、排行按各分数列排序、好友反向查、回放按对手)
 db.exec(`

@@ -47,23 +47,22 @@ function tierName(type, level) {
   return TIER_NAME[type]?.[tierIndex(level)] || `${TYPES[type]?.name || '水果'}${TIER_LABEL[tierKey(level)] || '兵'}`;
 }
 function tierDeployCd(type, level) {
-  const role = TYPES[type]?.role;
+  const tags = TYPES[type]?.tags;
   let cd = 12.0;
-  if (role === 'rush') cd = 10.8;
-  else if (role === 'back' || role === 'front') cd = 12.0;
-  else if (role === 'tank') cd = 12.9;
-  else if (role === 'control') cd = 13.4;
-  else if (role === 'support') cd = 14.8;
-  else if (role === 'siege') cd = 15.6;
-  else if (role === 'merge') cd = 15.0;
+  if (tags?.includes('rush')) cd = 10.8;
+  else if (tags?.includes('tank')) cd = 12.9;
+  else if (tags?.includes('control')) cd = 13.4;
+  else if (tags?.includes('support')) cd = 14.8;
+  else if (tags?.includes('siege')) cd = 15.6;
+  else if (tags?.includes('merge')) cd = 15.0;
   const discount = [0,0,0.02,0.04,0.06,0.08,0.10,0.12][Math.max(1, Math.min(MAX_LEVEL, level))] || 0;
   return Math.max(9.2, cd * (1 - discount));
 }
 function tierRoleSlot(type) {
-  const role = TYPES[type]?.role;
-  if (role === 'tank' || role === 'front' || role === 'rush') return 'front';
-  if (role === 'siege') return 'siege';
-  if (role === 'support' || role === 'control' || role === 'back') return 'back';
+  const tags = TYPES[type]?.tags;
+  if (tags?.includes('tank') || tags?.includes('front') || tags?.includes('rush')) return 'front';
+  if (tags?.includes('siege')) return 'siege';
+  if (tags?.includes('support') || tags?.includes('control') || tags?.includes('back')) return 'back';
   return 'engine';
 }
 function tierTroops(side, lane = null) {
@@ -82,13 +81,13 @@ function applyTroopTierStats(s) {
   const type = s.type;
   const level = s.level || 1;
   const base = TYPES[type] || TYPES[DEFAULT_DECK[0]];
-  const role = base.role;
+  const tags = Array.isArray(base.tags) ? base.tags : [];
   const tier = tierKey(level);
   const oldRatio = s.maxHp > 0 ? clamp01(s.hp / s.maxHp) : 1;
   const levelMul = LEVEL_MUL[level] || 1;
   const stacks = Math.min(2, s.reinforceStacks || 0);
-  const hpReinforce = 1 + stacks * (role === 'tank' || role === 'front' ? 0.08 : 0.06);
-  const atkReinforce = 1 + stacks * (role === 'siege' || role === 'back' || role === 'rush' ? 0.06 : 0.05);
+  const hpReinforce = 1 + stacks * (tags.includes('tank') || tags.includes('front') ? 0.08 : 0.06);
+  const atkReinforce = 1 + stacks * (tags.includes('siege') || tags.includes('back') || tags.includes('rush') ? 0.06 : 0.05);
   // 英雄等级 + 科技倍率（玩家方有效，PvP 沙箱自动跳过）
   let hpMul = 1, atkMul = 1;
   if (s.side === 'player' && typeof meta !== 'undefined') {
@@ -101,11 +100,11 @@ function applyTroopTierStats(s) {
     atkMul *= techAtk;
     hpMul *= techHp;
   }
-  s.maxHp = Math.round(base.hp * levelMul * (TIER_HP_MUL[tier] || 1) * hpReinforce * (role === 'tank' ? 1.10 : 1) * hpMul);
+  s.maxHp = Math.round(base.hp * levelMul * (TIER_HP_MUL[tier] || 1) * hpReinforce * (tags.includes('tank') ? 1.10 : 1) * hpMul);
   s.hp = Math.max(1, Math.round(s.maxHp * oldRatio));
   s.atk = Math.round(base.atk * levelMul * (TIER_ATK_MUL[tier] || 1) * atkReinforce * atkMul);
-  s.siege = (typeof roleStats === 'function' ? roleStats(base.role).siege : (base.siege || 1));
-  s.armor = (typeof roleStats === 'function' ? roleStats(base.role).armor : (base.armor || 0));
+  s.siege = (base.siege != null ? base.siege : (typeof roleStats === 'function' ? roleStats(base.role).siege : 1));
+  s.armor = (base.armor != null ? base.armor : (typeof roleStats === 'function' ? roleStats(base.role).armor : 0));
   s.troopTier = tier;
   s.troopName = tierName(type, level);
   s.troopScale = TIER_SCALE[tier] || 1;

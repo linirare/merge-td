@@ -79,6 +79,29 @@ const TYPES = {
   chill_juice:      { id:'chill_juice',      name:'冰镇果汁球', icon:'🧊', color:'#9be7ff', rarity:'normal', role:'shell', range:'support',atk:3,  hp:26, rate:1.50,  siege:0.05,  tags:['econ','sp_discount'], desc:'每20s下一次操作消耗减半, Lv4 15s, Lv7 免费。', skill:'sp_discount' },
 };
 
+/* ——— 技能效果分类：6 类，用于 VFX 调度 ——— */
+const SKILL_TYPE_MAP = {
+  /* self-buff: 自身增益（盾/冲锋/免疫） */
+  watermelon_guard:'self-buff', coconut_guard:'self-buff', avocado_brawler:'self-buff', strawberry_knight:'self-buff',
+  /* single-projectile: 单体弹道 / 近战攻击附带效果 */
+  grape_archer:'single-projectile', orange_cannon:'single-projectile', blueberry_sniper:'single-projectile',
+  mango_arbalest:'single-projectile', pear_frost:'single-projectile', banana_raider:'single-projectile',
+  lemon_assassin:'single-projectile', olive_assassin:'single-projectile', pineapple_lancer:'single-projectile',
+  dragonfruit_warrior:'single-projectile', melon_shaman:'single-projectile',
+  /* line-aoe: 范围伤害 */
+  cherry_bomber:'line-aoe', pumpkin_roller:'line-aoe',
+  /* special: 治疗 / SP 经济 / 合成辅助 */
+  peach_medic:'special', mint_supply:'special', shock_lemon:'special',
+  honey_save:'special', ferment_grape:'special', chill_juice:'special',
+  kiwi_wildcard:'special', passion_copy:'special',
+};
+const SKILL_VFX = {
+  'self-buff':         { ringColor:'#53e77b', ringRadius:8,  sparkCount:5,  label:'强化' },
+  'single-projectile': { ringColor:null,       ringRadius:0,  sparkCount:3,  label:null },
+  'line-aoe':          { ringColor:'#ff6b4a',  ringRadius:14, sparkCount:10, label:'范围' },
+  special:             { ringColor:'#b076ff',  ringRadius:6,  sparkCount:4,  label:null },
+};
+
 if (typeof applyWorldThemeToTypes === 'function') applyWorldThemeToTypes(TYPES);
 
 const UNIT_POOL = Object.keys(TYPES);
@@ -172,21 +195,6 @@ const ROLE_COUNTER_DMG = 1.35;
 const ROLE_SOFT_COUNTER_DMG = 1.22;
 const ROLE_WEAK_DMG = 0.85;
 const COUNTER_DMG = ROLE_COUNTER_DMG;
-const COUNTER = {
-  grape_archer: 'front',
-  blueberry_sniper: 'back',
-  banana_raider: 'back',
-  lemon_assassin: 'support',
-  pineapple_lancer: 'rush',
-  watermelon_guard: 'back',
-  coconut_guard: 'back',
-  orange_cannon: 'tank',
-  pumpkin_roller: 'tank',
-  pear_frost: 'rush',
-  peach_medic: '',
-  kiwi_wildcard: '',
-  passion_copy: '',
-};
 // 4×4 职责克制矩阵(设计档 fruit-assault-final.md §2.3),幅度 ±35%(0.80~1.35)。
 // 行=攻击方职责,列=防御方职责。wildcard(万能)不参与克制,返回 1。
 // 克制环: 甲壳兵→射手→枪刺兵→游骑兵→甲壳兵
@@ -213,8 +221,25 @@ function roleCounterText(sourceType, targetType) {
 }
 // 克制飘字按"攻击方职责"配色(战斗屏 UI 规范 §3):突击黄/后排紫/坦克绿/攻城橙/前排琥珀/控制青/辅助浅绿
 function roleFxColor(sourceType) {
-  const r = (TYPES[sourceType] || {}).role;
-  return ({ rush: '#FFD24A', back: '#B076FF', tank: '#53E77B', siege: '#FF9A35', front: '#FFB547', control: '#38C6E8', support: '#8FE0A0' })[r] || '#F5C242';
+  const t = TYPES[sourceType] || {};
+  const tags = Array.isArray(t.tags) ? t.tags : [];
+  for (const tag of tags) {
+    const color = ({ rush: '#FFD24A', back: '#B076FF', tank: '#53E77B', siege: '#FF9A35', front: '#FFB547', control: '#38C6E8', support: '#8FE0A0' })[tag];
+    if (color) return color;
+  }
+  const roleMap = { raider: '#FFD24A', shooter: '#B076FF', shell: '#53E77B', spike: '#FFB547', wildcard: '#8FE0A0' };
+  return roleMap[t.role || ''] || '#F5C242';
+}
+/* 职责基础属性：护甲/攻城/移速 — 各兵种 TYPES 中的显式值会优先于此处 */
+function roleStats(role) {
+  const map = {
+    shell:    { armor:12, siege:0.75, move:78 },
+    spike:    { armor:8,  siege:0.92, move:82 },
+    shooter:  { armor:3,  siege:1.00, move:86 },
+    raider:   { armor:5,  siege:1.00, move:92 },
+    wildcard: { armor:0,  siege:0.20, move:86 },
+  };
+  return map[role] || { armor:0, siege:1, move:86 };
 }
 function bestCounterForEnemy(enemyType, pool = null) {
   const list = pool || UNIT_POOL;

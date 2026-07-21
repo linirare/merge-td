@@ -237,12 +237,11 @@ function battleUnitTierScaleV59(tier) {
 }
 function battleUnitRoleScaleV59(type) {
   const role = TYPES[type]?.role;
-  if (role === 'tank') return 1.09;
-  if (role === 'front') return 1.04;
-  if (role === 'siege') return 1.05;
-  if (role === 'rush') return 0.96;
-  if (role === 'back') return 0.92;
-  if (role === 'support' || role === 'control') return 0.90;
+  if (role === 'shell') return 1.09;
+  if (role === 'spike') return 1.04;
+  if (role === 'raider') return 0.96;
+  if (role === 'shooter') return 0.92;
+  if (role === 'wildcard') return 0.90;
   return 1;
 }
 function battleUnitStyleV59(side) {

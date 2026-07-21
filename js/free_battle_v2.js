@@ -117,9 +117,10 @@
   function moveVector(s, tx, ty, multiplier = 1) {
     const dx = tx - s.x, dy = ty - s.y, d = Math.hypot(dx, dy);
     if (d <= 0.5) return;
+    const dt = typeof dt_global === 'number' ? dt_global : 1/60;
     const tide = worldTideState(state.time).multiplier;
     const base = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : (s.move || CHASE_SPEED);
-    const step = Math.min(d, base * multiplier * tide * dt_global);
+    const step = Math.min(d, base * multiplier * tide * dt);
     s.x += dx / d * step; s.y += dy / d * step;
     keepInsideBattlefield(s);
   }
@@ -160,25 +161,28 @@
     if (typeof isDisabled === 'function' && isDisabled(s)) return;
     if (!isCombatant(s)) { moveOutOfCastle(s); return; }
     const role = freeRole(s.type);
-    if (role === 'support') {
+    const isSupport = TYPES[s.type]?.tags?.includes('support') || TYPES[s.type]?.tags?.includes('heal');
+    if (isSupport) {
       const ally = woundedAlly(s);
       if (ally && Math.hypot(ally.x - s.x, ally.y - s.y) > 52) { s.mode = 'support'; moveVector(s, ally.x, ally.y + (s.side === 'player' ? 42 : -42), .8); return; }
     }
+    const isSiege = (TYPES[s.type]?.siege || 0) > 0.5;
     if (reachedWall(s)) {
-      // 到墙了:先找面前敌人,有就打,没就撞墙
-      const blockers = enemies.filter(e => isCombatant(e) && Math.hypot(e.x - s.x, e.y - s.y) <= (role === 'siege' ? 52 : 150)
+      const scanR = isSiege ? 52 : 150;
+      const blockers = enemies.filter(e => isCombatant(e) && Math.hypot(e.x - s.x, e.y - s.y) <= scanR
         && (Math.hypot(e.x - s.x, e.y - s.y) < 50 || (s.side === 'player' ? e.y <= s.y + 18 : e.y >= s.y - 18)));
       const blocker = blockers.length ? blockers.reduce((a, b) => Math.hypot(a.x - s.x, a.y - s.y) < Math.hypot(b.x - s.x, b.y - s.y) ? a : b) : null;
       if (blocker) { s.target = blocker.id; attackTarget(s, blocker); return; }
       ramWall(s);
       return;
     }
-    const target = role === 'siege' ? nearestBlocker(s, enemies, 64) : findTargetFree(s, enemies);
+    const target = isSiege ? nearestBlocker(s, enemies, 64) : findTargetFree(s, enemies);
     if (target) { s.target = target.id; attackTarget(s, target); return; }
     advanceFree(s);
   }
 
   function applySeparationFree(soldiers) {
+    const dt = typeof dt_global === 'number' ? dt_global : 1/60;
     for (let i = 0; i < soldiers.length; i++) {
       const a = soldiers[i]; if (!isCombatant(a)) continue;
       let px = 0, py = 0;
@@ -188,20 +192,21 @@
         if (d > 0 && d < 34) { const f = (34 - d) / 34; px += dx / d * f; py += dy / d * f; }
         else if (d === 0) px += stableHash(a.id) % 2 ? .4 : -.4;
       }
-      a.x = clamp(a.x + px * 34 * dt_global, 24, W - 24);
-      if (!String(a.mode).startsWith('siege')) a.y = clamp(a.y + py * 24 * dt_global, fieldTop(), fieldBottom());
+      a.x = clamp(a.x + px * 34 * dt, 24, W - 24);
+      if (!String(a.mode).startsWith('siege')) a.y = clamp(a.y + py * 24 * dt, fieldTop(), fieldBottom());
     }
   }
 
   function attackWallFree(s) {
     if (!isCombatant(s)) return;
+    const dt = typeof dt_global === 'number' ? dt_global : 1/60;
     const wall = wallDataFor(s), x = freeSiegeX(s);
     s.mode = 'siege'; s.siegeSlot = stableHash(s.id) % 12;
-    s.x += (x - s.x) * Math.min(1, dt_global * 7); s.y = wall.attackY;
-    s.atkTimer -= dt_global * worldTideState(state.time).multiplier;
+    s.x += (x - s.x) * Math.min(1, dt * 7); s.y = wall.attackY;
+    s.atkTimer -= dt * worldTideState(state.time).multiplier;
     if (s.atkTimer > 0) return;
     const siegeMul = Math.max(.2, s.siege || TYPES[s.type]?.siege || 1);
-    const dmg = Math.max(1, Math.round((s.level * (s.side === 'player' ? 1.45 : 1.25) + s.atk * (s.side === 'player' ? .105 : .075)) * siegeMul));
+    const dmg = Math.max(1, Math.round((s.level * 1.45 + s.atk * 0.3) * siegeMul));
     damageReefBarrier(s.side === 'player' ? 'enemy' : 'player', dmg, s);
     state.attackFx.push({ x1:s.x-8, y1:wall.attackY, x2:s.x+8, y2:wall.wallY+wall.wallH/2, life:.22, maxLife:.22 });
     s.atkTimer = WALL_ATTACK_INTERVAL;
@@ -209,12 +214,13 @@
 
   function rangedAttackWallFree(s) {
     if (!isCombatant(s)) return;
+    const dt = typeof dt_global === 'number' ? dt_global : 1/60;
     s.mode = 'siege';
-    s.atkTimer -= dt_global * worldTideState(state.time).multiplier;
+    s.atkTimer -= dt * worldTideState(state.time).multiplier;
     if (s.atkTimer > 0) return;
     const wall = wallDataFor(s), siegeMul = Math.max(.2, s.siege || TYPES[s.type]?.siege || 1);
-    const openFieldBalance = freeRole(s.type) === 'siege' ? .64 : 1;
-    const dmg = Math.max(1, Math.round((s.level * 1.25 + s.atk * .085) * siegeMul * openFieldBalance));
+    const openFieldBalance = (TYPES[s.type]?.siege || 0) > 0.5 ? .64 : 1;
+    const dmg = Math.max(1, Math.round((s.level * 1.25 + s.atk * 0.3) * siegeMul * openFieldBalance));
     damageReefBarrier(s.side === 'player' ? 'enemy' : 'player', dmg, s);
     state.projectiles.push({ x:s.x, y:s.y, targetX:freeSiegeX(s), targetY:wall.wallY+wall.wallH/2, dmg:0, speed:245, color:TYPES[s.type]?.color || '#7de6ff', life:.35, side:s.side, reefVisual:true });
     s.atkTimer = s.rate;
@@ -245,7 +251,7 @@
     function sidePressure(list, side) {
       const alive = list.filter(isCombatant);
       const power = alive.reduce((n,u) => n + (u.atk || 0) + (u.hp || 0) * .32 + (u.level || 1) * 3, 0);
-      const siege = alive.filter(u => freeRole(u.type) === 'siege' || reachedWall(u)).length;
+      const siege = alive.filter(u => (TYPES[u.type]?.siege || 0) > 0.5 || reachedWall(u)).length;
       const depth = alive.length ? alive.reduce((n,u) => n + (side === 'player' ? (fieldBottom()-u.y) : (u.y-fieldTop())) / Math.max(1, LAYOUT.fieldH), 0) / alive.length : 0;
       return { power:Math.round(power), count:alive.length, siege, depth:Math.max(0, Math.min(1, depth)) };
     }

@@ -63,8 +63,8 @@ function tickStatus(s, dt) {
     se.burning.timer = Math.max(0, se.burning.timer - dt);
     se.burning.tickTimer -= dt;
     if (se.burning.tickTimer <= 0) {
-      se.burning.tickTimer = 1.0; // 1 tick per second = 3 damage per tick
-      const burnDmg = 3;
+      se.burning.tickTimer = 1.0;
+      const burnDmg = Math.round(3 * (se.burning.multiplier || 1));
       s.hp -= burnDmg;
       s.hitFlash = Math.max(s.hitFlash || 0, 0.18);
       if (typeof addFx === 'function') addFx(s.x, s.y - 20, `🔥${burnDmg}`, '#ff6b3a', 10);
@@ -105,24 +105,26 @@ function applyStatus(target, source, type, duration, opts = {}) {
   const srcType = (source && source.type) || '';
   const srcLevel = (source && source.level) || 1;
 
+  const controlExt = (source && source._bondControlExtend) || 0;
   switch (type) {
     case 'frozen':
-      se.frozen.timer = Math.max(se.frozen.timer || 0, duration);
+      se.frozen.timer = Math.max(se.frozen.timer || 0, duration + controlExt);
       break;
     case 'slowed':
-      se.slowed.timer = Math.max(se.slowed.timer || 0, duration);
-      se.slowed.mul = opts.mul || se.slowed.mul || 0.7; // 新施加默认 0.7,已有值保留(迁移时可能设 0.52)
+      se.slowed.timer = Math.max(se.slowed.timer || 0, duration + controlExt);
+      se.slowed.mul = opts.mul || se.slowed.mul || 0.7;
       break;
     case 'burning':
-      se.burning.timer = Math.max(se.burning.timer || 0, duration);
-      se.burning.tickTimer = 0; // immediate first tick
+      se.burning.timer = Math.max(se.burning.timer || 0, duration + controlExt);
+      se.burning.tickTimer = 0;
+      se.burning.multiplier = Math.max(se.burning.multiplier || 1, 1 + ((source && source._bondBurnBoost) || 0));
       break;
     case 'armorBreak':
       se.armorBreak.timer = Math.max(se.armorBreak.timer || 0, duration);
       se.armorBreak.value = Math.max(se.armorBreak.value || 0, opts.value || 5);
       break;
     case 'stunned':
-      se.stunned.timer = Math.max(se.stunned.timer || 0, duration);
+      se.stunned.timer = Math.max(se.stunned.timer || 0, duration + controlExt);
       break;
     case 'weakened':
       if (se.weakened.timer <= 0) se.weakened.atkFull = target.atk; // snapshot
@@ -198,7 +200,7 @@ function migrateOldStatus(s) {
     // take the more restrictive multiplier (lower = slower)
     const effectiveMul = Math.min(oldMul, newMul);
     const t = TYPES[s.type] || {};
-    const move = (typeof roleStats === 'function' ? roleStats(t.role).move : (t.move || 86));
+    const move = (t.move != null ? t.move : (typeof roleStats === 'function' ? roleStats(t.role).move : 86));
     // 修#2:恢复 78% 速度下限(原 fruit_mechanics.fruitMoveSpeed 有,v61 shim 时丢了)。
     //       丢失后慢速单位(move 64-72)+减速叠加可掉到正常的 34-51%,表现为爬行/卡住。
     return Math.max(base * 0.78, base * (move / 92) * effectiveMul);

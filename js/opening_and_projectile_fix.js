@@ -60,7 +60,7 @@ function patchProjectileV15() {
         if (p.slow) { tgt.slowTimer = 2.2 + (tgt.level || 1) * 0.12; tgt.slowMul = 0.52; }
         // 樱桃炸弹:范围炸弹,炸目标周围同侧敌人
         if (p.aoe) {
-          const aoeR = 44, aoeDmg = Math.max(1, Math.round(p.dmg * 0.6));
+          const aoeR = Math.round(44 * (1 + (p.bondAoeRange || 0))), aoeDmg = Math.max(1, Math.round(p.dmg * 0.6));
           for (const e of enemies) {
             if (e === tgt || !isCombatant(e)) continue;
             if (Math.hypot(e.x - tgt.x, e.y - tgt.y) <= aoeR) {

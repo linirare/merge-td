@@ -37,7 +37,7 @@ function labSkillV21(id) {
 }
 function labRoleLabelV21(role) {
   if (typeof roleLabelV20 === 'function') return roleLabelV20(role);
-  return ({ tank:'前排', back:'远程', rush:'突击', front:'枪线', siege:'攻城', control:'控制', support:'辅助', merge:'合成' })[role] || role;
+  return ({ shell:'前排', shooter:'远程', raider:'突击', spike:'枪线', wildcard:'全能' })[role] || role;
 }
 function labSkillStateV21(id) {
   return ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'].includes(id) ? '技能已实装' : '技能待接入';

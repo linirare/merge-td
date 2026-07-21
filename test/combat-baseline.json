@@ -2,35 +2,35 @@
   "duels": {
     "banana_vs_watermelon_adjacent": {
       "engage": 20,
-      "frames": 24,
+      "frames": 152,
       "winner": "player",
-      "pHp": 63,
+      "pHp": 21,
       "eHp": 0
     },
     "banana_vs_watermelon_sameLane": {
       "engage": 7,
-      "frames": 9,
+      "frames": 106,
       "winner": "player",
-      "pHp": 63,
+      "pHp": 35,
       "eHp": 0
     },
     "lemon_vs_pineapple": {
       "engage": 4,
-      "frames": 5,
+      "frames": 4,
       "winner": "enemy",
       "pHp": 0,
       "eHp": 94
     },
     "sniper_vs_banana": {
-      "engage": 75,
-      "frames": 76,
+      "engage": 80,
+      "frames": 128,
       "winner": "enemy",
       "pHp": 0,
       "eHp": 63
     },
     "frost_vs_coconut": {
-      "engage": 98,
-      "frames": 111,
+      "engage": 86,
+      "frames": 372,
       "winner": "enemy",
       "pHp": 0,
       "eHp": 172
@@ -42,10 +42,10 @@
     "pumpkin_600f": 1
   },
   "skirmish_900f": {
-    "pAlive": 0,
+    "pAlive": 2,
     "eAlive": 0,
     "pWall": 600,
-    "eWall": 599,
+    "eWall": 600,
     "phase": "playing"
   },
   "boss_melon_shield": 0,

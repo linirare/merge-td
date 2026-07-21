@@ -12,11 +12,13 @@
 
 function fruitRange(s) {
   const t = TYPES[s.type] || {};
-  if (t.range === 'long') return 154;
-  if (t.range === 'far') return 118;
-  if (t.range === 'mid') return 42;
-  if (t.range === 'support') return 96;
-  return 24;
+  let r;
+  if (t.range === 'long') r = 154;
+  else if (t.range === 'far') r = 118;
+  else if (t.range === 'mid') r = 42;
+  else if (t.range === 'support') r = 96;
+  else r = 24;
+  return Math.round(r * (1 + (s._bondRangeBonus || 0)));
 }
 function fruitIsBackline(s) {
   const role = TYPES[s.type]?.role;
@@ -24,7 +26,7 @@ function fruitIsBackline(s) {
 }
 function fruitMoveSpeed(s, base) {
   const t = TYPES[s.type] || {};
-  const move = (typeof roleStats === 'function' ? roleStats(t.role).move : (t.move || 86));
+  const move = (t.move != null ? t.move : (typeof roleStats === 'function' ? roleStats(t.role).move : 86));
   const slow = s.slowTimer > 0 ? (s.slowMul || 0.55) : 1;
   return Math.max(base * 0.78, base * (move / 92) * slow); // 不低于基准的 78%,防慢速单位在攻城/追击时像卡住
 }
@@ -93,12 +95,14 @@ function updateFruitPassiveSkills(dt) {
     if (s.type === 'peach_medic' && s.skillTimer <= 0) {
       const ally = nearestAllyOnLane(s.side, s.laneIndex);
       if (ally) {
-        const heal = Math.round(8 + s.level * 5 + s.atk * 0.55);
+        let heal = Math.round(8 + s.level * 5 + s.atk * 0.55);
+        if (s._bondHealBoost) heal = Math.round(heal * (1 + s._bondHealBoost));
+        if (ally._bondHealReceived) heal = Math.round(heal * (1 + ally._bondHealReceived));
         ally.hp = Math.min(ally.maxHp, ally.hp + heal);
         s.damageDone = (s.damageDone || 0) + heal;
         if (s.side === 'player') state.damageByType[s.type] = (state.damageByType[s.type] || 0) + heal;
-        addFx(ally.x, ally.y - 24, `+${heal}`, '#ff9fbd', 12);
-        state.rings.push({ x: ally.x, y: ally.y, r: 6, life: 0.25, maxLife: 0.25, color: '#ff9fbd' });
+        addFx(ally.x, ally.y - 24, `+${heal}`, '#53E77B', 12);
+        state.rings.push({ x: ally.x, y: ally.y, r: 6, life: 0.25, maxLife: 0.25, color: '#53E77B' });
       }
       s.skillTimer = Math.max(1.8, 4.4 - s.level * 0.22);
     }

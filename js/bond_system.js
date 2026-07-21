@@ -13,7 +13,13 @@
       units: ['watermelon_guard', 'coconut_guard'],
       desc: '甲壳+15%',
       apply(sideList) {
-        for (const s of sideList) s.armor = Math.round((s.armor || 0) * 1.15);
+        for (const s of sideList) {
+          if (s._bondIronWall) continue;
+          s._bondIronWall = true;
+          const t = TYPES[s.type] || {};
+          const base = t.armor != null ? t.armor : (typeof roleStats === 'function' ? roleStats(t.role).armor : 14);
+          s.armor = Math.round(base * 1.15);
+        }
       },
     },
     {

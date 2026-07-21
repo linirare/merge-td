@@ -10,7 +10,7 @@
   document.head.appendChild(style);
 
   roleText = function roleTextFixed(role) {
-    return ({ tank:'前排', back:'输出', rush:'突击', front:'枪线', siege:'攻城', control:'控制', support:'辅助', merge:'合成辅助' })[role] || role;
+    return ({ shell:'前排', shooter:'输出', raider:'突击', spike:'枪线', wildcard:'全能' })[role] || role;
   };
 
   renderDeckPanel = function renderDeckPanelFixed() {

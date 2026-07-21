@@ -27,6 +27,9 @@
   }
   function grantSp(n) {
     if (n > 0) {
+      // 深海储能羁绊:SP恢复+15%
+      const hasSpBond = state.playerSoldiers.some(s => s.alive && s._bondSpRegen);
+      if (hasSpBond) n = Math.round(n * 1.15);
       state.sp = (state.sp || 0) + n;
       if (typeof pulseJuice === 'function') pulseJuice(n, 'gain');
     }

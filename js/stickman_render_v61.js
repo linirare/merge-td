@@ -711,19 +711,19 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
     ctx.scale(dir || 1, 1);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-    if (role === 'tank' || role === 'front') {
+    if (role === 'shell' || role === 'spike') {
       ctx.fillStyle = accent; ctx.strokeStyle = metal; ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(r*.32,-r*.18); ctx.lineTo(r*.72,-r*.05); ctx.lineTo(r*.64,r*.48);
       ctx.lineTo(r*.32,r*.68); ctx.lineTo(r*.06,r*.48); ctx.lineTo(r*.02,-r*.05); ctx.closePath();
       ctx.fill(); ctx.stroke();
       ctx.fillStyle = metal; ctx.beginPath(); ctx.arc(r*.35,r*.22,r*.09,0,Math.PI*2); ctx.fill();
-    } else if (role === 'rush') {
+    } else if (role === 'raider') {
       ctx.strokeStyle = wood; ctx.lineWidth = 3.5;
       ctx.beginPath(); ctx.moveTo(r*.12,r*.54); ctx.lineTo(r*.75,-r*.55); ctx.stroke();
       ctx.fillStyle = metal;
       ctx.beginPath(); ctx.moveTo(r*.72,-r*.65); ctx.lineTo(r*.91,-r*.48); ctx.lineTo(r*.64,-r*.42); ctx.closePath(); ctx.fill();
-    } else if (role === 'back') {
+    } else if (role === 'shooter') {
       ctx.strokeStyle = metal; ctx.lineWidth = 2.4;
       ctx.beginPath(); ctx.arc(r*.30,r*.06,r*.42,-Math.PI*.62,Math.PI*.62); ctx.stroke();
       ctx.strokeStyle = '#F8F4D7'; ctx.lineWidth = 1;
@@ -731,7 +731,7 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
       ctx.strokeStyle = wood; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(-r*.05,r*.15); ctx.lineTo(r*.68,-r*.16); ctx.stroke();
       ctx.fillStyle = metal; ctx.beginPath(); ctx.moveTo(r*.70,-r*.16); ctx.lineTo(r*.55,-r*.28); ctx.lineTo(r*.57,-r*.07); ctx.closePath(); ctx.fill();
-    } else if (role === 'siege') {
+    } else if (role === 'wildcard') {
       ctx.fillStyle = '#274B62'; ctx.strokeStyle = metal; ctx.lineWidth = 2;
       roundRect(r*.02,-r*.16,r*.74,r*.34,r*.12); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#111D2B'; ctx.beginPath(); ctx.arc(r*.12,r*.28,r*.14,0,Math.PI*2); ctx.fill();

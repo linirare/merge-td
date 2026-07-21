@@ -56,7 +56,7 @@ app.post('/api/auth/register', (req, res) => {
   db.prepare('INSERT INTO user_saves (uid) VALUES (?)').run(uid);
   db.prepare('INSERT INTO leaderboard (uid) VALUES (?)').run(uid);
   // 新手注册欢迎邮件
-  db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)').run(uid, '🎉 欢迎加入水果突击！', '这是您的注册大礼包，包含50000金币和50000钻石！点击领取后刷新页面即可到账。', JSON.stringify({ gold: 50000, diamonds: 50000 }));
+  db.prepare('INSERT INTO mail (uid, title, body, rewards_json) VALUES (?,?,?,?)').run(uid, '🎉 欢迎加入梦幻水世界！', '这是您的注册大礼包，包含50000金币和50000钻石！点击领取后刷新页面即可到账。', JSON.stringify({ gold: 50000, diamonds: 50000 }));
   return res.json(publicUser({ uid, token: signToken(uid), nickname: nicknameText, avatar: '🍉', level: 1, exp: 0, diamonds: 0, gold: 0 }));
 });
 
@@ -92,9 +92,12 @@ app.post('/api/save', authMiddleware, (req, res) => {
   db.prepare('UPDATE user_saves SET meta_json=?, shell_json=?, updated_at=CURRENT_TIMESTAMP WHERE uid=?').run(metaJson, shellJson, req.uid);
 
   const current = db.prepare('SELECT power, highest_stage FROM users WHERE uid=?').get(req.uid) || {};
-  const reportedPower = clampInt(b.power, 0, POWER_MAX, current.power || 0);
+  let reportedPower = clampInt(b.power, 0, POWER_MAX, current.power || 0);
+  // 单次战力增长上限 5000,防一次性提交假战力到底
+  const curPower = current.power || 0;
+  if (reportedPower > curPower + 5000) reportedPower = curPower + 5000;
   const reportedStage = clampInt(b.highest_stage, 1, 999, current.highest_stage || 1);
-  const power = Math.max(current.power || 0, reportedPower);
+  const power = Math.max(curPower, reportedPower);
   const highestStage = Math.max(current.highest_stage || 1, reportedStage);
   db.prepare('UPDATE users SET power=?, highest_stage=? WHERE uid=?').run(power, highestStage, req.uid);
   db.prepare('INSERT INTO leaderboard (uid, power, highest_stage) VALUES (?,?,?) ON CONFLICT(uid) DO UPDATE SET power=excluded.power, highest_stage=excluded.highest_stage, updated_at=CURRENT_TIMESTAMP').run(req.uid, power, highestStage);

@@ -8,6 +8,95 @@ const SOLDIER_SPEED = 92;
 const CHASE_SPEED = 82;
 const SIEGE_SPEED = 104;
 const FIELD_PAD = 12;
+
+/* ——— VFX 事件系统：战斗逻辑 emit → 渲染层消费 ——— */
+const _vfxListeners = [];
+function onVfx(fn) { _vfxListeners.push(fn); return fn; }
+function offVfx(fn) { const i = _vfxListeners.indexOf(fn); if (i >= 0) _vfxListeners.splice(i, 1); }
+function emitVfx(type, data) {
+  for (const fn of _vfxListeners) fn(type, data, state);
+}
+
+/* ——— 4 层同步命中反馈：将散落的 VFX 调用统一为单点入口 ——— */
+function triggerHitFeedback(target, source, dealt, opts = {}) {
+  const { isCrit = false, counterMul = 1, counterText = '', isProjectile = false, projectileColor = '#ffd24a', ownerType = '' } = opts;
+  if (!target) return;
+
+  // Layer 1: hitFlash — 受击闪白
+  target.hitFlash = isCrit ? 0.42 : 0.28;
+  if (isCrit) target._critHit = true;
+
+  // Layer 2: shake — 震屏 (近战/远程不同力度)
+  state.shake = Math.max(state.shake, Math.min(1.0, dealt * (isProjectile ? 0.008 : 0.012)));
+  if (isCrit) state.shake = Math.max(state.shake, 0.35);
+
+  // Layer 3: attack slash — 攻击划线 (仅近战)
+  if (source && !isProjectile) {
+    state.attackFx.push({ x1: source.x, y1: source.y, x2: target.x, y2: target.y, life: 0.22, maxLife: 0.22 });
+  }
+
+  // Layer 4: damage text — 伤害数字 + 克制文本
+  const srcRef = source || { type: ownerType, x: target.x, y: target.y };
+  const fxCol = typeof roleFxColor === 'function' ? roleFxColor(srcRef.type) : THEME.gold;
+  if (counterMul >= 1.25) {
+    addFx(target.x, target.y - 14, `克制 -${dealt}`, fxCol, 16);
+    state.rings.push({ x: target.x, y: target.y, r: 6, life: 0.3, maxLife: 0.3, color: fxCol });
+  } else if (counterMul > 1) {
+    addFx(target.x, target.y - 12, `优势 -${dealt}`, fxCol, 13);
+  } else if (counterText === '受制') {
+    addFx((srcRef.x + target.x) / 2, (srcRef.y + target.y) / 2 - 8, `受制 -${dealt}`, '#E23B4E', 12);
+  } else {
+    addFx((srcRef.x + target.x) / 2, (srcRef.y + target.y) / 2 - 8, `-${dealt}`, '#FFFFFF', 11);
+  }
+
+  // Layer 5: crit visuals — 暴击文字 + 光环
+  if (isCrit) {
+    addFx(target.x, target.y - 24, '暴击! x2', '#FFD700', 18);
+    state.rings.push({ x: target.x, y: target.y, r: 10, life: 0.35, maxLife: 0.35, color: '#fff2a9' });
+    state.shake = Math.max(state.shake, 0.35);
+  }
+
+  // Layer 6: projectile burst particles — 弹射物命中爆裂粒子
+  if (isProjectile) {
+    for (let j = 0; j < 5; j++) {
+      state.fx.push({
+        x: target.x + (Math.random() - 0.5) * 20, y: target.y + (Math.random() - 0.5) * 20,
+        text: '✦', color: projectileColor, size: 4 + Math.random() * 5,
+        life: 0.3 + Math.random() * 0.2, maxLife: 0.5,
+        vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60,
+      });
+    }
+    for (let j = 0; j < 3; j++) {
+      state.fx.push({
+        x: target.x, y: target.y, text: '·', color: projectileColor, size: 6,
+        life: 0.26, maxLife: 0.26,
+        vx: (Math.random() - 0.5) * 42, vy: (Math.random() - 0.5) * 42,
+      });
+    }
+  }
+
+  // Layer 7: emitVfx event for sprite backend
+  emitVfx('hit', { target, source, dealt, crit: isCrit, counterText, ownerType });
+}
+
+function _wrapVfxArrays() {
+  if (state.__vfxWrapped) return;
+  for (const key of ['attackFx', 'rings', 'fx']) {
+    const arr = state[key];
+    if (!arr || arr.__vfxWrapped) continue;
+    const origPush = arr.push.bind(arr);
+    arr.push = function(...items) {
+      const r = origPush(...items);
+      emitVfx(key, { action: 'push', items, array: this });
+      return r;
+    };
+    arr.__vfxWrapped = true;
+  }
+  state.__vfxWrapped = true;
+}
+window.emitVfx = emitVfx;
+window.onVfx = onVfx;
+window.offVfx = offVfx;
 function battleTimeLimit() {
   const k = Math.max(1, Number((state && state.currentLevel) || 1));
   if (k <= 5) return 120;
@@ -19,9 +108,9 @@ const LANE_TOLERANCE = 48;
 const SCAN_RANGE = 168;
 const TARGET_STICK_RANGE = 220;
 const WALL_ATTACK_INTERVAL = 1.05;
-const BOW_SAFE_MIN = 66;
+const BOW_SAFE_MIN = 0;
 const CROSS_LANE_EMERGENCY_RANGE = 120; // 修#6:50→120。邻路正常间距(~72px)原来看不见→径直去撞墙;放宽后邻路近敌可见
-const FIGHT_X_LEASH = 32;
+const FIGHT_X_LEASH = 20;
 
 const ATTACK_RANGES = {
   bow: 116,
@@ -73,7 +162,7 @@ function sameLaneBlocker(s, enemies) {
     let score = dy + xGap * 0.35 + laneDiff * 42;
     if (forward) score -= 24; else if (dy > 70) score += 36;
     if (roleMul >= 1.32) score -= 70; else if (roleMul >= 1.15) score -= 32;
-    if (typeof v15Role === 'function' && v15Role(s.type) === 'rush' && ['back','support','siege','control'].includes(v15Role(e.type))) score -= 55;
+    if (TYPES[s.type]?.tags?.includes('rush') && TYPES[e.type]?.tags?.some(t => ['back','support','siege','control'].includes(t))) score -= 55;
     if (score < bestScore) { bestScore = score; best = e; }
   }
   return best;
@@ -285,11 +374,10 @@ function findTarget(s, enemies) {
 
 function moveTowardEnemy(s, target) {
   s.mode = 'fight';
-  if (s._targetOffX === undefined) s._targetOffX = (Math.random() - 0.5) * 36;
   if (s._subLane === undefined) s._subLane = (s.id.charCodeAt(s.id.length - 1) % 3) - 1;
   const leash = FIGHT_X_LEASH * 1.8;
   const laneAnchor = s.laneX + s._subLane * 18;
-  const desiredX = clamp(target.x + s._targetOffX, laneAnchor - leash, laneAnchor + leash);
+  const desiredX = clamp(target.x, laneAnchor - leash, laneAnchor + leash);
   const dx = desiredX - s.x;
   const dy = target.y - s.y;
   const cspeed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : CHASE_SPEED;
@@ -297,18 +385,31 @@ function moveTowardEnemy(s, target) {
   const yStep = cspeed * dt_global;
 
   if (Math.abs(dx) > 3) s.x += Math.sign(dx) * Math.min(Math.abs(dx), xStep);
-  if (Math.abs(dy) > 3) s.y += Math.sign(dy) * Math.min(Math.abs(dy), yStep);
+  // 只前进不后退:向敌方城墙方向移动,绝对不向己方城墙方向走
+  if (Math.abs(dy) > 3) {
+    const fwd = s.side === 'player' ? -1 : 1;
+    if (Math.sign(dy) === fwd) {
+      const targetDist = Math.abs(dy);
+      const minGap = 20; // 保留最小间距,防敌我重合
+      if (targetDist > minGap) s.y += fwd * Math.min(targetDist - minGap, yStep);
+    }
+  }
   if (Math.abs(s.x - s.laneX) > leash + 12) steerToLane(s, 0.12);
   keepInsideBattlefield(s);
 }
 
 function kiteAsBackline(s, target) {
   s.mode = 'backline';
+  // 后退上限:最多退到战场本侧前 1/3,不再一路退到己方城墙
+  const top = fieldTop(), bot = fieldBottom();
+  const limitY = top + (bot - top) * (s.side === 'player' ? 0.32 : 0.68);
+  if (s.side === 'player' ? s.y >= limitY : s.y <= limitY) return false;
   steerToLane(s, 0.9);
   const dir = s.side === 'player' ? 1 : -1;
   const kspeed = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : CHASE_SPEED;
-  s.y += dir * kspeed * 0.68 * dt_global;
+  s.y += dir * kspeed * 0.50 * dt_global;
   keepInsideBattlefield(s);
+  return true;
 }
 
 function advanceTowardWall(s) {
@@ -326,11 +427,11 @@ function advanceTowardWall(s) {
     for (const u of group) {
       if (!isCombatant(u) || u.laneIndex !== s.laneIndex) continue;
       const ur = (TYPES[u.type] || {}).role;
-      if (ur === 'merge' || ur === 'support' || ur === 'back' || ur === 'control' || ur === 'siege') continue;
+      if (ur === 'shooter' || ur === 'wildcard') continue;
       if (!front) front = u;
       else if (s.side === 'player' ? u.y < front.y : u.y > front.y) front = u;
     }
-    const spacing = role === 'siege' ? 78 : role === 'support' ? 70 : 58;
+    const spacing = role === 'shooter' ? 70 : 58;
     const wallDir = s.side === 'player' ? -1 : 1; // 朝敌方城墙方向
     if (front) {
       const frontSieging = front.mode === 'siege' || front.mode === 'siege_queue' || front.mode === 'siege_support' || reachedWall(front);
@@ -387,7 +488,8 @@ function rangedAttackWall(s) {
   s.atkTimer = s.rate;
   const wall = wallDataFor(s);
   const siegeMul = Math.max(0.2, s.siege || TYPES[s.type]?.siege || 1);
-  const base = Math.round((s.level * 1.25 + s.atk * 0.085) * siegeMul);
+  const siegeBoost = 1 + (s._bondSiegeBoost || 0);
+  const base = Math.round((s.level * 1.25 + s.atk * 0.3) * siegeMul * siegeBoost);
   const dmg = Math.max(1, base);
   state.projectiles.push({
     x: s.x, y: s.y,
@@ -410,6 +512,19 @@ function siegeListFor(s) {
 function moveToSiegeQueue(s, idx, wall) {
   s.mode = 'siege_queue';
   s.siegeSlot = idx;
+  // 攻城排队超时：5 秒没进城就回撤（仅当墙前有阻挡者时退去打阻挡者）
+  const hasBlocker = sameLaneBlocker(s, s.side === 'player' ? state.enemySoldiers : state.playerSoldiers);
+  if (hasBlocker) {
+    s._siegeWaitTimer = (s._siegeWaitTimer || 0) + dt_global;
+    if (s._siegeWaitTimer > 5.0) {
+      s.mode = 'march';
+      s.target = hasBlocker.id;
+      delete s._siegeWaitTimer;
+      return;
+    }
+  } else {
+    delete s._siegeWaitTimer;
+  }
   const row = Math.floor((idx - laneSlotCount()) / laneSlotCount()) + 1;
   const QSPREAD = 22, QROW = 18;
   const offset = ((idx % laneSlotCount()) - (laneSlotCount() - 1) / 2) * QSPREAD;
@@ -445,9 +560,8 @@ function attackWall(s) {
     s.atkTimer -= dt_global;
     if (s.atkTimer > 0) return;
     const siegeMul = Math.max(0.2, s.siege || TYPES[s.type]?.siege || 1);
-    const base = s.side === 'player'
-      ? Math.round((s.level * 1.45 + s.atk * 0.105) * siegeMul)
-      : Math.round((s.level * 1.25 + s.atk * 0.075) * siegeMul);
+    const siegeBoost = 1 + (s._bondSiegeBoost || 0);
+    const base = Math.round((s.level * 1.45 + s.atk * 0.3) * siegeMul * siegeBoost);
     let dmg = Math.max(1, base);
     if (s.side === 'player') {
       state.enemyWallHp = Math.max(0, state.enemyWallHp - dmg); state.enemyWallDamageDealt += dmg;
@@ -548,12 +662,21 @@ function attackTarget(s, target) {
   const isBack = typeof fruitIsBackline === 'function' ? fruitIsBackline(s) : (TYPES[s.type]?.role === 'shooter');
   const melee = ['shell','spike','raider'].includes((TYPES[s.type] || {}).role);
 
-  // 近战 stance(原 combat_pacing): 距离 > 30 先移近
-  if (melee) { const d = Math.hypot(s.x - target.x, s.y - target.y); if (d > 30) { moveTowardEnemy(s, target); return; } }
+  // 近战 stance:距离 >30 先移近,目标在身后时只前进不后退
+  if (melee) {
+    const d = Math.hypot(s.x - target.x, s.y - target.y);
+    if (d > 30) {
+      if (!isForwardOf(s, target)) { advanceTowardWall(s); return; }
+      moveTowardEnemy(s, target); return;
+    }
+  }
 
   const dx = s.x - target.x, dy = s.y - target.y, dist = Math.sqrt(dx*dx + dy*dy);
-  if (isBack && !reachedWall(s) && dist < BOW_SAFE_MIN) { kiteAsBackline(s, target); return; }
-  if (dist > range) { moveTowardEnemy(s, target); return; }
+  if (isBack && !reachedWall(s) && dist < BOW_SAFE_MIN) { if (kiteAsBackline(s, target)) return; }
+  if (dist > range) {
+    if (!isForwardOf(s, target)) { advanceTowardWall(s); return; }
+    moveTowardEnemy(s, target); return;
+  }
   if (dist > range + 6) return;
 
   s.mode = isBack ? 'backline' : 'fight';
@@ -562,51 +685,28 @@ function attackTarget(s, target) {
 
   const counterMul = typeof roleCounterMultiplier === 'function' ? roleCounterMultiplier(s.type, target.type) : 1;
   const counterText = typeof roleCounterText === 'function' ? roleCounterText(s.type, target.type) : '';
-  let dmg = Math.round(s.atk * counterMul);
-  // 暴击:10%概率×2(参考三国10%暴击设计)
-  const isCrit = Math.random() < 0.10;
+  const antiRaider = (s._bondAntiRaider || 0) > 0 && (TYPES[target.type]?.role === 'raider') ? (1 + s._bondAntiRaider) : 1;
+  let dmg = Math.round(s.atk * counterMul * antiRaider);
+  // 暴击:10%基础概率 + 羁绊加成(如双鲨突击+20%)
+  const isCrit = Math.random() < (0.10 + (s._bondCritBonus || 0));
   if (isCrit) dmg = Math.round(dmg * 2);
-  s.atkTimer = s.rate;
+  s.atkTimer = s.rate * (s._bondRateBoost || 1);
 
   if (isBack && s.type !== 'peach_medic') {
     playSfx('arrow');
     let cherryAoe = false;
     if (s.type === 'cherry_bomber' && (s.level || 1) >= 4) { s._cherryShot = (s._cherryShot || 0) + 1; if (s._cherryShot % 5 === 0) cherryAoe = true; }
-    state.projectiles.push({ x: s.x, y: s.y, targetX: target.x, targetY: target.y, targetId: target.id, dmg, speed: s.type === 'blueberry_sniper' ? 315 : 245, color: TYPES[s.type]?.color || '#ff6b4a', life: 1.15, side: s.side, counterHit: !!counterText && counterMul > 1, counterMul: counterMul, ownerType: s.type, ownerLevel: s.level, slow: s.type === 'pear_frost', aoe: cherryAoe, firstHit: s.firstHit, crit: isCrit });
+    state.projectiles.push({ x: s.x, y: s.y, targetX: target.x, targetY: target.y, targetId: target.id, dmg, speed: s.type === 'blueberry_sniper' ? 315 : 245, color: TYPES[s.type]?.color || '#ff6b4a', life: 1.15, side: s.side, counterHit: !!counterText && counterMul > 1, counterMul: counterMul, ownerType: s.type, ownerLevel: s.level, slow: s.type === 'pear_frost', aoe: cherryAoe, firstHit: s.firstHit, crit: isCrit, bondAoeRange: s._bondAoeRange || 0 });
     s.firstHit = false;
     return;
   }
 
   playSfx('hit');
   const dealt = typeof applyFruitDamage === 'function' ? applyFruitDamage(target, dmg, s) : dmg;
-  if (typeof applyFruitDamage !== 'function') { target.hp -= dealt; target.hitFlash = 0.28; }
-  // 近战暴击:兵身金闪+更久霸体
-  if (isCrit) { target._critHit = true; target.hitFlash = Math.max(target.hitFlash || 0, 0.42); }
+  if (typeof applyFruitDamage !== 'function') { target.hp -= dealt; }
   trackDamage(s, dealt, false);
-  // 命中震屏:近战伤害按比例震动
-  state.shake = Math.max(state.shake, Math.min(1.0, dealt * 0.012));
-  // 受击微抖动:只有视觉碰撞效果,不影响移动轨迹
-  // (之前版本的击退已移除,因为会干扰敌人推进逻辑)
   if (s.type === 'pear_frost') { target.slowTimer = 2.2 + s.level * 0.18; target.slowMul = 0.52; }
-  state.attackFx.push({ x1: s.x, y1: s.y, x2: target.x, y2: target.y, life: 0.22, maxLife: 0.22 });
-  // 克制可视化(战斗屏规范 §3):按攻击方职责配色 + 分级字号;强克制加光环 pop,受制标红
-  const fxCol = typeof roleFxColor === 'function' ? roleFxColor(s.type) : THEME.gold;
-  if (counterMul >= 1.25) {
-    addFx(target.x, target.y - 14, `克制 -${dealt}`, fxCol, 16);
-    state.rings.push({ x: target.x, y: target.y, r: 6, life: 0.3, maxLife: 0.3, color: fxCol });
-  } else if (counterMul > 1) {
-    addFx(target.x, target.y - 12, `优势 -${dealt}`, fxCol, 13);
-  } else if (counterText === '受制') {
-    addFx((s.x + target.x) / 2, (s.y + target.y) / 2 - 8, `受制 -${dealt}`, '#E23B4E', 12);
-  } else {
-    addFx((s.x + target.x) / 2, (s.y + target.y) / 2 - 8, `-${dealt}`, THEME.accent, 11);
-  }
-  // 暴击视觉效果
-  if (isCrit) {
-    addFx(target.x, target.y - 24, `暴击! x2`, '#ffd24a', 18);
-    state.rings.push({ x: target.x, y: target.y, r: 10, life: 0.35, maxLife: 0.35, color: '#fff2a9' });
-    state.shake = Math.max(state.shake, 0.35);
-  }
+  triggerHitFeedback(target, s, dealt, { isCrit, counterMul, counterText });
   s.firstHit = false;
   if (target.hp <= 0) killSoldier(target, s.side, s.atk, s.type);
 }
@@ -627,7 +727,8 @@ function updateSoldier(s, enemies) {
   }
 
   // 已到敌方城墙:优先攻城,不清完面前 blocker 不离开；远程兵可在攻击范围内射墙
-  if (reachedWall(s) || canRangedSiege(s)) {
+  // siege_queue/siege_support 模式保持攻城路径,防排队兵Y漂移后反复进出
+  if (reachedWall(s) || canRangedSiege(s) || s.mode === 'siege_queue' || s.mode === 'siege_support' || s.mode === 'siege') {
     const blocker = sameLaneBlocker(s, enemies);
     if (blocker) {
       s.target = blocker.id;
@@ -654,18 +755,17 @@ function updateSoldier(s, enemies) {
   const target = findTarget(s, enemies) || sameLaneBlocker(s, enemies);
   if (target) {
     ensureLane(target);
-    // 近战转路收敛(来自 lane_block_fix)
-    if (typeof isMeleeRoleLB === 'function' && isMeleeRoleLB(s.type) && target.laneIndex !== s.laneIndex) {
+    // 近战转路收敛:只追Y距离近的目标,防远路画圈
+    if (typeof isMeleeRoleLB === 'function' && isMeleeRoleLB(s.type) && target.laneIndex !== s.laneIndex && Math.abs(s.y - target.y) < 100) {
       const tLaneX = laneXByIndex(clamp(target.laneIndex, 0, COLS - 1));
       const step = 140 * dt_global;
       s.laneX += Math.sign(tLaneX - s.laneX) * Math.min(Math.abs(tLaneX - s.laneX), step);
     }
     // 平滑切路后同步 laneIndex,确保 applySeparation 能正确识别同路
-    if (typeof isMeleeRoleLB === 'function' && isMeleeRoleLB(s.type) && target.laneIndex !== s.laneIndex) {
+    if (typeof isMeleeRoleLB === 'function' && isMeleeRoleLB(s.type) && target.laneIndex !== s.laneIndex && Math.abs(s.y - target.y) < 100) {
       if (Math.abs(s.laneX - laneXByIndex(clamp(target.laneIndex, 0, COLS - 1))) < 20) {
         s.laneIndex = clamp(target.laneIndex, 0, COLS - 1);
         delete s._subLane;
-        delete s._targetOffX;
       }
     }
     s.target = target.id;
@@ -673,13 +773,8 @@ function updateSoldier(s, enemies) {
     return;
   }
   advanceTowardWall(s);
-  // 记录当前模式供下次切换冷却检测
+  // 记录当前模式供下次切换冷却检测(当前未启用)
   s._prevMode = s.mode;
-  // 检测本次帧内是否发生了模式切换 -> 下次帧跳过目标重算
-  // 仅对已有目标的战斗态切换冷却,首次 march→fight 不受限
-  if (enterMode && enterMode !== s.mode && s._modeCd <= 0 && s.target) {
-    s._modeCd = 0.10;
-  }
 }
 
 /* V3: 角色感知分离力 — 加大检测半径 + 按间距分组加权 + 硬间距阶段 */
@@ -689,6 +784,7 @@ function applySeparation(soldiers) {
   for (let i = 0; i < soldiers.length; i++) {
     const a = soldiers[i];
     if (!isCombatant(a)) continue;
+    const inFight = a.mode === 'fight' || a.mode === 'backline';
     let fx = 0, fy = 0;
     for (let j = 0; j < soldiers.length; j++) {
       if (i === j) continue;
@@ -701,20 +797,22 @@ function applySeparation(soldiers) {
       // 软分离
       if (dist < SEP_DIST && dist > 0.1) {
         const w = sepWeight(a, b);
-        const force = (SEP_DIST - dist) / SEP_DIST * w;
+        const fightMul = inFight ? 0.55 : 1.0;
+        const force = (SEP_DIST - dist) / SEP_DIST * w * fightMul;
         fx += (dx / dist) * force;
-        fy += (dy / dist) * force * 0.80;
+        if (!inFight) fy += (dy / dist) * force * 0.80;
       } else if (dist <= 0.1) {
-        fx += (i % 2 === 0 ? 1 : -1) * 0.45;
-        fy += (i % 3 - 1) * 0.12;
+        fx += (i % 2 === 0 ? 1 : -1) * 0.45 * (inFight ? 0.55 : 1.0);
+        if (!inFight) fy += (i % 3 - 1) * 0.12;
       }
-      // 硬间距
       if (dist < MIN_SPACING && dist > 0.1) {
         const w = sepWeight(a, b);
         const push = (MIN_SPACING - dist) / 2 * w * 0.6;
         fx += (dx / dist) * push;
-        const sieging = b.mode === 'siege' || b.mode === 'siege_queue' || b.mode === 'siege_support';
-        if (!sieging) fy += (dy / dist) * push * 0.5;
+        if (!inFight) {
+          const sieging = b.mode === 'siege' || b.mode === 'siege_queue' || b.mode === 'siege_support';
+          if (!sieging) fy += (dy / dist) * push * 0.5;
+        } // 战斗中Y靠 minGap=20 防重合,不再加推开力防振荡
       }
     }
     if (fx || fy) {
@@ -767,52 +865,15 @@ function updateProjectiles() {
     const d = Math.sqrt(dx * dx + dy * dy);
     if (d < 10) {
       tgt.hp -= p.dmg;
-      tgt.hitFlash = 0.28;
-      // 弹射物命中加震屏+爆裂粒子
-      state.shake = Math.max(state.shake, Math.min(0.6, p.dmg * 0.008));
-      for (let j = 0; j < 5; j++) {
-        state.fx.push({
-          x: tgt.x + (Math.random() - 0.5) * 20,
-          y: tgt.y + (Math.random() - 0.5) * 20,
-          text: '✦',
-          color: p.color || '#ffd24a',
-          size: 4 + Math.random() * 5,
-          life: 0.3 + Math.random() * 0.2,
-          maxLife: 0.5,
-          vx: (Math.random() - 0.5) * 60,
-          vy: (Math.random() - 0.5) * 60,
-        });
-      }
       if (p.side === 'player') state.damageByType[p.ownerType || 'bow'] = (state.damageByType[p.ownerType || 'bow'] || 0) + p.dmg;
-      // 远程暴击:兵身标记+震屏
-      if (p.crit) {
-        tgt._critHit = true;
-        tgt.hitFlash = Math.max(tgt.hitFlash || 0, 0.42);
-        state.shake = Math.max(state.shake, 0.3);
-      }
       const pcm = p.counterMul || (p.counterHit ? 1.3 : 1);
-      const pcol = typeof roleFxColor === 'function' ? roleFxColor(p.ownerType) : THEME.gold;
-      if (pcm >= 1.25) {
-        addFx(tgt.x, tgt.y - 14, `克制 -${p.dmg}`, pcol, 16);
-        state.rings.push({ x: tgt.x, y: tgt.y, r: 6, life: 0.3, maxLife: 0.3, color: pcol });
-      } else if (pcm > 1) {
-        addFx(tgt.x, tgt.y - 12, `优势 -${p.dmg}`, pcol, 13);
-      } else {
-        addFx((p.x + tgt.x) / 2, (p.y + tgt.y) / 2 - 8, `-${p.dmg}`, THEME.accent, 12);
-      }
-      for (let j = 0; j < 3; j++) {
-        state.fx.push({
-          x: tgt.x,
-          y: tgt.y,
-          text: '·',
-          color: p.color,
-          size: 6,
-          life: 0.26,
-          maxLife: 0.26,
-          vx: (Math.random() - 0.5) * 42,
-          vy: (Math.random() - 0.5) * 42,
-        });
-      }
+      triggerHitFeedback(tgt, null, p.dmg, {
+        isCrit: !!p.crit,
+        counterMul: pcm,
+        isProjectile: true,
+        projectileColor: p.color || '#ffd24a',
+        ownerType: p.ownerType || 'bow',
+      });
       if (tgt.hp <= 0) killSoldier(tgt, p.side, p.dmg, p.ownerType || 'bow');
       state.projectiles.splice(i, 1);
       continue;
@@ -941,6 +1002,7 @@ function buildBattleReport(win) {
 
 function updateCombat() {
   if (state.phase !== 'playing') return;
+  _wrapVfxArrays();
 
   // 被动技能 tick(原 fruit_mech updateFruitPassiveSkills, skill_v17 包装)
   if (typeof updateFruitPassiveSkills === 'function') updateFruitPassiveSkills(dt_global);

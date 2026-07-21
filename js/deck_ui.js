@@ -77,7 +77,7 @@ function bindDeckButtons() {
 }
 
 function roleText(role) {
-  return ({ tank:'前排', back:'输出', rush:'突击', front:'枪线', siege:'攻城', control:'控制', support:'辅助', merge:'合成引擎' })[role] || role;
+  return ({ shell:'前排', shooter:'输出', raider:'突击', spike:'枪线', wildcard:'全能' })[role] || role;
 }
 var RARITY_TIER = { normal:'common', rare:'rare', epic:'epic' };
 var RARITY_BG = { common:'linear-gradient(160deg,rgba(180,220,180,.35),rgba(140,200,160,.22))', rare:'linear-gradient(160deg,rgba(140,180,240,.35),rgba(100,160,220,.22))', epic:'linear-gradient(160deg,rgba(200,160,240,.40),rgba(160,120,220,.25))' };

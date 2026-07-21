@@ -276,8 +276,8 @@
     const idx = roleIndex(ball.type);
     const role = TYPES[ball.type]?.role || '';
     const roleColor = ({
-      tank:'#72e1c4', rush:'#ff9a8d', back:'#8fbfff', control:'#c39bff',
-      support:'#84e4ee', siege:'#ffd37b', wild:'#f29cc4'
+      shell:'#72e1c4', raider:'#ff9a8d', shooter:'#8fbfff', spike:'#ffd37b',
+      wildcard:'#f29cc4'
     })[role] || '#8debf0';
     ctx.save();
     ctx.fillStyle = 'rgba(8,48,64,.28)';

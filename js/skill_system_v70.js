@@ -53,9 +53,11 @@
           if (!second || a.hp / a.maxHp < second.hp / second.maxHp) second = a;
         }
         if (second) {
-          const heal = Math.round(6 + lv * 3 + s.atk * 0.35);
+          let heal = Math.round(6 + lv * 3 + s.atk * 0.35);
+          if (s._bondHealBoost) heal = Math.round(heal * (1 + s._bondHealBoost));
+          if (second._bondHealReceived) heal = Math.round(heal * (1 + second._bondHealReceived));
           second.hp = Math.min(second.maxHp, second.hp + heal);
-          if (typeof addFx === 'function') addFx(second.x, second.y - 22, `+${heal}`, '#ff9fbd', 11);
+          if (typeof addFx === 'function') addFx(second.x, second.y - 22, `+${heal}`, '#53E77B', 11);
         }
         s._v70Timer = lv >= 7 ? 2.5 : 3.8;
       }

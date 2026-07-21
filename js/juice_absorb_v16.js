@@ -146,8 +146,9 @@ function patchAttackJuiceV16() {
       const color = juiceV16Color(s.type);
       const mx = (s.x + target.x) / 2;
       const my = (s.y + target.y) / 2;
-      const role = TYPES[s.type]?.role;
-      if (role === 'back' || role === 'control' || role === 'siege' || role === 'support') {
+      const rng = TYPES[s.type]?.range;
+      const isRanged = rng === 'long' || rng === 'far' || rng === 'support';
+      if (isRanged) {
         addJuiceBeamV16(s.x, s.y, target.x, target.y, color, 0.12, s.level >= 5 ? 5 : 3);
         addJuiceSparkV16(target.x, target.y, color, 3 + Math.min(5, s.level || 1), 34 + (s.level || 1) * 4, 2.1);
       } else {
