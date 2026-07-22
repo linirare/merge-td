@@ -325,17 +325,17 @@
       document.body.appendChild(nav);
     }
     nav.className = 'shell-hidden hifi';
-    // 烫金风底栏:中间"对战"凸起,沿用里子既有 5 tab 与 showTab 路由
+    // 五枚统一海洋卡通资源图标；中间“海战”保留凸起主入口。
     const navItems = [
-      { id: 'shop',    icon: 'i-bag',    label: '海市' },
-      { id: 'upgrade', icon: 'i-cards',  label: '编队' },
-      { id: 'home',    icon: 'i-sword',  label: '海战', main: true },
-      { id: 'arena',   icon: 'i-vs',     label: '潮汐' },
-      { id: 'rank',    icon: 'i-trophy', label: '潮榜' },
+      { id: 'shop',    art: 0, label: '海市' },
+      { id: 'upgrade', art: 1, label: '编队' },
+      { id: 'home',    art: 2, label: '海战', main: true },
+      { id: 'arena',   art: 3, label: '潮汐' },
+      { id: 'rank',    art: 4, label: '潮榜' },
     ];
     nav.innerHTML = navItems.map(t => t.main
-      ? `<button class="navtab navmain" data-tab="${t.id}"><svg class="micon"><use href="#${t.icon}"/></svg><span class="txt">${t.label}</span><span class="shine"></span></button>`
-      : `<button class="navtab" data-tab="${t.id}"><span class="ic"><svg class="icon"><use href="#${t.icon}"/></svg></span>${t.label}</button>`
+      ? `<button class="navtab navmain" data-tab="${t.id}"><span class="nav-art nav-art-${t.art}" aria-hidden="true"></span><span class="nav-label">${t.label}</span><span class="shine"></span></button>`
+      : `<button class="navtab" data-tab="${t.id}"><span class="ic"><span class="nav-art nav-art-${t.art}" aria-hidden="true"></span></span><span class="nav-label">${t.label}</span></button>`
     ).join('');
     nav.querySelectorAll('.navtab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
   }
@@ -364,13 +364,23 @@
     const root = shellPage('menuPanel', 'shell-home-page');
     const lv = currentStage();
     const dailyReady = shell.lastDaily !== todayKey();
+    const chapter = WORLD_THEME.chapters[Math.min(3, Math.floor((lv - 1) / 5))] || '珊瑚浅滩';
+    const chapterProgress = Math.min(100, (((lv - 1) % 5) + 1) * 20);
     root.innerHTML = `
       <div class="hifi-home">
         <div class="bg"></div><div class="scrim"></div>
         ${hifiTopBarHtml()}
 
         <div class="logo"><h1 class="display">梦幻水世界</h1><div class="rib">海灵合成 · 自由海战</div></div>
-        <div class="hero-spot"></div>
+        <button class="home-expedition" data-go="battle" aria-label="查看${chapter}第${lv}关远征队">
+          <img class="expedition-art" src="art/generated/water-world-home-expedition-v1.png" alt="" aria-hidden="true">
+          <span class="expedition-board">
+            <span class="expedition-kicker">远征队已就绪</span>
+            <strong>${chapter} · 第${lv}关</strong>
+            <span class="expedition-track"><i style="width:${chapterProgress}%"></i></span>
+            <em>探索 ${chapterProgress}% · 点击出航 ›</em>
+          </span>
+        </button>
 
         <div class="side-l">
           <button class="ring daily-float" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">${dailyReady ? '🎁 补给' : '✅ 已领'}</span>${dailyReady ? '<span class="badge pulse">+' + DAILY_GOLD + '🪙 +' + DAILY_GEMS + '💎</span>' : ''}</button>
@@ -393,14 +403,25 @@
     root.querySelector('#hifiPvp')?.addEventListener('click', () => showTab('arena'));
     root.querySelector('#hifiLevelSel')?.addEventListener('click', () => showTab('battle'));
     root.querySelector('[data-daily]')?.addEventListener('click', () => claimDaily());
+    [
+      ['[data-account]', openAccount],
+      ['[data-mail]', openMail],
+      ['[data-chat]', openChat],
+      ['[data-tut]', openTutorial],
+      ['[data-achievements]', openAchievements],
+      ['[data-friends]', openFriends],
+    ].forEach(([selector, handler]) => {
+      root.querySelectorAll(selector).forEach(btn => btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handler();
+      }));
+    });
     root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => {
       hidePanels();
       document.getElementById('helpPanel')?.classList.remove('hide');
     }));
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
     root.querySelectorAll('[data-toast]').forEach(btn => btn.addEventListener('click', () => hifiToast(btn.dataset.toast)));
-    root.querySelectorAll('[data-achievements]').forEach(btn => btn.addEventListener('click', openAchievements));
-    root.querySelectorAll('[data-friends]').forEach(btn => btn.addEventListener('click', openFriends));
     refreshResourceNumbers();
     updateMailBadge();
   }
@@ -468,7 +489,7 @@
     const artIndex = Math.max(0, Math.min(24, Number(t.artIndex) || 0));
     const artX = (artIndex % 5) * 25;
     const artY = Math.floor(artIndex / 5) * 25;
-    return `<span class="fdisc" role="img" aria-label="${escapeHtml(t.name)}" style="width:${size}px;height:${size}px;background-color:${col};background-image:url('art/generated/water-world-units-v2.png');background-size:500% 500%;background-position:${artX}% ${artY}%;background-repeat:no-repeat"></span>`;
+    return `<span class="fdisc" role="img" aria-label="${escapeHtml(t.name)}" style="width:${size}px;height:${size}px;background-color:${col};background-image:url('art/generated/water-world-units-v3.png');background-size:500% 500%;background-position:${artX}% ${artY}%;background-repeat:no-repeat"></span>`;
   }
   function roleZh(r) { return ROLE_ZH[r] || r || '单位'; }
   function skillZh(t) { return SKILL_ZH[t.skill] || '专属技能'; }
@@ -498,7 +519,7 @@
               const lv = Math.max(1, Number(shell.commanderLv[id] || 1));
               const selected = shell.commanderId === id;
               const cost = 60 + lv * 45;
-              const portraitSrc = 'art/generated/water-world-commanders-v2.png';
+              const portraitSrc = 'art/generated/water-world-commanders-v3.png';
               const artPos = id === 'berry_general' ? '50%' : id === 'juice_sage' ? '100%' : '0%';
               return `<div class="card ${selected ? 'on' : ''}" style="--rc:${selected ? '#F5C242' : '#6f806f'};flex:1;min-height:146px;padding:6px">
                 <span class="lv">Lv${lv}</span>
@@ -743,8 +764,8 @@
         ${hifiTopBarHtml()}
         <div class="hifi-scroll">
           <div class="shead"><h2 class="display">海螺集市</h2><span class="line"></span></div>
-          <div class="banner">
-            <img src="art/generated/water-world-orbs-v2.png" alt="海螺祈愿卡池">
+          <div class="banner pool-banner basic-pool-banner">
+            <img src="art/generated/water-world-basic-pool-banner-v1.png" alt="深海祈愿基础卡池">
             <div class="cap"><h3>深海祈愿 · 基础卡池</h3><div class="rar">
               ${GACHA_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
             </div></div>
@@ -753,10 +774,10 @@
             <button class="gbtn ${canG1 ? '' : 'gray'}" id="hifiGacha1"><span class="display">单抽</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${GACHA_COST_1}</small></button>
             <button class="gbtn ${canG10 ? '' : 'gray'}" id="hifiGacha10"><span class="display">十连 ×10</span><small class="cost"><svg class="icon" style="width:16px;height:16px"><use href="#i-gem"/></svg>${GACHA_COST_10} · 稀保底</small></button>
           </div>
-          <div class="shead" style="margin-top:20px"><h2 class="display" style="font-size:20px">🎯 精英卡池 T0-T2</h2><span class="line"></span></div>
-          <div class="banner legend-banner">
-            <div class="legend-stage"><i></i><i></i><i></i></div>
-            <div class="cap"><h3>深渊伙伴回响</h3><div class="rar">
+          <div class="shead" style="margin-top:20px"><h2 class="display">精英海市</h2><span class="line"></span></div>
+          <div class="banner pool-banner elite-pool-banner">
+            <img src="art/generated/water-world-elite-pool-banner-v1.png" alt="深渊祈愿精英卡池">
+            <div class="cap"><h3>深渊祈愿 · 精英卡池</h3><div class="rar">
               ${T0T2_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
             </div></div>
           </div>

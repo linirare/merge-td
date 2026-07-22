@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="css/style.css?v=20260722a3">
 <link rel="stylesheet" href="css/hifi_shell.css?v=20260722a3">
+<link rel="stylesheet" href="css/cartoon_refresh.css?v=20260722c1">
 </head>
 <body>
 <script>fetch('/art/icons.svg').then(r=>r.text()).then(svg=>{const d=document.createElement('div');d.innerHTML=svg;const e=d.querySelector('svg');if(e){e.style.position='absolute';document.body.prepend(e)}}).catch(()=>console.warn('icons.svg 加载失败'))</script>
@@ -37,6 +38,15 @@
         <button class="ring" data-go="shop"><span class="inner"><svg class="icon"><use href="#i-bag"/></svg></span></button>
       </header>
       <div class="logo"><h1 class="display">梦幻水世界</h1><div class="rib">海灵合成 · 自由海战</div></div>
+      <button class="home-expedition" data-go="battle" aria-label="查看珊瑚浅滩第1关远征队">
+        <img class="expedition-art" src="art/generated/water-world-home-expedition-v1.png" alt="" aria-hidden="true">
+        <span class="expedition-board">
+          <span class="expedition-kicker">远征队已就绪</span>
+          <strong>珊瑚浅滩 · 第1关</strong>
+          <span class="expedition-track"><i style="width:20%"></i></span>
+          <em>探索 20% · 点击出航 ›</em>
+        </span>
+      </button>
       <div class="side-l">
         <button class="ring" data-daily><span class="inner" style="background:radial-gradient(circle at 40% 34%,#F0A0B8,#C93366)"><svg class="icon"><use href="#i-gift"/></svg></span><span class="lbl">签到</span></button>
         <button class="ring" data-mail><span class="inner" style="background:radial-gradient(circle at 40% 34%,#7FBFE8,#2E6FB0)"><svg class="icon"><use href="#i-mail"/></svg></span><span class="lbl">邮件</span></button>

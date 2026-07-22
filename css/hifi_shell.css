@@ -641,16 +641,16 @@ body.battle-shell-active #game{background:#10283f;border-radius:14px;}
 body{background:radial-gradient(circle at 50% 0,#197f99 0,#073b55 58%,#031f32 100%);}
 .hifi{--gold:#a7f0e5;--gold-lt:#effff9;--gold-dk:#3b98a6;--gold-dpp:#155c74;--maroon:#8a496f;--maroon-dk:#55304f;--coin:#f5cb71;--gem:#70e8f0;--ruby:#e8759c;--jade:#6ad7b6;--cream:#effff9;--paper:#d2f6f1;}
 
-.hifi-home .bg{background-image:url('../art/generated/water-world-battlefield-v3.png');}
+.hifi-home .bg{background-image:url('../art/generated/water-world-home-v1.png');}
 .hifi-home .scrim{background:linear-gradient(180deg,rgba(231,253,255,.10),transparent 25%,transparent 63%,rgba(3,42,65,.34) 100%);}
 .hifi .logo h1{color:#effff9;-webkit-text-stroke:2px #317d98;text-shadow:0 2px 0 #77d8dc,0 4px 0 #317d98,0 8px 18px rgba(1,35,55,.42);}
 .hifi .logo .rib{color:#155c74;background:linear-gradient(180deg,#effff9,#bdf5ed);border-color:#fff;box-shadow:0 3px 8px rgba(3,45,67,.28);}
 .hifi-home .hero-spot{background:radial-gradient(circle at 48% 44%,rgba(211,255,249,.42) 0%,rgba(91,214,223,.12) 42%,transparent 72%);}
 .hifi-home .hero-spot::after{filter:drop-shadow(0 8px 16px rgba(3,58,82,.28));}
 
-.hifi-screen.shop-bg>.bg,.hifi-screen.squad-bg>.bg{background-image:url('../art/generated/water-world-battlefield-v3.png');}
-.hifi-screen.campaign-bg>.bg{background-image:url('../art/generated/water-world-campaign-v1.png');}
-.hifi-screen.arena-bg>.bg{background-image:url('../art/generated/water-world-arena-v1.png');}
+.hifi-screen.shop-bg>.bg,.hifi-screen.squad-bg>.bg{background-image:url('../art/generated/water-world-home-v1.png');}
+.hifi-screen.campaign-bg>.bg{background-image:url('../art/generated/water-world-campaign-v2.png');}
+.hifi-screen.arena-bg>.bg{background-image:url('../art/generated/water-world-arena-v2.png');}
 .hifi-screen>.scrim{background:linear-gradient(180deg,rgba(5,55,77,.18),rgba(5,47,70,.46));}
 .hifi-screen.campaign-bg>.scrim{background:linear-gradient(180deg,rgba(236,255,251,.07),rgba(5,78,94,.40));}
 .hifi-screen.arena-bg>.scrim{background:linear-gradient(180deg,rgba(5,57,90,.12),rgba(5,42,75,.48));}
@@ -681,7 +681,7 @@ body{background:radial-gradient(circle at 50% 0,#197f99 0,#073b55 58%,#031f32 10
 .hifi .banner{border-color:#b9f7ef;box-shadow:0 6px 16px rgba(0,40,62,.36);}.hifi .banner .cap{background:linear-gradient(transparent,rgba(4,42,69,.89));}.hifi .banner .cap h3{color:#effff9;-webkit-text-stroke:1px #317d98;text-shadow:0 2px 3px rgba(0,35,56,.7);}
 .hifi .lvnode{background:linear-gradient(160deg,rgba(32,126,143,.88),rgba(7,70,96,.94));border-color:#6acdd1;color:#d9fff8;box-shadow:0 3px 8px rgba(0,43,64,.28);}.hifi .lvnode b{color:#effff9;}.hifi .lvnode small{color:#bdeee8;}.hifi .lvnode.current{border-color:#effff9;box-shadow:0 0 12px rgba(178,255,246,.65);}.hifi .lvnode.boss{border-color:#ef9ab7;background:linear-gradient(160deg,#a75985,#56365e);}.hifi .lvnode.boss b{color:#fff1f7;}
 
-.legend-banner{background:linear-gradient(150deg,#173f72,#246b91)!important;}.legend-stage{width:100%;aspect-ratio:16/9;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 58%,rgba(161,255,245,.52),transparent 36%),linear-gradient(180deg,#1b5c8d,#0b3a68);}.legend-stage::before{content:'';position:absolute;left:8%;right:8%;bottom:14%;height:22%;border:2px solid rgba(219,255,250,.72);border-radius:50%;box-shadow:0 0 22px rgba(126,244,239,.6),inset 0 0 18px rgba(200,255,250,.35);}.legend-stage i{position:absolute;width:54px;height:54px;border-radius:50%;background-image:url('../art/generated/water-world-units-v2.png');background-size:500% 500%;border:2px solid #e8fffa;box-shadow:0 5px 14px rgba(0,20,52,.45);}.legend-stage i:nth-child(1){left:17%;top:28%;background-position:0 0;}.legend-stage i:nth-child(2){left:43%;top:16%;width:68px;height:68px;background-position:50% 25%;}.legend-stage i:nth-child(3){right:17%;top:30%;background-position:100% 50%;}
+.legend-banner{background:linear-gradient(150deg,#173f72,#246b91)!important;}.legend-stage{width:100%;aspect-ratio:16/9;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 58%,rgba(161,255,245,.52),transparent 36%),linear-gradient(180deg,#1b5c8d,#0b3a68);}.legend-stage::before{content:'';position:absolute;left:8%;right:8%;bottom:14%;height:22%;border:2px solid rgba(219,255,250,.72);border-radius:50%;box-shadow:0 0 22px rgba(126,244,239,.6),inset 0 0 18px rgba(200,255,250,.35);}.legend-stage i{position:absolute;width:54px;height:54px;border-radius:50%;background-image:url('../art/generated/water-world-units-v3.png');background-size:500% 500%;border:2px solid #e8fffa;box-shadow:0 5px 14px rgba(0,20,52,.45);}.legend-stage i:nth-child(1){left:17%;top:28%;background-position:0 0;}.legend-stage i:nth-child(2){left:43%;top:16%;width:68px;height:68px;background-position:50% 25%;}.legend-stage i:nth-child(3){right:17%;top:30%;background-position:100% 50%;}
 
 /* Final exterior clean-up: action, commander and rank surfaces share the same reef palette. */
 .hifi .cta.pve{background:linear-gradient(180deg,#fff2f7,#f4b6cd 45%,#df7ca5 65%,#b95d86);border-color:#713d68;box-shadow:0 6px 0 #713d68,0 10px 16px rgba(0,40,62,.34),inset 0 2px 3px #fff,0 0 22px rgba(240,150,193,.35);}.hifi .cta.pve .t{color:#562c56;-webkit-text-stroke-color:#ffe9f4;text-shadow:0 1px 0 rgba(255,255,255,.45);}.hifi .cta.pve .s{color:#65345f;}.hifi .cta.pve:active{box-shadow:0 2px 0 #713d68;}

@@ -13,11 +13,11 @@
     bosses: new Image(),
   };
 
-  ART.background.src = 'art/generated/water-world-battlefield-v3.png';
-  ART.barracks.src = 'art/generated/water-world-orbs-v2.png';
-  ART.troops.src = 'art/generated/water-world-units-v2.png';
-  ART.commanders.src = 'art/generated/water-world-commanders-v2.png';
-  ART.bosses.src = 'art/generated/water-world-bosses-v2.png';
+  ART.background.src = 'art/generated/water-world-battlefield-v4.png';
+  ART.barracks.src = 'art/generated/water-world-orbs-v3.png';
+  ART.troops.src = 'art/generated/water-world-units-v3.png';
+  ART.commanders.src = 'art/generated/water-world-commanders-v3.png';
+  ART.bosses.src = 'art/generated/water-world-bosses-v3.png';
   for (const img of Object.values(ART)) {
     img.onload = () => requestAnimationFrame(() => {
       try { if (typeof draw === 'function') draw(); } catch (_) {}
@@ -28,8 +28,8 @@
     x: Math.round((i % 5) * 1254 / 5), y: Math.round(Math.floor(i / 5) * 1254 / 5), w: Math.ceil(1254 / 5), h: Math.ceil(1254 / 5),
   }));
   const TROOP_RECTS = BARRACK_RECTS.map(r => ({ ...r }));
-  const COMMANDER_RECTS = Array.from({ length:3 }, (_, i) => ({ x:Math.round(i * 1823 / 3), y:0, w:Math.ceil(1823 / 3), h:864 }));
-  const BOSS_RECTS = Array.from({ length:4 }, (_, i) => ({ x:Math.round(i * 1774 / 4), y:0, w:Math.ceil(1774 / 4), h:887 }));
+  const COMMANDER_RECTS = Array.from({ length:3 }, (_, i) => ({ x:Math.round(i * 1654 / 3), y:0, w:Math.ceil(1654 / 3), h:951 }));
+  const BOSS_RECTS = Array.from({ length:4 }, (_, i) => ({ x:Math.round(i * 2172 / 4), y:0, w:Math.ceil(2172 / 4), h:724 }));
   const COMMANDER_ART = {
     // The two original atlas cells are wide half-body illustrations.  Their
     // faces are offset inside the cells, so a centred crop cuts them off in
