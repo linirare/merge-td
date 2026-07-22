@@ -72,10 +72,9 @@ function addJuiceTextV16(x, y, text, color = THEME.gold, size = 14, life = 0.62)
 }
 function punchV16(power = 0.22, stop = 0.012) {
   const j = ensureJuiceV16();
-  const cameraPower = state.roundPhase === 'fight' ? Math.max(0, (power - 0.3) * 0.35) : power * 0.45;
-  state.shake = Math.max(state.shake || 0, cameraPower);
+  // Keep the local impact envelope for effects, but never move or pause the game.
   j.punch = Math.max(j.punch || 0, power);
-  j.hitStop = Math.max(j.hitStop || 0, stop);
+  j.hitStop = 0;
 }
 function addComboV16(x, y, label = '击破') {
   const j = ensureJuiceV16();
@@ -209,13 +208,7 @@ function patchUpdateDrawJuiceV16() {
   const oldDraw = draw;
 
   update = function updateJuiceAbsorbV16(dt) {
-    const j = ensureJuiceV16();
-    if (state.roundPhase === 'fight') j.hitStop = 0;
-    if (j.hitStop > 0 && state.phase === 'playing') {
-      j.hitStop = Math.max(0, j.hitStop - dt);
-      updateJuiceOnlyV16(dt * 0.35);
-      return;
-    }
+    ensureJuiceV16().hitStop = 0;
     oldUpdate(dt);
     updateJuiceOnlyV16(dt);
   };

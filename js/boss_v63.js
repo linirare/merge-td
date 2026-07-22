@@ -91,7 +91,6 @@
             }
           }
           if (typeof addFx === 'function') addFx(b.x, b.y - 34, '榴莲炮 AOE', '#b06a2e', 13);
-          state.shake = Math.max(state.shake || 0, 0.5);
         }
       } else if (b._bossKind === 'fruit_king') {
         // 减速光环:近身玩家兵持续减速

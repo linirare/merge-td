@@ -88,10 +88,9 @@ function addSmokePuff(x, y) {
 
 function punch(power = 0.3, stop = 0.018) {
   const j = ensureJuice();
-  const cameraPower = state.roundPhase === 'fight' ? Math.max(0, (power - 0.3) * 0.35) : power * 0.45;
-  state.shake = Math.max(state.shake || 0, cameraPower);
+  // Keep the local impact envelope for effects, but never move or pause the game.
   j.punch = Math.max(j.punch, power);
-  j.hitStop = Math.max(j.hitStop, stop);
+  j.hitStop = 0;
 }
 
 function addCombo(x, y, label = 'COMBO') {
@@ -239,13 +238,7 @@ function patchUpdateDrawJuice() {
   const oldDraw = draw;
 
   update = function juiceUpdate(dt) {
-    const j = ensureJuice();
-    if (state.roundPhase === 'fight') j.hitStop = 0;
-    if (j.hitStop > 0 && state.phase === 'playing') {
-      j.hitStop = Math.max(0, j.hitStop - dt);
-      updateJuiceOnly(dt * 0.35);
-      return;
-    }
+    ensureJuice().hitStop = 0;
     oldUpdate(dt);
     updateJuiceOnly(dt);
   };

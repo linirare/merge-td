@@ -27,10 +27,7 @@ function triggerHitFeedback(target, source, dealt, opts = {}) {
   target.hitFlash = isCrit ? 0.42 : 0.28;
   if (isCrit) target._critHit = true;
 
-  // Layer 2: camera impulse. Ordinary hits use local flash only; shaking the
-  // whole battlefield on every hit reads as frame stutter in a crowded fight.
-  if (!isProjectile && dealt >= 40) state.shake = Math.max(state.shake, 0.08);
-  if (isCrit) state.shake = Math.max(state.shake, 0.16);
+  // Camera shake is intentionally omitted; hit flash and local VFX carry impact.
 
   // Layer 3: attack slash — 攻击划线 (仅近战)
   if (source && !isProjectile) {
@@ -55,7 +52,6 @@ function triggerHitFeedback(target, source, dealt, opts = {}) {
   if (isCrit) {
     addFx(target.x, target.y - 24, '暴击! x2', '#FFD700', 18);
     state.rings.push({ x: target.x, y: target.y, r: 10, life: 0.35, maxLife: 0.35, color: '#fff2a9' });
-    state.shake = Math.max(state.shake, 0.16);
   }
 
   // Layer 6: projectile burst particles — 弹射物命中爆裂粒子
@@ -589,7 +585,6 @@ function attackWall(s) {
     state.attackFx.push({ x1: s.x - 8, y1: wall.attackY, x2: s.x + 8, y2: s.side === 'player' ? wall.wallY + 2 : wall.wallY + wall.wallH - 2, life: 0.22, maxLife: 0.22 });
     state.rings.push({ x: s.x, y: wall.attackY, r: 7, life: 0.35, maxLife: 0.35, color: THEME.gold });
     s.atkTimer = WALL_ATTACK_INTERVAL;
-    state.shake = Math.max(state.shake, s.type === 'orange_cannon' ? 0.24 : 0.12);
     if (typeof playSfx === 'function' && (state.time || 0) - (state._lastWallSfx ?? -1) > 0.2) { playSfx('wall'); state._lastWallSfx = state.time || 0; } // 墙破音效(审计#7:sfxWallBreak 原本定义了却从没触发)
 
     // 协攻加成:排队兵给前排 +8%/名,封顶 +24%(原 combat_pacing_v19)
@@ -655,9 +650,6 @@ function killSoldier(target, killerSide, killerAtk, killerType) {
       vy: Math.sin(angle) * speed,
     });
   }
-  // 击杀震屏
-  state.shake = Math.max(state.shake, Math.min(0.16, 0.06 + killLv * 0.012));
-
   if (killerSide === 'player') {
     state.kills++;
     state.killSpProgress = (state.killSpProgress || 0) + 1;
@@ -1221,7 +1213,6 @@ function updateCombat() {
 
   applySeparation(state.playerSoldiers); applySeparation(state.enemySoldiers);
   updateProjectiles(); updateLaneStats(); updateLaneAlerts();
-  if (state.shake > 0) state.shake = Math.max(0, state.shake - dt_global * 4);
 
   // FIGHT 结束检测：一方全灭 → BREACH（最少战斗 3 秒，给兵出城时间）
   state.roundTimer += dt_global;

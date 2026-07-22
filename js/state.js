@@ -121,7 +121,6 @@ function createState() {
     time: 0,
     speed: 1,
     sp: 6,
-    shake: 0,
     roundPhase: 'idle',
     roundTimer: 0,
     breachList: [],

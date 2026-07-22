@@ -681,10 +681,6 @@ function drawRoundStatus() {
 /* ——— 主绘制 ——— */
 function draw() {
   ctx.save();
-  if (!window.REDUCE_MOTION && state.shake > 0.05) ctx.translate(
-    Math.sin((state.time || 0) * 22) * Math.min(2.2, state.shake * 3),
-    Math.cos((state.time || 0) * 18) * Math.min(1.3, state.shake * 1.8)
-  );
 
   drawBackground();
   drawInfo();

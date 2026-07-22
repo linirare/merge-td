@@ -140,7 +140,6 @@ function updateRollingPumpkins(dt) {
       else if (r.side === 'player') { state.enemyWallHp = Math.max(0, state.enemyWallHp - dmg); state.enemyWallDamageDealt += dmg; }
       else { state.playerWallHp = Math.max(0, state.playerWallHp - dmg); state.playerWallDamageTaken += dmg; }
       addFx(r.x, wallY, `南瓜爆破 -${dmg}`, '#ff7d35', 13);
-      state.shake = Math.max(state.shake, 0.55);
       r.life = 0;
     }
 

@@ -137,7 +137,7 @@ function isMergeSupport(ball) { return isWildcard(ball) || isCopyBall(ball); }
 function resetSpawnAfterMerge(ball) {
   const newCd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
   ball.spawnTimer = newCd * 0.25;
-  ball.bounce = 1;
+  ball.bounce = 0;
 }
 
 function tryMerge(slots, fromR, fromC, toR, toC) {
@@ -155,7 +155,7 @@ function tryMerge(slots, fromR, fromC, toR, toC) {
   // 百香果复制：拖到同星目标上，原位变成目标水果，不消耗目标，专门养核心。
   if (isCopyBall(src) && !isMergeSupport(dst)) {
     src.type = dst.type;
-    src.bounce = 1;
+    src.bounce = 0;
     src.spawnTimer = Math.max(0.2, src.spawnTimer * 0.25);
     return { merged: false, copied: true, type: dst.type, level: src.level, fromR, fromC, toR, toC };
   }
@@ -255,7 +255,6 @@ function initLevel(k) {
   state.rollings = [];
   state.sp = getSpStart(meta);
   state._spTimer = 0;
-  state.shake = 0;
   state.time = 0;
   state.dust = Array.from({ length: 8 }, (_, i) => ({
     x: 42 + i * 54 + Math.random() * 12,

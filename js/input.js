@@ -208,7 +208,6 @@ function onUp(ev) {
           vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
         });
       }
-      state.shake = Math.min(0.35 + result.newLevel * 0.13, 1.7);
     } else if (result && result.copied) {
       state.specialMerges++;
       playSfx('merge');

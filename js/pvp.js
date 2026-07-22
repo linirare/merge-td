@@ -333,7 +333,6 @@
     state._juiceEnemyTimer = 0;
     state.enemySpCheckTimer = 0;
     state.enemyBallTimer = -9999;
-    state.shake = 0;
   }
 
   function hidePvpPanels() {
@@ -530,7 +529,6 @@
   // PvP 客户端逐帧:双帧线性混合插值(applySnapshot 设好 _blendT/_blendDur) + 视觉衰减
   function pvpClientUpdate(dt) {
     state.time = (state.time || 0) + dt;
-    if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 4);
     for (const arr of [state.playerSoldiers, state.enemySoldiers]) {
       for (const s of arr) {
         if (s._fromX != null && s._blendDur > 0) {
