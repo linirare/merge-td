@@ -12,7 +12,7 @@
   };
 
   const TEXT = {
-    lv2: 'Lv2 \u52a0\u901f',
+    lv2: 'Lv2 \u5f3a\u5316',
     fire: '\u706b\u529b\u63a5\u901a',
     line: '\u9635\u7ebf\u63a5\u901a',
     engine: '\u5f15\u64ce\u63a5\u901a',
@@ -221,7 +221,6 @@
     const ball = state.playerSlots && state.playerSlots[toR] && state.playerSlots[toR][toC];
     if (level >= 2) {
       if (b.metrics.firstLv2Time == null) b.metrics.firstLv2Time = now();
-      if (ball) ball.spawnTimer = Math.min(Number(ball.spawnTimer) || 0, 0.75);
       slotFx(toR, toC, TEXT.lv2, (THEME && THEME.gold) || '#f5c242', 12);
     }
 
@@ -258,9 +257,9 @@
       updateMetrics();
       return;
     }
-    for (const row of state.playerSlots) {
-      for (const ball of row) {
-        if (ball) ball.spawnTimer -= dt * extra;
+    for (const soldier of state.playerSoldiers || []) {
+      if (soldier && soldier.alive) {
+        soldier.atkTimer = Math.max(0, (Number(soldier.atkTimer) || 0) - dt * extra);
       }
     }
     updateMetrics();

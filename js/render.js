@@ -648,6 +648,36 @@ function drawHUD() {
   ctx.fillText(`第 ${state.currentLevel} 关`, W / 2, LAYOUT.fieldY + LAYOUT.fieldH - 20);
 }
 
+function drawRoundStatus() {
+  if (!state || (state.phase !== 'playing' && state.phase !== 'paused')) return;
+  const phase = state.roundPhase || 'idle';
+  const nextRound = phase === 'prepare' || phase === 'idle';
+  const roundNo = Math.max(1, (Number(state.roundIndex) || 0) + (nextRound ? 1 : 0));
+  const labels = { idle: '布阵', prepare: '布阵', fight: '交战', breach: '破墙' };
+  const reserve = state.roundReserveCount || { player: 0, enemy: 0 };
+  let text = `第 ${roundNo} 回合 · ${labels[phase] || labels.fight}`;
+  if (phase === 'prepare' && state.roundTimer > 0) text += ` ${state.roundTimer.toFixed(1)}s`;
+  if ((reserve.player || 0) > 0) text += ` · 预备 ${reserve.player}`;
+
+  ctx.save();
+  ctx.font = 'bold 12px sans-serif';
+  const width = Math.min(W - 40, Math.max(132, ctx.measureText(text).width + 28));
+  const x = (W - width) / 2;
+  const y = LAYOUT.fieldY + 10;
+  ctx.fillStyle = 'rgba(8,25,36,0.76)';
+  roundRect(x, y, width, 25, 12);
+  ctx.fill();
+  ctx.strokeStyle = phase === 'breach' ? 'rgba(255,112,92,0.9)' : 'rgba(126,230,224,0.72)';
+  ctx.lineWidth = 1;
+  roundRect(x, y, width, 25, 12);
+  ctx.stroke();
+  ctx.fillStyle = '#f5fbff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, W / 2, y + 12.5);
+  ctx.restore();
+}
+
 /* ——— 主绘制 ——— */
 function draw() {
   ctx.save();
@@ -722,6 +752,7 @@ function draw() {
 
   drawOverflowIndicator();
   drawHUD();
+  drawRoundStatus();
   drawProjectiles();
   drawAttackFx();
   drawRings();

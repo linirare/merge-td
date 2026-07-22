@@ -127,6 +127,7 @@ function createState() {
     breachList: [],
     roundIndex: 0,
     _roundSpawned: false,
+    roundReserveCount: { player: 0, enemy: 0 },
   };
 }
 

@@ -317,7 +317,7 @@
     }
     ctx.fillStyle = 'rgba(255,255,255,.72)';
     ctx.beginPath(); ctx.ellipse(cx - radius * .36, y - radius * .40, radius * .18, radius * .10, -.5, 0, Math.PI * 2); ctx.fill();
-    if (state.phase === 'playing') {
+    if (state.phase === 'playing' && typeof state.roundPhase !== 'string') {
       const level = Math.max(1, Math.min(7, ball.level || 1));
       const cd = SPAWN_COOLDOWNS[level] || SPAWN_COOLDOWNS[1] || 5;
       const pct = ball.spawnTimer <= 0 ? 1 : Math.max(0, Math.min(1, 1 - (ball.spawnTimer || 0) / cd));

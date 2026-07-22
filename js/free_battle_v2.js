@@ -63,11 +63,11 @@
     return role; // raider→raider, wildcard→wildcard
   }
 
-  function soldierBaseRank(s) {
+  function formationBand(s) {
     const role = freeRole(s.type);
-    if (role === 'tank') return 1;
-    if (role === 'front') return 2;
-    return 3;
+    if (role === 'tank' || role === 'front') return 0;
+    if (role === 'raider' || role === 'rush' || role === 'siege') return 1;
+    return 2;
   }
 
   function assignFormationRanks() {
@@ -78,16 +78,23 @@
       const signature = active.map(s => `${s.id}:${freeRole(s.type)}`).join('|');
       if (state._formationSignatures[side] === signature) continue;
       state._formationSignatures[side] = signature;
-      const byLane = {};
+      const byBand = [[], [], []];
       for (const s of active) {
-        const lane = s.laneIndex ?? nearestLaneIndex(s.x);
-        if (!byLane[lane]) byLane[lane] = [];
-        byLane[lane].push(s);
+        byBand[formationBand(s)].push(s);
       }
-      for (const lane of Object.keys(byLane)) {
-        const squad = byLane[lane];
-        squad.sort((a, b) => soldierBaseRank(a) - soldierBaseRank(b));
-        squad.forEach((s, idx) => { s._formationPosition = idx; });
+      for (let band = 0; band < byBand.length; band++) {
+        const squad = byBand[band].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+        const pad = 52;
+        squad.forEach((s, idx) => {
+          const anchor = squad.length === 1
+            ? W / 2
+            : pad + idx * ((W - pad * 2) / Math.max(1, squad.length - 1));
+          s._formationBand = band;
+          s._formationSlot = idx;
+          s._formationPosition = band * 5 + idx;
+          s._formationAnchorX = Math.round(anchor);
+          s._formationDepthOffset = ((idx % 3) - 1) * 4;
+        });
       }
     }
   }
@@ -151,15 +158,16 @@
     const base = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : (s.move || CHASE_SPEED);
     const step = Math.min(d, base * multiplier * tide * dt);
     s.x += dx / d * step; s.y += dy / d * step;
-    if (state.roundPhase === 'fight') {
+    // Formation bands are staging anchors, not invisible walls. Once a unit
+    // has a target it may cross bands (notably raiders diving the backline).
+    if (state.roundPhase === 'fight' && s.mode !== 'fight') {
       const cy = fieldCenter();
-      const pos = s._formationPosition;
-      let offsetLow = 32, offsetHigh = 82; // default: mid zone
-      if (pos !== undefined && pos !== null) {
-        if (pos < 5) { offsetLow = 2; offsetHigh = 25; }       // front
-        else if (pos < 10) { offsetLow = 32; offsetHigh = 82; } // mid
-        else { offsetLow = 92; offsetHigh = 150; }              // back
-      }
+      const band = Number.isFinite(s._formationBand) ? s._formationBand : formationBand(s);
+      const zones = [[8, 30], [42, 78], [88, 128]];
+      const zone = zones[band] || zones[1];
+      const depthOffset = Number(s._formationDepthOffset) || 0;
+      const offsetLow = zone[0] + depthOffset;
+      const offsetHigh = zone[1] + depthOffset;
       const yLow = s.side === 'player' ? cy + offsetLow : cy - offsetHigh;
       const yHigh = s.side === 'player' ? cy + offsetHigh : cy - offsetLow;
       s.y = clamp(s.y, Math.min(yLow, yHigh), Math.max(yLow, yHigh));
@@ -169,7 +177,9 @@
 
   function moveTowardEnemyFree(s, target) {
     s.mode = 'fight';
-    const offset = (stableHash(`${s.id}|offset`) % 31) - 15;
+    const anchor = Number.isFinite(s._formationAnchorX) ? s._formationAnchorX : s.x;
+    const formationPull = clamp(anchor - target.x, -28, 28) * 0.5;
+    const offset = ((stableHash(`${s.id}|offset`) % 13) - 6) + formationPull;
     moveVector(s, clamp(target.x + offset, 24, W - 24), target.y, 1);
   }
   function kiteFree(s, target) {
@@ -180,7 +190,8 @@
   function advanceFree(s) {
     s.target = null; s.mode = 'march';
     const targetY = s.side === 'player' ? fieldTop() : fieldBottom();
-    moveVector(s, freeSiegeX(s), targetY, freeRole(s.type) === 'raider' ? 1 : .86); // 游骑兵冲刺速度1.0,其他0.86
+    const targetX = Number.isFinite(s._formationAnchorX) ? s._formationAnchorX : freeSiegeX(s);
+    moveVector(s, targetX, targetY, freeRole(s.type) === 'raider' ? 1 : .86); // 游骑兵冲刺速度1.0,其他0.86
   }
 
   function nearestBlocker(s, enemies, maxDistance) {
@@ -233,11 +244,11 @@
       for (let j = 0; j < soldiers.length; j++) {
         if (i === j || !isCombatant(soldiers[j])) continue;
         const b = soldiers[j], dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy);
-        if (d > 0 && d < 34) { const f = (34 - d) / 34; px += dx / d * f; py += dy / d * f; }
+        if (d > 0 && d < 48) { const f = (48 - d) / 48; px += dx / d * f; py += dy / d * f; }
         else if (d === 0) px += stableHash(a.id) % 2 ? .4 : -.4;
       }
-      a.x = clamp(a.x + px * 34 * dt, 24, W - 24);
-      if (!String(a.mode).startsWith('siege')) a.y = clamp(a.y + py * 24 * dt, fieldTop(), fieldBottom());
+      a.x = clamp(a.x + px * 46 * dt, 24, W - 24);
+      if (!String(a.mode).startsWith('siege')) a.y = clamp(a.y + py * 30 * dt, fieldTop(), fieldBottom());
     }
   }
 

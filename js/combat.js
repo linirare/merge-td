@@ -99,12 +99,14 @@ window.emitVfx = emitVfx;
 window.onVfx = onVfx;
 window.offVfx = offVfx;
 function battleTimeLimit() {
-  const k = Math.max(1, Number((state && state.currentLevel) || 1));
-  if (k <= 5) return 120;
-  if (k <= 10) return 135;
-  if (k <= 15) return 150;
-  return 165;
+  const pve = typeof TUNING === 'object' && TUNING && TUNING.pve ? TUNING.pve : {};
+  const boss = !!(state && state.levelConfig && (state.levelConfig.isBoss || state.levelConfig.type === 'boss'));
+  const target = boss ? pve.bossTargetSeconds : pve.normalTargetSeconds;
+  return Array.isArray(target) && Number(target[1]) > 0 ? Number(target[1]) : (boss ? 90 : 75);
 }
+const ROUND_PREPARE_INITIAL = 4.0;
+const ROUND_PREPARE_BETWEEN = 1.2;
+const ROUND_FIGHT_LIMIT = 16.0;
 const LANE_TOLERANCE = 48;
 const SCAN_RANGE = 168;
 const TARGET_STICK_RANGE = 220;
@@ -1034,19 +1036,31 @@ function roundSpawnAll() {
   for (const grp of groups) {
     const soldiers = grp.side === 'player' ? state.playerSoldiers : state.enemySoldiers;
     const alive = soldiers.filter(s => s.alive).length;
-    const remaining = MAX_SOLDIERS - alive;
+    const remaining = Math.max(0, MAX_SOLDIERS - alive);
     if (remaining <= 0) continue;
+    const candidates = [];
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const ball = grp.slots[r][c];
         if (!ball) continue;
-        const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
-        // 回合制:每回合所有球都出兵,无视 spawnTimer
-        const spawnFn = typeof spawnSoldierFromBall === 'function' ? spawnSoldierFromBall : null;
-        if (spawnFn) spawnFn(ball, r, c, grp.side);
-        ball.spawnTimer = cd;
+        candidates.push({ ball, r, c });
       }
     }
+    // A full 3x5 board has more barracks than the battlefield cap. Select the
+    // strongest barracks first instead of silently excluding the bottom row.
+    candidates.sort((a, b) =>
+      (Number(b.ball.level) || 1) - (Number(a.ball.level) || 1)
+      || a.r - b.r || a.c - b.c);
+    const selected = candidates.slice(0, remaining);
+    const spawnFn = typeof spawnSoldierFromBall === 'function' ? spawnSoldierFromBall : null;
+    for (const entry of selected) {
+      if (spawnFn) spawnFn(entry.ball, entry.r, entry.c, grp.side);
+      // Cooldown is not part of the round model. Keep the barracks ready so
+      // renderers cannot show a countdown that has no gameplay effect.
+      entry.ball.spawnTimer = 0;
+    }
+    state.roundReserveCount = state.roundReserveCount || { player: 0, enemy: 0 };
+    state.roundReserveCount[grp.side] = Math.max(0, candidates.length - selected.length);
   }
 }
 
@@ -1060,12 +1074,52 @@ function startBreach(winnerSide) {
   }
 }
 
+function roundBreachDamage(s) {
+  const level = Math.max(1, Number(s && s.level) || 1);
+  const tags = (TYPES[s.type] && TYPES[s.type].tags) || [];
+  const siegeBonus = tags.includes('siege') ? 1 : 0;
+  return 1 + Math.floor(level / 2) + siegeBonus;
+}
+
+function roundSideScore(list) {
+  return list.filter(isCombatant).reduce((score, s) => {
+    const hp = Math.max(0, Number(s.hp) || 0);
+    const atk = Math.max(0, Number(s.atk) || 0);
+    return score + hp + atk * 2;
+  }, 0);
+}
+
+function resolveTimedRound() {
+  const player = state.playerSoldiers.filter(isCombatant);
+  const enemy = state.enemySoldiers.filter(isCombatant);
+  const pScore = roundSideScore(player);
+  const eScore = roundSideScore(enemy);
+  const spread = Math.abs(pScore - eScore) / Math.max(1, pScore, eScore);
+
+  if (spread < 0.05) {
+    for (const s of [...player, ...enemy]) { s.alive = false; s.hp = 0; }
+    state.playerSoldiers = state.playerSoldiers.filter(s => s.alive);
+    state.enemySoldiers = state.enemySoldiers.filter(s => s.alive);
+    state.roundPhase = 'prepare';
+    state.roundTimer = ROUND_PREPARE_BETWEEN;
+    state._roundSpawned = false;
+    return;
+  }
+
+  const winnerSide = pScore > eScore ? 'player' : 'enemy';
+  const losers = winnerSide === 'player' ? enemy : player;
+  for (const s of losers) { s.alive = false; s.hp = 0; }
+  state.playerSoldiers = state.playerSoldiers.filter(s => s.alive);
+  state.enemySoldiers = state.enemySoldiers.filter(s => s.alive);
+  startBreach(winnerSide);
+}
+
 function breachChargeMove(s) {
   const wallY = s.side === 'player' ? fieldTop() : fieldBottom();
   const dir = s.side === 'player' ? -1 : 1;
   s.y += dir * SIEGE_SPEED * 2 * dt_global;
   if ((s.side === 'player' && s.y <= wallY) || (s.side !== 'player' && s.y >= wallY)) {
-    damageReefBarrier(s.side === 'player' ? 'enemy' : 'player', 1, s);
+    damageReefBarrier(s.side === 'player' ? 'enemy' : 'player', roundBreachDamage(s), s);
     state.attackFx.push({ x1: s.x - 8, y1: wallY, x2: s.x + 8, y2: wallY, life: 0.3, maxLife: 0.3 });
     for (let k = 0; k < 6; k++) {
       state.fx.push({ x: s.x + (Math.random() - 0.5) * 16, y: s.y + (Math.random() - 0.5) * 12,
@@ -1092,8 +1146,8 @@ function tickBreach() {
   ]);
   state.breachList = state.breachList.filter(id => aliveIds.has(id));
   if (state.breachList.length === 0) {
-    state.roundPhase = 'fight';
-    state.roundTimer = 0;
+    state.roundPhase = 'prepare';
+    state.roundTimer = ROUND_PREPARE_BETWEEN;
     state._roundSpawned = false;
   }
 }
@@ -1102,11 +1156,30 @@ function updateCombat() {
   if (state.phase !== 'playing') return;
   _wrapVfxArrays();
 
+  // The match clock is authoritative in every round phase, including prepare
+  // and breach. Previously a charge animation could run past the configured
+  // PvE limit because only the fight phase performed this check.
+  if (state.mode !== 'pvp' && (state.time || 0) >= battleTimeLimit()) {
+    const pPct = state.playerWallHp / Math.max(1, state.playerWallMax);
+    const ePct = state.enemyWallHp / Math.max(1, state.enemyWallMax);
+    const win = pPct > ePct + 0.02 || (Math.abs(pPct - ePct) <= 0.02 && (state.enemyWallDamageDealt || 0) > (state.playerWallDamageTaken || 0));
+    state.lastBattleReport = buildBattleReport(win);
+    state.phase = win ? 'won' : 'lost';
+    onGameOver(win);
+    return;
+  }
+
   // === 回合状态机调度 ===
   if (state.roundPhase === 'idle') {
+    state.roundPhase = 'prepare';
+    state.roundTimer = ROUND_PREPARE_INITIAL;
+    state._roundSpawned = false;
+  }
+  if (state.roundPhase === 'prepare') {
+    state.roundTimer = Math.max(0, state.roundTimer - dt_global);
+    if (state.roundTimer > 0) return;
     state.roundPhase = 'fight';
     state.roundTimer = 0;
-    state._roundSpawned = false;
   }
   if (state.roundPhase === 'breach') {
     tickBreach();
@@ -1155,7 +1228,17 @@ function updateCombat() {
     const _pAlive = state.playerSoldiers.filter(isCombatant).length;
     const _eAlive = state.enemySoldiers.filter(isCombatant).length;
     if (_pAlive === 0 || _eAlive === 0) {
-      startBreach(_pAlive > 0 ? 'player' : 'enemy');
+      if (_pAlive === 0 && _eAlive === 0) {
+        state.roundPhase = 'prepare';
+        state.roundTimer = ROUND_PREPARE_BETWEEN;
+        state._roundSpawned = false;
+      } else {
+        startBreach(_pAlive > 0 ? 'player' : 'enemy');
+      }
+      return;
+    }
+    if (state.roundTimer >= ROUND_FIGHT_LIMIT) {
+      resolveTimedRound();
       return;
     }
   }

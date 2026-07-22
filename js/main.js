@@ -226,7 +226,7 @@ function update(dt) {
 
   updateAI(dt);
 
-  // 每个水果营按 CD 倒计时。回合制下只在回合开始出兵，FIGHT/BREACH 阶段只倒计时不出兵。
+  // Round combat deploys once per round; barracks stay ready between rounds.
   const slotsArr = [
     { slots: state.playerSlots, side: 'player' },
     { slots: state.enemySlots, side: 'enemy' },
@@ -240,12 +240,7 @@ function update(dt) {
       for (let c = 0; c < COLS; c++) {
         const ball = grp.slots[r][c];
         if (!ball) continue;
-        ball.spawnTimer -= dt;
-        if (ball.spawnTimer <= 0) {
-          const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
-          ball.spawnTimer += cd;
-          // 回合制:出兵由 roundSpawnAll 统一管理
-        }
+        ball.spawnTimer = 0;
       }
     }
   }

@@ -53,7 +53,7 @@
     chapters: ['珊瑚浅湾', '海藻森林', '荧光深渊', '失落海宫'],
     bosses: ['巨蛤', '海鳗', '深海鮟鱇', '远古章鱼'],
     commanders: {
-      orchard_lord: { id:'orchard_lord', name:'海豚领航员', skill:'潮汐号令', desc:'海灵珠召唤与全军攻击加速。', artKey:'dolphin-navigator' },
+      orchard_lord: { id:'orchard_lord', name:'海豚领航员', skill:'潮汐号令', desc:'立即重置攻击，并让全军持续攻击加速。', artKey:'dolphin-navigator' },
       berry_general: { id:'berry_general', name:'帝王蟹将军', skill:'护礁反攻', desc:'修复护礁结界并发动反攻。', artKey:'king-crab-general' },
       juice_sage: { id:'juice_sage', name:'鹦鹉螺贤者', skill:'深海丰潮', desc:'立即获得潮汐能并持续补给。', artKey:'nautilus-sage' },
     },

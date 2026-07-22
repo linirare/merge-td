@@ -3,7 +3,7 @@
    ------------------------------------------------------------
    与 combat-baseline 同样把真 combat 链载入一个 vm 沙箱、种子化
    Math.random,但这里驱动【整关】:复刻 main.js 的 update(dt) 主循环
-   (SP 回复 / 敌方补营 / updateAI / 双方按 CD 自动派兵 / updateCombat),
+   (SP 回复 / 敌方补营 / updateAI / 回合统一派兵 / updateCombat),
    玩家侧用"尊重果汁经济的简单 bot"(果汁够就往空格召唤 + 贪心合成)。
 
    敌方 100% 真(补营+真 updateAI+真派兵+真 combat);仅玩家决策是脚本化的,
@@ -168,12 +168,9 @@ function update(dt) {
       for (var c = 0; c < COLS; c++) {
         var ball = grp.slots[r][c];
         if (!ball) continue;
-        ball.spawnTimer -= dt;
-        if (ball.spawnTimer <= 0) {
-          var cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
-          ball.spawnTimer += cd;
-          spawnSoldierFromBall(ball, r, c, grp.side);
-        }
+        // Match browser round combat: roundSpawnAll() is the only deployment
+        // source. A cooldown stream here would double-spawn the simulator.
+        ball.spawnTimer = 0;
       }
     }
   }
@@ -197,15 +194,18 @@ const DRIVER = `
   ].filter(strategy => REQUESTED_STRATEGIES.includes(strategy.id));
 
   // —— 玩家 bot:贪心合成(同类同级) ——
-  function botMerge() {
+  function botMerge(minBarracks = 0) {
+    let occupied = state.playerSlots.flat().filter(Boolean).length;
     const seen = {};
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       const b = state.playerSlots[r][c];
       if (!b || b.level >= MAX_LEVEL) continue;
       const key = b.type + '#' + b.level;
       if (seen[key]) {
+        if (occupied <= minBarracks) return;
         const [pr, pc] = seen[key];
         tryMerge(state.playerSlots, r, c, pr, pc);   // 把 (r,c) 合入之前那个
+        occupied--;
         delete seen[key];
       } else {
         seen[key] = [r, c];
@@ -215,8 +215,8 @@ const DRIVER = `
 
   // —— 玩家 bot:果汁够就往空格召唤(复刻 input.js summonFruitAt 的经济) ——
   const botMergeOnce = botMerge;
-  botMerge = function botMergeMultiPass() {
-    for (let i = 0; i < 4; i++) botMergeOnce();
+  botMerge = function botMergeMultiPass(minBarracks = 0) {
+    for (let i = 0; i < 4; i++) botMergeOnce(minBarracks);
   };
 
   function botActionCost() {
@@ -239,7 +239,6 @@ const DRIVER = `
   }
 
   function botPickType(strategy) {
-    const k = state.currentLevel || 1;
     const boss = !!(state.levelConfig && state.levelConfig.isBoss);
     const pattern = boss
       ? ['orange_cannon', 'watermelon_guard', 'grape_archer', 'pineapple_lancer', 'banana_raider']
@@ -364,12 +363,13 @@ const DRIVER = `
     let urgentTimer = 0;
     let peakJuice = state.sp || 0;
     let maxUnits = 0;
+    let maxBarracks = 0;
     for (let f = 0; f < MAX_SIM_FRAMES; f++) {
       botTimer += DT;
       urgentTimer += DT;
       if (botTimer >= strategy.botEvery) {
         botTimer -= strategy.botEvery;
-        botMerge();
+        botMerge(strategy.id === 'standard' ? 5 : strategy.id === 'light' ? 3 : 0);
         if (strategy.summon > 0) botSummon(strategy.summon, strategy);
       }
       if (urgentTimer >= strategy.urgentEvery) {
@@ -379,10 +379,13 @@ const DRIVER = `
       stepFrame();
       peakJuice = Math.max(peakJuice, state.sp || 0);
       maxUnits = Math.max(maxUnits, (state.playerSoldiers || []).filter(s => s && s.alive).length);
-      if (state.enemyWallHp <= 0) return stageResult({ win: 1, time: state.time, wall: state.playerWallHp / state.playerWallMax, peakJuice, maxUnits });
-      if (state.playerWallHp <= 0) return stageResult({ win: 0, time: state.time, wall: 0, peakJuice, maxUnits });
+      maxBarracks = Math.max(maxBarracks, state.playerSlots.flat().filter(Boolean).length);
+      // The browser can settle on the time-limit comparison before either wall
+      // reaches zero. Treat that authoritative phase as the real result.
+      if (state.phase === 'won' || state.enemyWallHp <= 0) return stageResult({ win: 1, time: state.time, wall: state.playerWallHp / state.playerWallMax, peakJuice, maxUnits, maxBarracks });
+      if (state.phase === 'lost' || state.playerWallHp <= 0) return stageResult({ win: 0, time: state.time, wall: 0, peakJuice, maxUnits, maxBarracks });
     }
-    return stageResult({ win: 0, time: state.time, wall: state.playerWallHp / state.playerWallMax, timeout: 1, peakJuice, maxUnits });
+    return stageResult({ win: 0, time: state.time, wall: state.playerWallHp / state.playerWallMax, timeout: 1, peakJuice, maxUnits, maxBarracks });
   }
 
   const rows = [];
@@ -390,7 +393,7 @@ const DRIVER = `
     const def = getStageDefinition(k);
     for (let sIdx = 0; sIdx < STRATEGIES.length; sIdx++) {
       const strategy = STRATEGIES[sIdx];
-      let wins = 0, timeouts = 0, tSum = 0, wallSum = 0, peakJuice = 0, maxUnits = 0;
+      let wins = 0, timeouts = 0, tSum = 0, wallSum = 0, peakJuice = 0, maxUnits = 0, maxBarracks = 0;
       let maxMergeLevel = 0, pairComboCount = 0, summonCount = 0, mergeCount = 0;
       let lv2Sum = 0, lv2N = 0, lv3Sum = 0, lv3N = 0, formedSum = 0, formedN = 0;
       for (let i = 0; i < RUNS_PER_STAGE; i++) {
@@ -400,6 +403,7 @@ const DRIVER = `
         if (r.timeout) timeouts++;
         peakJuice += r.peakJuice || 0;
         maxUnits += r.maxUnits || 0;
+        maxBarracks += r.maxBarracks || 0;
         maxMergeLevel = Math.max(maxMergeLevel, r.maxMergeLevel || 0);
         pairComboCount += r.pairComboCount || 0;
         summonCount += r.summonCount || 0;
@@ -419,6 +423,7 @@ const DRIVER = `
         avgWallLeft: wins ? Math.round((wallSum / wins) * 100) : 0,
         avgPeakJuice: Math.round(peakJuice / RUNS_PER_STAGE),
         avgMaxUnits: Math.round(maxUnits / RUNS_PER_STAGE),
+        avgMaxBarracks: Math.round(maxBarracks / RUNS_PER_STAGE),
         maxMergeLevel,
         firstLv2Time: lv2N ? +(lv2Sum / lv2N).toFixed(1) : null,
         firstLv3Time: lv3N ? +(lv3Sum / lv3N).toFixed(1) : null,
@@ -451,7 +456,7 @@ const check = process.argv[2] === '--check';
 function band(v, [lo, hi]) { return v >= lo && v <= hi ? 'OK ' : (v < lo ? 'LOW' : 'HIGH'); }
 
 console.log(`\n=== 真战斗仿真 · ${requestedStages.length}关 x ${requestedStrategies.length}档操作 (${simRunsPerStage} run/stage, ${simMaxSeconds}s cap) ===`);
-console.log('关 操作档      类型      胜率   胜均时长  城墙剩% 果汁峰 单位峰 超时  vs目标(时长/胜率)');
+console.log('关 操作档      类型      胜率   胜均时长  城墙剩% 果汁峰 兵站峰 单位峰 超时  vs目标(时长/胜率)');
 for (const r of rows) {
   const winTarget = r.strategy === 'no_action' ? [0, 0.45] : (r.strategy === 'light' ? [0.35, 0.85] : (r.boss ? tuning.bossWinRate : tuning.standardWinRate));
   const timeTarget = r.boss ? tuning.bossTargetSeconds : tuning.normalTargetSeconds;
@@ -466,6 +471,7 @@ for (const r of rows) {
     String(r.avgWinTime == null ? '-' : r.avgWinTime + 's').padStart(7) + '  ' +
     String(r.avgWallLeft + '%').padStart(5) + '  ' +
     String(r.avgPeakJuice).padStart(5) + '  ' +
+    String(r.avgMaxBarracks).padStart(5) + '  ' +
     String(r.avgMaxUnits).padStart(5) + '  ' +
     String(r.maxMergeLevel).padStart(5) + '  ' +
     String(r.firstLv2Time == null ? '-' : r.firstLv2Time + 's').padStart(5) + '  ' +
@@ -499,14 +505,26 @@ if (standardRows.length >= 5) {
   if (isGateRun && simRunsPerStage >= 3) {
     const blockedStages = standardRows.filter(r => r.winRate === 0).map(r => r.stage);
     assert.strictEqual(blockedStages.length, 0, `PVE gate: zero-win stages detected: ${blockedStages.join(',')}`);
+    if (standardRows.length >= 10) {
+      const aggregateWinRate = standardRows.reduce((sum, row) => sum + row.winRate / 100, 0) / standardRows.length;
+      const target = Array.isArray(tuning.standardWinRate) ? tuning.standardWinRate : [0.80, 0.95];
+      assert.ok(aggregateWinRate >= Math.max(0, target[0] - 0.05), `PVE gate: aggregate standard win rate ${Math.round(aggregateWinRate * 100)}% is too low`);
+      assert.ok(aggregateWinRate <= Math.min(0.98, target[1] + 0.03), `PVE gate: aggregate standard win rate ${Math.round(aggregateWinRate * 100)}% is too high`);
+    }
   }
 }
 const firstStage = standardRows.find(r => r.stage === 1);
 if (firstStage) assert.ok(firstStage.winRate > 0, 'PVE gate: stage 1 must be clearable by standard strategy');
 if (requestedStrategies.includes('no_action')) {
-  assert.ok(rows.filter(r => r.strategy === 'no_action').length > 0, 'no_action records present');
+  const noActionRows = rows.filter(r => r.strategy === 'no_action');
+  assert.ok(noActionRows.length > 0, 'no_action records present');
+  if (isGateRun && simRunsPerStage >= 3 && noActionRows.length >= 10) {
+    const aggregateNoAction = noActionRows.reduce((sum, row) => sum + row.winRate / 100, 0) / noActionRows.length;
+    assert.ok(aggregateNoAction <= 0.45, `PVE gate: no-action win rate ${Math.round(aggregateNoAction * 100)}% is too high`);
+  }
 }
 if (typeof tuning.bossesEnabled === 'boolean' && !tuning.bossesEnabled) {
   assert.strictEqual(rows.filter(r => r.boss).length, 0, 'bosses are disabled for the current PVE season');
 }
-console.log(`\nOK: real-combat PVE gate passed (${Math.round(playableStageRatio * 100)}% requested stages clearable)`);
+const aggregateStandard = standardRows.reduce((sum, row) => sum + row.winRate / 100, 0) / standardRows.length;
+console.log(`\nOK: real-combat PVE gate passed (${Math.round(playableStageRatio * 100)}% stages clearable; ${Math.round(aggregateStandard * 100)}% aggregate standard wins)`);

@@ -29,7 +29,9 @@ function patchLevelPacingV19() {
     state.playerWallHp = Math.min(state.playerWallHp, state.playerWallMax);
 
     state.enemyBallTimer = Math.min(state.enemyBallTimer || 0, -0.6);
-    state._enemyReinforcePause = 0.6;
+    // Round combat owns reinforcement timing. A legacy clear-line pause must
+    // never cancel the enemy half of a newly started round.
+    state._enemyReinforcePause = 0;
     state._lastEnemyCombatantsV19 = 0;
   };
   initLevel._pacingV19 = true;
@@ -45,11 +47,15 @@ function hasPlayerPressureV19() {
   return (state.playerSoldiers || []).some(s => s && s.alive && s.battleReady && s.y < LAYOUT.playerWallY - 30);
 }
 
+function usesRoundCombatV19() {
+  return typeof state.roundPhase === 'string';
+}
+
 function patchEnemyReinforceWindowV19() {
   if (typeof spawnSoldierFromBall === 'function' && !spawnSoldierFromBall._pacingV19) {
     const oldSpawn = spawnSoldierFromBall;
     spawnSoldierFromBall = function spawnSoldierFromBallPacingV19(ball, r, c, side, forced = false) {
-      if (side === 'enemy' && (state._enemyReinforcePause || 0) > 0) return null;
+      if (!usesRoundCombatV19() && side === 'enemy' && (state._enemyReinforcePause || 0) > 0) return null;
       return oldSpawn(ball, r, c, side, forced);
     };
     spawnSoldierFromBall._pacingV19 = true;
@@ -58,7 +64,7 @@ function patchEnemyReinforceWindowV19() {
   if (typeof updateAI === 'function' && !updateAI._pacingV19) {
     const oldAI = updateAI;
     updateAI = function updateAIPacingV19(dt) {
-      if ((state._enemyReinforcePause || 0) > 0) return;
+      if (!usesRoundCombatV19() && (state._enemyReinforcePause || 0) > 0) return;
       oldAI(dt);
     };
     updateAI._pacingV19 = true;
@@ -70,6 +76,11 @@ function patchEnemyReinforceWindowV19() {
       const beforeEnemy = enemyCombatantsV19();
       oldUpdate(dt);
       if (state.phase !== 'playing') return;
+
+      if (usesRoundCombatV19()) {
+        state._enemyReinforcePause = 0;
+        return;
+      }
 
       if ((state._enemyReinforcePause || 0) > 0) {
         state._enemyReinforcePause = Math.max(0, state._enemyReinforcePause - dt);

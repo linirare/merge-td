@@ -370,7 +370,7 @@ const TUNING = {
         ['watermelon_guard','grape_archer','banana_raider'],
         ['watermelon_guard','grape_archer','banana_raider'],
         ['watermelon_guard','grape_archer','banana_raider'],
-        ['watermelon_guard','mango_arbalest','banana_raider'],
+        ['watermelon_guard','blueberry_sniper','banana_raider'],
       ],
       mechanic: [
         ['pineapple_lancer','pear_frost','grape_archer'],

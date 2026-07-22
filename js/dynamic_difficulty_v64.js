@@ -9,8 +9,11 @@
    (Boss 墙 HP 覆盖 combat_pacing 的 0.68/0.78 折扣)。
    ============================================================ */
 (function installDynamicDifficultyV64() {
-  const STAGE_ATK_RATE = 0.12;
-  const STAGE_HP_RATE = 0.20;
+  // Enemy barracks deploy at level 1 in the juice economy, so this gradual
+  // multiplier is the authoritative use of the stage enemyLevel curve. Rates
+  // track the recommended hero + tech curve while keeping the player ahead.
+  const STAGE_ATK_RATE = 0.32;
+  const STAGE_HP_RATE = 0.38;
 
   function enemyPveStatMultipliers() {
     const stageLevel = Math.max(1, Number(state.levelConfig && state.levelConfig.enemyInitLevel || 1));

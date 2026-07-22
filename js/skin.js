@@ -473,6 +473,7 @@ function draw() {
   drawRings();
   drawFx();
   drawHUD();
+  if (typeof drawRoundStatus === 'function') drawRoundStatus();
 
   if (state.phase === 'paused') {
     ctx.fillStyle = 'rgba(0,0,0,0.45)';

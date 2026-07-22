@@ -416,6 +416,7 @@
 
     if (!ball) {
       juiceLastTap.time = 0;
+      summonFruitAtV59(r, c);
       return;
     }
 

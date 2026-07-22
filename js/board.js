@@ -270,6 +270,7 @@ function initLevel(k) {
   state.breachList = [];
   state.roundIndex = 0;
   state._roundSpawned = false;
+  state.roundReserveCount = { player: 0, enemy: 0 };
   state.phase = 'playing';
   resetAI();
   // 关卡入口可能由多个壳层触发；立即同步，避免首帧出现黑底或旧导航。

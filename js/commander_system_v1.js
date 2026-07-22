@@ -79,7 +79,6 @@
     commander.pulseTimer = 0;
 
     if (commander.id === 'orchard_lord') {
-      for (const ball of state.playerSlots.flat()) if (ball) ball.spawnTimer = Math.max(0, (ball.spawnTimer || 0) - 2);
       for (const soldier of state.playerSoldiers) if (soldier && soldier.alive) soldier.atkTimer = 0;
     } else if (commander.id === 'berry_general') {
       const heal = Math.round(Number(state.playerWallMax || 0) * (0.14 + commander.level * 0.003));
@@ -104,8 +103,7 @@
     enemy.active = Math.max(0, enemy.active - dt);
 
     if (own.id === 'orchard_lord' && own.active > 0) {
-      for (const ball of state.playerSlots.flat()) if (ball) ball.spawnTimer = Math.max(0, (ball.spawnTimer || 0) - dt * 0.55);
-      for (const soldier of state.playerSoldiers) if (soldier && soldier.alive) soldier.atkTimer = Math.max(0, (soldier.atkTimer || 0) - dt * 0.42);
+      for (const soldier of state.playerSoldiers) if (soldier && soldier.alive) soldier.atkTimer = Math.max(0, (soldier.atkTimer || 0) - dt * 0.7);
     } else if (own.id === 'berry_general' && own.active > 0) {
       for (const soldier of state.playerSoldiers) if (soldier && soldier.alive) soldier.atkTimer = Math.max(0, (soldier.atkTimer || 0) - dt * 0.18);
     } else if (own.id === 'juice_sage' && own.active > 0) {
