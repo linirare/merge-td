@@ -72,7 +72,8 @@ function addJuiceTextV16(x, y, text, color = THEME.gold, size = 14, life = 0.62)
 }
 function punchV16(power = 0.22, stop = 0.012) {
   const j = ensureJuiceV16();
-  state.shake = Math.max(state.shake || 0, power);
+  const cameraPower = state.roundPhase === 'fight' ? Math.max(0, (power - 0.3) * 0.35) : power * 0.45;
+  state.shake = Math.max(state.shake || 0, cameraPower);
   j.punch = Math.max(j.punch || 0, power);
   j.hitStop = Math.max(j.hitStop || 0, stop);
 }
@@ -209,6 +210,7 @@ function patchUpdateDrawJuiceV16() {
 
   update = function updateJuiceAbsorbV16(dt) {
     const j = ensureJuiceV16();
+    if (state.roundPhase === 'fight') j.hitStop = 0;
     if (j.hitStop > 0 && state.phase === 'playing') {
       j.hitStop = Math.max(0, j.hitStop - dt);
       updateJuiceOnlyV16(dt * 0.35);

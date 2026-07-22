@@ -417,8 +417,8 @@ function draw() {
   ctx.save();
   _frameCount++;
   if (!window.REDUCE_MOTION && state.shake > 0.05) ctx.translate(
-    (_frameCount % 2 === 0 ? 1 : -1) * state.shake * 6,
-    (_frameCount % 3 === 0 ? 1 : -1) * state.shake * 4
+    Math.sin((state.time || 0) * 22) * Math.min(2.2, state.shake * 3),
+    Math.cos((state.time || 0) * 18) * Math.min(1.3, state.shake * 1.8)
   );
 
   drawBackground();

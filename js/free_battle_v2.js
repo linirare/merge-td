@@ -170,7 +170,8 @@
       const offsetHigh = zone[1] + depthOffset;
       const yLow = s.side === 'player' ? cy + offsetLow : cy - offsetHigh;
       const yHigh = s.side === 'player' ? cy + offsetHigh : cy - offsetLow;
-      s.y = clamp(s.y, Math.min(yLow, yHigh), Math.max(yLow, yHigh));
+      const formationY = clamp(s.y, Math.min(yLow, yHigh), Math.max(yLow, yHigh));
+      s.y += (formationY - s.y) * Math.min(1, dt * 6);
     }
     keepInsideBattlefield(s);
   }
@@ -238,17 +239,27 @@
 
   function applySeparationFree(soldiers) {
     const dt = typeof dt_global === 'number' ? dt_global : 1/60;
+    const push = soldiers.map(() => ({ x: 0, y: 0 }));
     for (let i = 0; i < soldiers.length; i++) {
       const a = soldiers[i]; if (!isCombatant(a)) continue;
-      let px = 0, py = 0;
-      for (let j = 0; j < soldiers.length; j++) {
-        if (i === j || !isCombatant(soldiers[j])) continue;
-        const b = soldiers[j], dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy);
-        if (d > 0 && d < 48) { const f = (48 - d) / 48; px += dx / d * f; py += dy / d * f; }
-        else if (d === 0) px += stableHash(a.id) % 2 ? .4 : -.4;
+      for (let j = i + 1; j < soldiers.length; j++) {
+        const b = soldiers[j]; if (!isCombatant(b)) continue;
+        let dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy);
+        if (d >= 48) continue;
+        if (d < 0.001) {
+          const angle = (stableHash(`${a.id}|${b.id}`) % 360) * Math.PI / 180;
+          dx = Math.cos(angle); dy = Math.sin(angle); d = 1;
+        }
+        const force = (48 - d) / 48;
+        const nx = dx / d * force, ny = dy / d * force;
+        push[i].x += nx; push[i].y += ny;
+        push[j].x -= nx; push[j].y -= ny;
       }
-      a.x = clamp(a.x + px * 46 * dt, 24, W - 24);
-      if (!String(a.mode).startsWith('siege')) a.y = clamp(a.y + py * 30 * dt, fieldTop(), fieldBottom());
+    }
+    for (let i = 0; i < soldiers.length; i++) {
+      const a = soldiers[i]; if (!isCombatant(a)) continue;
+      a.x = clamp(a.x + push[i].x * 28 * dt, 24, W - 24);
+      if (!String(a.mode).startsWith('siege')) a.y = clamp(a.y + push[i].y * 20 * dt, fieldTop(), fieldBottom());
     }
   }
 

@@ -70,7 +70,7 @@ function patchProjectileV15() {
             }
           }
           addFx(tgt.x, tgt.y, '💥', THEME.accent, 14);
-          state.shake = Math.max(state.shake || 0, 0.4);
+          state.shake = Math.max(state.shake || 0, 0.16);
         }
         const text = p.counterHit ? `克制 -${dealt}` : `-${dealt}`;
         addFx((p.x + tgt.x) / 2, (p.y + tgt.y) / 2 - 8, text, p.counterHit ? THEME.gold : THEME.accent, p.counterHit ? 13 : 11);

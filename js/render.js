@@ -682,8 +682,8 @@ function drawRoundStatus() {
 function draw() {
   ctx.save();
   if (!window.REDUCE_MOTION && state.shake > 0.05) ctx.translate(
-    (Math.random() - 0.5) * state.shake * 12,
-    (Math.random() - 0.5) * state.shake * 12
+    Math.sin((state.time || 0) * 22) * Math.min(2.2, state.shake * 3),
+    Math.cos((state.time || 0) * 18) * Math.min(1.3, state.shake * 1.8)
   );
 
   drawBackground();

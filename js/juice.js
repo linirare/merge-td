@@ -88,7 +88,8 @@ function addSmokePuff(x, y) {
 
 function punch(power = 0.3, stop = 0.018) {
   const j = ensureJuice();
-  state.shake = Math.max(state.shake || 0, power);
+  const cameraPower = state.roundPhase === 'fight' ? Math.max(0, (power - 0.3) * 0.35) : power * 0.45;
+  state.shake = Math.max(state.shake || 0, cameraPower);
   j.punch = Math.max(j.punch, power);
   j.hitStop = Math.max(j.hitStop, stop);
 }
@@ -239,6 +240,7 @@ function patchUpdateDrawJuice() {
 
   update = function juiceUpdate(dt) {
     const j = ensureJuice();
+    if (state.roundPhase === 'fight') j.hitStop = 0;
     if (j.hitStop > 0 && state.phase === 'playing') {
       j.hitStop = Math.max(0, j.hitStop - dt);
       updateJuiceOnly(dt * 0.35);
