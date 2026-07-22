@@ -8,7 +8,7 @@
   LAYOUT.recalc = function (_w, h) {
     // Match the red board to the authored upper basin: its card finishes just
     // above the painted coral/stone sill and the wall sits on that sill.
-    const enemyBoardY = 72;
+    const enemyBoardY = 60;
     // Keep the simulation boundary stable; the v5 renderer applies the
     // authored 22px reef inset only to the painted wall.
     const enemyWallY = 276;

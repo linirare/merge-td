@@ -198,7 +198,7 @@ async function assertBattleGeometry(page) {
   }));
   const { enemy, player, canvas, grid, walls, operationY } = geometry;
   if (grid.rows !== 3 || grid.cols !== 5) throw new Error(`battle grid must be 3x5: ${JSON.stringify(geometry)}`);
-  if (enemy.y !== 72 || player.y !== 676) throw new Error(`battle board calibration regressed: ${JSON.stringify(geometry)}`);
+  if (enemy.y !== 60 || player.y !== 676) throw new Error(`battle board calibration regressed: ${JSON.stringify(geometry)}`);
   if (enemy.w !== player.w || enemy.h !== player.h) throw new Error(`enemy/player boards differ: ${JSON.stringify(geometry)}`);
   if (enemy.x + player.x + enemy.w !== canvas.w) throw new Error(`boards are not horizontally mirrored: ${JSON.stringify(geometry)}`);
   const wallRenderH = 24;
@@ -211,7 +211,7 @@ async function assertBattleGeometry(page) {
     throw new Error(`commander system missing: ${JSON.stringify(geometry)}`);
   }
   if (geometry.guides) {
-    const authoredFrames = { enemy:{ x:64, y:70 }, player:{ x:126, y:684 } };
+    const authoredFrames = { enemy:{ x:64, y:60 }, player:{ x:126, y:684 } };
     if (enemy.x !== authoredFrames.enemy.x || enemy.y !== authoredFrames.enemy.y ||
         player.x !== authoredFrames.player.x || player.y !== authoredFrames.player.y) {
       throw new Error(`boards do not match authored background frames: ${JSON.stringify(geometry)}`);

@@ -474,17 +474,17 @@ function drawBoard(slots, isEnemy, dragHint = null) {
 
   ctx.save();
   ctx.fillStyle = team.deep;
-  roundRect(BOARD_X + 10, by - 28, 116, 24, 8);
+  roundRect(BOARD_X + 10, by - 20, 116, 24, 8);
   ctx.fill();
   ctx.strokeStyle = team.trim;
   ctx.lineWidth = 1.5;
   ctx.stroke();
   ctx.fillStyle = team.main;
-  ctx.beginPath(); ctx.arc(BOARD_X + 25, by - 16, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(BOARD_X + 25, by - 8, 5, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = team.text;
   ctx.font = '900 12px "Microsoft YaHei",sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText(isEnemy ? '\u654c\u65b9\u5927\u672c\u8425' : '\u6211\u65b9\u6307\u6325\u90e8', BOARD_X + 37, by - 16);
+  ctx.fillText(isEnemy ? '\u654c\u65b9\u5927\u672c\u8425' : '\u6211\u65b9\u6307\u6325\u90e8', BOARD_X + 37, by - 8);
   ctx.restore();
 
   for (let r = 0; r < ROWS; r++) {
