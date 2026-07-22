@@ -26,7 +26,7 @@ function emptySlots(slots) {
 }
 
 /* ——— 随机池：玩家只从5个上阵水果中刷；敌人用战斗池，不用合成辅助球 ——— */
-const ENEMY_POOL = ['watermelon_guard','coconut_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon','pumpkin_roller','pear_frost','strawberry_knight','avocado_brawler','dragonfruit_warrior','olive_assassin','mango_arbalest','cherry_bomber','melon_shaman'];
+const ENEMY_POOL = UNIT_POOL.filter(id => TYPES[id] && TYPES[id].combatRole !== 'support');
 function randomType(pool = null) {
   const list = pool || activeDeck();
   return list[Math.floor(Math.random() * list.length)] || DEFAULT_DECK[0];
@@ -211,7 +211,7 @@ function initLevel(k) {
 
   initBuildEnemyOpening(k, eLevel);
 
-  state.playerWallHp = BASE_WALL_HP + getWallBonus(meta);
+  state.playerWallHp = lv.enemyWallHp + getWallBonus(meta);
   state.playerWallMax = state.playerWallHp;
   state.enemyWallHp = lv.enemyWallHp;
   state.enemyWallMax = lv.enemyWallHp;

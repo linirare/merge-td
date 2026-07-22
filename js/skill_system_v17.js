@@ -167,6 +167,7 @@ function patchFruitPassiveSkillsV17() {
       if (s.skillState?.bananaFury > 0) s.skillState.bananaFury = Math.max(0, s.skillState.bananaFury - dt);
       if (s.skillState?.grandCannonCd > 0) s.skillState.grandCannonCd = Math.max(0, s.skillState.grandCannonCd - dt);
       if (!isCombatant(s)) continue;
+      if (TYPES[s.type]?.combatV1) continue;
 
       // 西瓜 Lv4：果盾壁垒。Lv6 遇突击压力时护盾更强；Lv7 给同路友军小护盾。
       if (s.type === 'watermelon_guard' && hasSkillV17(s)) {

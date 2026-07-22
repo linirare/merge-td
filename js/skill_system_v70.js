@@ -13,6 +13,7 @@
     const all = [...state.playerSoldiers, ...state.enemySoldiers];
     for (const s of all) {
       if (!s.alive || !isCombatant(s)) continue;
+      if (TYPES[s.type]?.combatV1) continue;
       const lv = s.level || 1;
       s._v70Timer = (s._v70Timer || 0) - dt;
 

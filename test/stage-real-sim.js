@@ -52,6 +52,7 @@ const FILES = [
   'js/commander_system_v1.js',
   'js/build_combo_v2.js',
   'js/bond_system.js',
+  'js/four_class_combat_v1.js',
 ];
 
 function mulberry32(seed) {

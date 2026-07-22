@@ -76,7 +76,7 @@ function findReinforceTarget(side, type, lane) {
   return tierTroops(side, lane).filter(s => s.squadSlot === slot && (s.reinforceStacks || 0) < 2).sort((a,b) => b.level - a.level)[0] || null;
 }
 function tierLaneLimit() { return (state.currentLevel || 1) <= 3 ? 2 : 3; }
-function tierGlobalLimit() { return (state.currentLevel || 1) <= 8 ? 10 : 12; }
+function tierGlobalLimit() { return MAX_SOLDIERS; }
 function applyTroopTierStats(s) {
   const type = s.type;
   const level = s.level || 1;
@@ -93,16 +93,18 @@ function applyTroopTierStats(s) {
   if (s.side === 'player' && typeof meta !== 'undefined') {
     const win = typeof window !== 'undefined' ? window : null;
     const lv = Math.max(1, win?.shell?.fruitLv?.[type] || 1);
-    hpMul = heroMul(lv);
-    atkMul = heroMul(lv);
+    hpMul = typeof heroMulForType === 'function' ? heroMulForType(type, lv, 'hp') : heroMul(lv);
+    atkMul = typeof heroMulForType === 'function' ? heroMulForType(type, lv, 'atk') : heroMul(lv);
     const techAtk = 1 + (getUpgradeLv?.(meta, type, 'atk') || 0) * UPGRADE_PER_LV;
     const techHp = 1 + (getUpgradeLv?.(meta, type, 'hp') || 0) * UPGRADE_PER_LV;
     atkMul *= techAtk;
     hpMul *= techHp;
   }
-  s.maxHp = Math.round(base.hp * levelMul * (TIER_HP_MUL[tier] || 1) * hpReinforce * (tags.includes('tank') ? 1.10 : 1) * hpMul);
+  const tierHpMul = base.combatV1 ? 1 : (TIER_HP_MUL[tier] || 1);
+  const tierAtkMul = base.combatV1 ? 1 : (TIER_ATK_MUL[tier] || 1);
+  s.maxHp = Math.round(base.hp * levelMul * tierHpMul * hpReinforce * (tags.includes('tank') ? 1.10 : 1) * hpMul);
   s.hp = Math.max(1, Math.round(s.maxHp * oldRatio));
-  s.atk = Math.round(base.atk * levelMul * (TIER_ATK_MUL[tier] || 1) * atkReinforce * atkMul);
+  s.atk = Math.round(base.atk * levelMul * tierAtkMul * atkReinforce * atkMul);
   s.siege = (base.siege != null ? base.siege : (typeof roleStats === 'function' ? roleStats(base.role).siege : 1));
   s.armor = (base.armor != null ? base.armor : (typeof roleStats === 'function' ? roleStats(base.role).armor : 0));
   s.troopTier = tier;

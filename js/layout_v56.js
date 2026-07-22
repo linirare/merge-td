@@ -6,12 +6,11 @@
   if (typeof LAYOUT === 'undefined') return;
 
   LAYOUT.recalc = function (_w, h) {
-    // The red board's painted inner well begins below its decorative top rim.
-    // y=58 puts the interactive cells over that rim.  Leave an 8px visual
-    // inset inside the painted well so the cells do not touch its top edge.
-    const enemyBoardY = 88;
-    // These coordinates remain simulation boundaries.  The renderer applies
-    // its own small visual inset for the lower reef band.
+    // Match the red board to the authored upper basin: its card finishes just
+    // above the painted coral/stone sill and the wall sits on that sill.
+    const enemyBoardY = 72;
+    // Keep the simulation boundary stable; the v5 renderer applies the
+    // authored 22px reef inset only to the painted wall.
     const enemyWallY = 276;
     const operationH = 54;
     const operationY = h - operationH - 8;

@@ -47,6 +47,8 @@ const FILES = [
   'js/boss_v63.js',
   'js/dynamic_difficulty_v64.js',
   'js/free_battle_v2.js',
+  'js/bond_system.js',
+  'js/four_class_combat_v1.js',
 ];
 
 function mulberry32(seed) {

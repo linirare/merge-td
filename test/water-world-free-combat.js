@@ -105,9 +105,10 @@ assert.strictEqual(r.tideCalm.multiplier, 1);
 assert.strictEqual(r.tideSurge.phase, 'calm');
 assert.strictEqual(r.tideSurge.multiplier, 1);
 const shield = r.shield();
-assert.strictEqual(shield.shieldAfterFirst, 100);
-assert.strictEqual(shield.used, true);
-assert.strictEqual(shield.second.absorbed, 1);
+assert.strictEqual(shield.shieldAfterFirst, 0);
+assert.strictEqual(shield.used, false);
+assert.strictEqual(shield.first.applied, 20);
+assert.strictEqual(shield.second.applied, 1);
 const formation = r.formation();
 assert.deepStrictEqual([...new Set(formation.map(item => item.band))].sort(), [0, 1, 2], '战场应包含前中后三层');
 for (const band of [0, 1, 2]) {
@@ -115,8 +116,8 @@ for (const band of [0, 1, 2]) {
   assert.strictEqual(new Set(anchors).size, anchors.length, '同层士兵应横向展开');
 }
 const deployment = r.strongestDeployment();
-assert.strictEqual(deployment.levels.length, 10, '战场人数应受上限约束');
+assert.strictEqual(deployment.levels.length, 8, '战场人数应受 8 人上限约束');
 assert.ok(deployment.levels.every(level => level >= 2), '满盘时应优先派遣高等级兵站');
-assert.strictEqual(deployment.reserve, 5, '未出战兵站应计入预备队');
+assert.strictEqual(deployment.reserve, 7, '未出战兵站应计入预备队');
 assert.deepStrictEqual(JSON.parse(JSON.stringify(r.migrate)), { themeVersion:2, gems:37, fragments:{orange_cannon:9}, fruitLv:{orange_cannon:6}, commanderId:'juice_sage' });
 console.log('OK: 梦幻水世界自由战场行为验收通过');

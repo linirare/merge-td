@@ -23,6 +23,17 @@ function triggerHitFeedback(target, source, dealt, opts = {}) {
   const { isCrit = false, counterMul = 1, counterText = '', isProjectile = false, projectileColor = '#ffd24a', ownerType = '' } = opts;
   if (!target) return;
 
+  const feedbackType = source?.type || ownerType;
+  if (TYPES[feedbackType]?.combatV1) {
+    target.hitFlash = 0.10;
+    if (counterMul >= ROLE_COUNTER_DMG && (state.time || 0) >= (target._counterHintUntil || 0)) {
+      target._counterHintUntil = (state.time || 0) + 2.0;
+      addFx(target.x, target.y - 14, '克制', typeof roleFxColor === 'function' ? roleFxColor(feedbackType) : THEME.gold, 11);
+    }
+    emitVfx('hit', { target, source, dealt, crit:false, counterText, ownerType:feedbackType });
+    return;
+  }
+
   // Layer 1: hitFlash — 受击闪白
   target.hitFlash = isCrit ? 0.42 : 0.28;
   if (isCrit) target._critHit = true;
@@ -103,7 +114,6 @@ function battleTimeLimit() {
 }
 const ROUND_PREPARE_INITIAL = 4.0;
 const ROUND_PREPARE_BETWEEN = 1.2;
-const ROUND_FIGHT_LIMIT = 16.0;
 const LANE_TOLERANCE = 48;
 const SCAN_RANGE = 168;
 const TARGET_STICK_RANGE = 220;
@@ -130,8 +140,8 @@ function combatRange(s) {
 }
 
 function combatIsBackline(s) {
-  const role = TYPES[s.type]?.role;
-  return s.type === 'bow' || role === 'shooter' || role === 'wildcard';
+  const t = TYPES[s.type] || {};
+  return !!t.combatV1 || s.type === 'bow' || t.role === 'shooter' || t.role === 'wildcard';
 }
 
 /* 同路/邻路阻塞清理(原 lane_block_fix.js,已合并) */
@@ -663,11 +673,60 @@ function killSoldier(target, killerSide, killerAtk, killerType) {
   }
 }
 
+function prepareFourClassAttack(s, target, baseDamage) {
+  if (!TYPES[s.type]?.combatV1) return baseDamage;
+  let dmg = baseDamage;
+  const now = state.time || 0;
+  if ((s._fourDamageBuffUntil || 0) > now) dmg *= 1 + (s._fourDamageBuffPct || 0);
+  if ((s._fourDamageDownUntil || 0) > now) dmg *= s._fourDamageDownMul || 0.88;
+  if (s.type === 'grape_archer') {
+    if (s._inkTargetId !== target.id) { s._inkTargetId = target.id; s._inkStacks = 0; }
+    dmg *= 1 + Math.min(3, s._inkStacks || 0) * 0.04;
+    s._inkStacks = Math.min(3, (s._inkStacks || 0) + 1);
+  }
+  if (s.type === 'lemon_assassin' && target.hp / Math.max(1, target.maxHp) < 0.35) dmg *= 1.15;
+  if ((s._fourEmpoweredShots || 0) > 0) {
+    dmg *= 1.20;
+    s._fourEmpoweredShots--;
+  }
+  if ((s._fourUltShots || 0) > 0) {
+    dmg += 15;
+    s._fourUltShots--;
+  }
+  if ((s._fourEchoShots || 0) > 0) {
+    dmg *= 1.40;
+    s._fourEchoShots--;
+  }
+  if (s.type === 'watermelon_guard') {
+    s._fourAttackCount = (s._fourAttackCount || 0) + 1;
+    if (s._fourAttackCount % 4 === 0) {
+      const shield = Math.max(1, Math.round(s.maxHp * 0.04));
+      s.shield = Math.max(s.shield || 0, shield);
+      s.maxShield = Math.max(s.maxShield || 0, shield);
+      s._fourShieldAmount = Math.max(s._fourShieldAmount || 0, shield);
+      s._fourShieldUntil = now + 2.5;
+    }
+  }
+  return Math.max(1, Math.round(dmg));
+}
+
+function applyFourClassHitEffect(source, target) {
+  if (!source || !target || !TYPES[source.type]?.combatV1) return;
+  const now = state.time || 0;
+  if (source.type === 'pineapple_lancer' && combatRoleOfType(target.type) === 'cavalry' && now >= (source._lancerPushReadyAt || 0)) {
+    const dy = target.y - source.y;
+    target.y = clamp(target.y + (dy >= 0 ? 10 : -10), fieldTop(), fieldBottom());
+    source._lancerPushReadyAt = now + 3.0;
+  }
+}
+
 function attackTarget(s, target) {
   if (!isCombatant(s) || !isCombatant(target)) return;
+  const typeCfg = TYPES[s.type] || {};
   const range = typeof fruitRange === 'function' ? fruitRange(s) : 24;
   const isBack = typeof fruitIsBackline === 'function' ? fruitIsBackline(s) : (TYPES[s.type]?.role === 'shooter');
-  const melee = ['shell','spike','raider'].includes((TYPES[s.type] || {}).role);
+  const usesDistanceBand = !!typeCfg.combatV1 && Number.isFinite(typeCfg.preferredDistance);
+  const melee = !usesDistanceBand && ['shell','spike','raider'].includes(typeCfg.role);
 
   // 近战 stance:距离 >30 先移近,目标在身后时只前进不后退
   if (melee) {
@@ -679,9 +738,15 @@ function attackTarget(s, target) {
   }
 
   const dx = s.x - target.x, dy = s.y - target.y, dist = Math.sqrt(dx*dx + dy*dy);
+  if (usesDistanceBand) {
+    const retreatDistance = Number(typeCfg.retreatDistance) || Math.max(24, typeCfg.preferredDistance - 16);
+    if (dist < retreatDistance) s._distanceRetreating = true;
+    if (s._distanceRetreating && dist >= typeCfg.preferredDistance) s._distanceRetreating = false;
+    if (s._distanceRetreating && !reachedWall(s) && kiteAsBackline(s, target)) return;
+  }
   if (isBack && !reachedWall(s) && dist < BOW_SAFE_MIN) { if (kiteAsBackline(s, target)) return; }
   if (dist > range) {
-    if (!isForwardOf(s, target)) { advanceTowardWall(s); return; }
+    if (!usesDistanceBand && !isForwardOf(s, target)) { advanceTowardWall(s); return; }
     moveTowardEnemy(s, target); return;
   }
   if (dist > range + 6) return;
@@ -694,16 +759,18 @@ function attackTarget(s, target) {
   const counterText = typeof roleCounterText === 'function' ? roleCounterText(s.type, target.type) : '';
   const antiRaider = (s._bondAntiRaider || 0) > 0 && (TYPES[target.type]?.role === 'raider') ? (1 + s._bondAntiRaider) : 1;
   let dmg = Math.round(s.atk * counterMul * antiRaider);
+  dmg = prepareFourClassAttack(s, target, dmg);
   // 暴击:10%基础概率 + 羁绊加成(如双鲨突击+20%)
-  const isCrit = Math.random() < (0.10 + (s._bondCritBonus || 0));
+  const isCrit = !typeCfg.combatV1 && Math.random() < (0.10 + (s._bondCritBonus || 0));
   if (isCrit) dmg = Math.round(dmg * 2);
-  s.atkTimer = s.rate * (s._bondRateBoost || 1);
+  const fourRateMul = (s._fourRateBuffUntil || 0) > (state.time || 0) ? 0.85 : 1;
+  s.atkTimer = s.rate * (s._bondRateBoost || 1) * fourRateMul;
 
-  if (isBack && s.type !== 'peach_medic') {
+  if (isBack) {
     playSfx('arrow');
     let cherryAoe = false;
     if (s.type === 'cherry_bomber' && (s.level || 1) >= 4) { s._cherryShot = (s._cherryShot || 0) + 1; if (s._cherryShot % 5 === 0) cherryAoe = true; }
-    state.projectiles.push({ x: s.x, y: s.y, targetX: target.x, targetY: target.y, targetId: target.id, dmg, speed: s.type === 'blueberry_sniper' ? 315 : 245, color: TYPES[s.type]?.color || '#ff6b4a', life: 1.15, side: s.side, counterHit: !!counterText && counterMul > 1, counterMul: counterMul, ownerType: s.type, ownerLevel: s.level, slow: s.type === 'pear_frost', aoe: cherryAoe, firstHit: s.firstHit, crit: isCrit, bondAoeRange: s._bondAoeRange || 0 });
+    state.projectiles.push({ x: s.x, y: s.y, targetX: target.x, targetY: target.y, targetId: target.id, dmg, speed: typeCfg.projectileSpeed || (s.type === 'blueberry_sniper' ? 360 : 280), color: typeCfg.color || '#ff6b4a', life: 1.15, side: s.side, counterHit: !!counterText && counterMul > 1, counterMul: counterMul, ownerType: s.type, ownerId:s.id, ownerLevel: s.level, slow: s.type === 'pear_frost', aoe: cherryAoe, firstHit: s.firstHit, crit: isCrit, combatV1:!!typeCfg.combatV1, bondAoeRange: s._bondAoeRange || 0 });
     s.firstHit = false;
     return;
   }
@@ -871,17 +938,22 @@ function updateProjectiles() {
     const dy = tgt.y - p.y;
     const d = Math.sqrt(dx * dx + dy * dy);
     if (d < 10) {
-      tgt.hp -= p.dmg;
+      const owners = p.side === 'player' ? state.playerSoldiers : state.enemySoldiers;
+      const source = owners.find(unit => unit.id === p.ownerId && unit.alive) || null;
+      let dealt = p.dmg;
+      if (p.combatV1 && typeof applyFruitDamage === 'function') dealt = applyFruitDamage(tgt, p.dmg, source || { type:p.ownerType });
+      else tgt.hp -= dealt;
       if (p.side === 'player') state.damageByType[p.ownerType || 'bow'] = (state.damageByType[p.ownerType || 'bow'] || 0) + p.dmg;
       const pcm = p.counterMul || (p.counterHit ? 1.3 : 1);
-      triggerHitFeedback(tgt, null, p.dmg, {
+      if (source) { trackDamage(source, dealt, false); applyFourClassHitEffect(source, tgt); }
+      triggerHitFeedback(tgt, source, dealt, {
         isCrit: !!p.crit,
         counterMul: pcm,
         isProjectile: true,
         projectileColor: p.color || '#ffd24a',
         ownerType: p.ownerType || 'bow',
       });
-      if (tgt.hp <= 0) killSoldier(tgt, p.side, p.dmg, p.ownerType || 'bow');
+      if (tgt.hp <= 0) killSoldier(tgt, p.side, dealt, p.ownerType || 'bow');
       state.projectiles.splice(i, 1);
       continue;
     }
@@ -1068,10 +1140,7 @@ function startBreach(winnerSide) {
 }
 
 function roundBreachDamage(s) {
-  const level = Math.max(1, Number(s && s.level) || 1);
-  const tags = (TYPES[s.type] && TYPES[s.type].tags) || [];
-  const siegeBonus = tags.includes('siege') ? 1 : 0;
-  return 1 + Math.floor(level / 2) + siegeBonus;
+  return s && s.alive ? 1 : 0;
 }
 
 function roundSideScore(list) {
@@ -1082,31 +1151,6 @@ function roundSideScore(list) {
   }, 0);
 }
 
-function resolveTimedRound() {
-  const player = state.playerSoldiers.filter(isCombatant);
-  const enemy = state.enemySoldiers.filter(isCombatant);
-  const pScore = roundSideScore(player);
-  const eScore = roundSideScore(enemy);
-  const spread = Math.abs(pScore - eScore) / Math.max(1, pScore, eScore);
-
-  if (spread < 0.05) {
-    for (const s of [...player, ...enemy]) { s.alive = false; s.hp = 0; }
-    state.playerSoldiers = state.playerSoldiers.filter(s => s.alive);
-    state.enemySoldiers = state.enemySoldiers.filter(s => s.alive);
-    state.roundPhase = 'prepare';
-    state.roundTimer = ROUND_PREPARE_BETWEEN;
-    state._roundSpawned = false;
-    return;
-  }
-
-  const winnerSide = pScore > eScore ? 'player' : 'enemy';
-  const losers = winnerSide === 'player' ? enemy : player;
-  for (const s of losers) { s.alive = false; s.hp = 0; }
-  state.playerSoldiers = state.playerSoldiers.filter(s => s.alive);
-  state.enemySoldiers = state.enemySoldiers.filter(s => s.alive);
-  startBreach(winnerSide);
-}
-
 function breachChargeMove(s) {
   const wallY = s.side === 'player' ? fieldTop() : fieldBottom();
   const dir = s.side === 'player' ? -1 : 1;
@@ -1114,11 +1158,6 @@ function breachChargeMove(s) {
   if ((s.side === 'player' && s.y <= wallY) || (s.side !== 'player' && s.y >= wallY)) {
     damageReefBarrier(s.side === 'player' ? 'enemy' : 'player', roundBreachDamage(s), s);
     state.attackFx.push({ x1: s.x - 8, y1: wallY, x2: s.x + 8, y2: wallY, life: 0.3, maxLife: 0.3 });
-    for (let k = 0; k < 6; k++) {
-      state.fx.push({ x: s.x + (Math.random() - 0.5) * 16, y: s.y + (Math.random() - 0.5) * 12,
-        color: '#ffd24a', size: 3 + Math.random() * 3, life: 0.3 + Math.random() * 0.2, maxLife: 0.5,
-        vx: (Math.random() - 0.5) * 50, vy: (Math.random() - 0.5) * 40 });
-    }
     s.alive = false; s.hp = 0;
   }
 }
@@ -1148,19 +1187,6 @@ function tickBreach() {
 function updateCombat() {
   if (state.phase !== 'playing') return;
   _wrapVfxArrays();
-
-  // The match clock is authoritative in every round phase, including prepare
-  // and breach. Previously a charge animation could run past the configured
-  // PvE limit because only the fight phase performed this check.
-  if (state.mode !== 'pvp' && (state.time || 0) >= battleTimeLimit()) {
-    const pPct = state.playerWallHp / Math.max(1, state.playerWallMax);
-    const ePct = state.enemyWallHp / Math.max(1, state.enemyWallMax);
-    const win = pPct > ePct + 0.02 || (Math.abs(pPct - ePct) <= 0.02 && (state.enemyWallDamageDealt || 0) > (state.playerWallDamageTaken || 0));
-    state.lastBattleReport = buildBattleReport(win);
-    state.phase = win ? 'won' : 'lost';
-    onGameOver(win);
-    return;
-  }
 
   // === 回合状态机调度 ===
   if (state.roundPhase === 'idle') {
@@ -1229,10 +1255,6 @@ function updateCombat() {
       }
       return;
     }
-    if (state.roundTimer >= ROUND_FIGHT_LIMIT) {
-      resolveTimedRound();
-      return;
-    }
   }
 
   // Boss tick(原 boss_v63)
@@ -1240,15 +1262,6 @@ function updateCombat() {
 
   if (state.playerWallHp <= 0) { state.lastBattleReport = buildBattleReport(false); state.phase = 'lost'; onGameOver(false); }
   else if (state.enemyWallHp <= 0) { state.lastBattleReport = buildBattleReport(true); state.phase = 'won'; onGameOver(true); }
-  // 计时器:治无限局(combat-fixes-plan §2A)。PvP 由 pvp-sim 独立判定,不参与。
-  else if (state.mode !== 'pvp' && (state.time || 0) >= battleTimeLimit()) {
-    const pPct = state.playerWallHp / Math.max(1, state.playerWallMax);
-    const ePct = state.enemyWallHp / Math.max(1, state.enemyWallMax);
-    const win = pPct > ePct + 0.02 || (Math.abs(pPct - ePct) <= 0.02 && (state.enemyWallDamageDealt || 0) > (state.playerWallDamageTaken || 0));
-    state.lastBattleReport = buildBattleReport(win);
-    state.phase = win ? 'won' : 'lost';
-    onGameOver(win);
-  }
 }
 
 /* ——— 开放战场模式注册口 ——— */

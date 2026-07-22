@@ -2,8 +2,8 @@
 const assert = require('assert');
 const { PvpBattle } = require('../server/pvp-sim');
 
-const DECK_A = ['watermelon_guard', 'grape_archer', 'banana_raider', 'pineapple_lancer', 'orange_cannon'];
-const DECK_B = ['pineapple_lancer', 'banana_raider', 'grape_archer', 'watermelon_guard', 'orange_cannon'];
+const DECK_A = ['watermelon_guard', 'grape_archer', 'banana_raider', 'pineapple_lancer', 'peach_medic'];
+const DECK_B = ['pineapple_lancer', 'banana_raider', 'grape_archer', 'watermelon_guard', 'peach_medic'];
 
 // —— 被动局:只验模拟"活着"(结构/出兵/掉墙),不强求胜负(对称被动本就可能平) ——
 function runPassive(seed) {
@@ -17,8 +17,8 @@ function runPassive(seed) {
   assert.ok(Array.isArray(s0.soldiers), 'snapshot.soldiers 是数组');
 
   // 双方各召唤,验证 applyAction 命中不同 side
-  const rp = b.applyAction(0, { type: 'summon_cell', payload: { r: 2, c: 0, type: 'orange_cannon', level: 1 } });
-  const re = b.applyAction(1, { type: 'summon_cell', payload: { r: 2, c: 4, type: 'orange_cannon', level: 1 } });
+  const rp = b.applyAction(0, { type: 'summon_cell', payload: { r: 2, c: 0, type: 'banana_raider', level: 1 } });
+  const re = b.applyAction(1, { type: 'summon_cell', payload: { r: 2, c: 4, type: 'banana_raider', level: 1 } });
   assert.ok(rp.ok, 'player 召唤应成功: ' + JSON.stringify(rp));
   assert.ok(re.ok, 'enemy 召唤应成功: ' + JSON.stringify(re));
   const sB = b.snapshot();
@@ -45,7 +45,7 @@ function runPassive(seed) {
 // —— 胜负局:清空 side1 防守 + 敌墙压低,side0 开局攻势无阻力破墙 → winner 0 ——
 function runWinner(seed) {
   const b = new PvpBattle(seed, DECK_A, DECK_B);
-  const summon = b.applyAction(0, { type: 'summon_cell', payload: { r: 2, c: 0, type: 'orange_cannon', level: 1 } });
+  const summon = b.applyAction(0, { type: 'summon_cell', payload: { r: 2, c: 0, type: 'banana_raider', level: 1 } });
   assert.ok(summon.ok, '胜负局应先合法召唤一个Lv1兵营');
   b.sb.__pvp._test_clearSide(1);      // side1 无防守
   b.sb.__pvp._test_setWalls(null, 1); // 敌墙压到 1,攻速修复后 DPS 较低但 1HP 可快速破
@@ -64,12 +64,12 @@ function runWinner(seed) {
 function runAuthorityValidation(seed) {
   const b = new PvpBattle(seed, DECK_A, DECK_B);
   assert.strictEqual(b.snapshot().sp.p, 8, 'PVP 开局果汁应为8');
-  assert.strictEqual(b.applyAction(0, { type:'summon_cell', payload:{ r:-1, c:0, type:'orange_cannon', level:1 } }).err, 'bad_cell');
+  assert.strictEqual(b.applyAction(0, { type:'summon_cell', payload:{ r:-1, c:0, type:'banana_raider', level:1 } }).err, 'bad_cell');
   assert.strictEqual(b.applyAction(0, { type:'summon_cell', payload:{ r:0, c:0, type:'olive_assassin', level:1 } }).err, 'type_not_in_deck');
-  assert.strictEqual(b.applyAction(0, { type:'summon_cell', payload:{ r:0, c:0, type:'orange_cannon', level:3 } }).err, 'level_must_be_one');
+  assert.strictEqual(b.applyAction(0, { type:'summon_cell', payload:{ r:0, c:0, type:'banana_raider', level:3 } }).err, 'level_must_be_one');
   const cells = [[0,0],[0,1],[0,2],[0,3]];
-  for (const [r,c] of cells) assert.ok(b.applyAction(0, { type:'summon_cell', payload:{ r,c,type:'orange_cannon',level:1 } }).ok, '前四次合法召唤应有足够果汁');
-  const denied = b.applyAction(0, { type:'summon_cell', payload:{ r:0,c:4,type:'orange_cannon',level:1 } });
+  for (const [r,c] of cells) assert.ok(b.applyAction(0, { type:'summon_cell', payload:{ r,c,type:'banana_raider',level:1 } }).ok, '前四次合法召唤应有足够果汁');
+  const denied = b.applyAction(0, { type:'summon_cell', payload:{ r:0,c:4,type:'banana_raider',level:1 } });
   assert.strictEqual(denied.err, 'not_enough_juice', '服务端必须拒绝果汁不足的召唤');
   assert.strictEqual(b.snapshot().sp.p, 2, '费用曲线1/1/2/2后应剩2果汁');
 }
@@ -95,7 +95,7 @@ function runActiveBreakthrough(seed) {
     if (frame % 15 === 0) {
       const board = b.snapshot().boards.p;
       for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
-        if (!board[r][c]) { b.applyAction(0, { type:'summon_cell', payload:{ r, c, type:'orange_cannon', level:1 } }); break; }
+        if (!board[r][c]) { b.applyAction(0, { type:'summon_cell', payload:{ r, c, type:'banana_raider', level:1 } }); break; }
       }
     }
     b.tick(1 / 30);
@@ -110,7 +110,7 @@ function runActiveBreakthrough(seed) {
 (function main() {
   const p1 = runPassive(0xABCDEF01);
   assert.ok(p1.maxSoldiers > 0, '被动局也应出过兵');
-  assert.ok(p1.maxSoldiers <= 28, '双方各14兵，总快照不得超过28');
+  assert.ok(p1.maxSoldiers <= 16, '双方各8兵，总快照不得超过16');
   runAuthorityValidation(0x12345678);
   runCommanderValidation(0x87654321);
   const active = runActiveBreakthrough(123);
@@ -121,5 +121,5 @@ function runActiveBreakthrough(seed) {
   assert.strictEqual(JSON.stringify(w1), JSON.stringify(w2), '同 seed 胜负局应确定性一致');
 
   console.log('OK: pvp-sim 权威模拟 — 结构/双side操作/出兵/破墙/胜负判定/确定性 全部通过'
-    + ' (双方峰值总兵力=' + p1.maxSoldiers + '/28, 正常对抗=' + active.duration + 's, 低墙确定性局=' + w1.duration + 's)');
+    + ' (双方峰值总兵力=' + p1.maxSoldiers + '/16, 正常对抗=' + active.duration + 's, 低墙确定性局=' + w1.duration + 's)');
 })();

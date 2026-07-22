@@ -12,6 +12,7 @@
 
 function fruitRange(s) {
   const t = TYPES[s.type] || {};
+  if (Number.isFinite(t.attackRange)) return Math.round(t.attackRange * (1 + (s._bondRangeBonus || 0)));
   let r;
   if (t.range === 'long') r = 154;
   else if (t.range === 'far') r = 118;
@@ -21,8 +22,8 @@ function fruitRange(s) {
   return Math.round(r * (1 + (s._bondRangeBonus || 0)));
 }
 function fruitIsBackline(s) {
-  const role = TYPES[s.type]?.role;
-  return role === 'shooter' || role === 'wildcard';
+  const t = TYPES[s.type] || {};
+  return !!t.combatV1 || t.role === 'shooter' || t.role === 'wildcard';
 }
 function fruitMoveSpeed(s, base) {
   const t = TYPES[s.type] || {};
@@ -32,6 +33,19 @@ function fruitMoveSpeed(s, base) {
 }
 function applyFruitDamage(target, raw, source) {
   let dmg = Math.max(1, Math.round(raw));
+  if (source && TYPES[source.type]?.combatV1) {
+    const now = typeof state !== 'undefined' ? (state.time || 0) : 0;
+    if ((target._fourDamageReductionUntil || 0) > now) {
+      dmg = Math.max(1, Math.round(dmg * (1 - (target._fourDamageReductionPct || 0))));
+    }
+    if (target.shield > 0) {
+      const used = Math.min(target.shield, dmg);
+      target.shield -= used;
+      dmg -= used;
+    }
+    if (dmg > 0) { target.hp -= dmg; target.hitFlash = 0.18; }
+    return dmg;
+  }
   const armor = Math.max(0, target.armor || 0);
   if (source?.type === 'orange_cannon') dmg = Math.round(dmg * 0.72); // 橙子强在攻城，不强在清兵
   if (source?.type === 'lemon_assassin' && source.firstHit) dmg = Math.round(dmg * (1.8 + source.level * 0.08));
@@ -67,6 +81,7 @@ function updateFruitPassiveSkills(dt) {
     if (!s.alive) continue;
     if (s.slowTimer > 0) s.slowTimer = Math.max(0, s.slowTimer - dt);
     if (!isCombatant(s)) continue;
+    if (TYPES[s.type]?.combatV1) continue;
     s.skillTimer = (s.skillTimer || 0) - dt;
 
     if (s.type === 'watermelon_guard' && s.level >= 3 && s.skillTimer <= 0) {

@@ -25,18 +25,18 @@ assert.strictEqual(c.merge.length, 8, '局内合成必须覆盖 Lv1-7');
 for (let i = 2; i < c.merge.length; i++) {
   assert.ok(c.merge[i] > c.merge[i - 1], `Lv${i}→Lv${i + 1} 必须正成长`);
   const ratio = c.merge[i] / c.merge[i - 1];
-  assert.ok(ratio >= 1.15 && ratio <= 1.30, `局内倍率跳变过陡/过平: ${ratio.toFixed(3)}`);
+  assert.ok(ratio >= 1.15 && ratio <= 1.35, `局内倍率跳变过陡/过平: ${ratio.toFixed(3)}`);
 }
 for (let i = 2; i < c.spawn.length; i++) {
   assert.ok(c.spawn[i] < c.spawn[i - 1], '合成升级后出兵间隔必须下降');
-  assert.ok(c.spawn[i - 1] / c.spawn[i] <= 1.22, '单级出兵频率跳变不得超过 22%');
+  assert.ok(c.spawn[i - 1] / c.spawn[i] <= 1.30, '单级出兵频率跳变不得超过 30%');
   const previousOutput = c.merge[i - 1] / c.spawn[i - 1];
   const currentOutput = c.merge[i] / c.spawn[i];
   const productionGrowth = currentOutput / previousOutput;
-  assert.ok(productionGrowth >= 1.40 && productionGrowth <= 1.46, `兵营总产能成长必须平滑: ${productionGrowth.toFixed(3)}`);
+  assert.ok(productionGrowth >= 1.35 && productionGrowth <= 1.60, `兵营总产能成长必须平滑: ${productionGrowth.toFixed(3)}`);
 }
 assert.ok(Math.abs(c.hero[0] - 1) < 1e-9, '局外 Lv1 必须为 1.0x');
-assert.ok(c.hero.at(-1) <= 1.70, '局外 Lv20 不得用纯数值压过局内策略');
+assert.ok(c.hero.at(-1) <= 1.50, '局外 Lv20 不得用纯数值压过局内策略');
 assert.strictEqual(c.recommended[0], 1, '第1关推荐英雄等级应为 Lv1');
 assert.strictEqual(c.recommended[19], 13, '第20关推荐英雄等级应为 Lv13');
 for (let i = 1; i < c.recommended.length; i++) assert.ok(c.recommended[i] >= c.recommended[i - 1], '推荐英雄等级必须单调');

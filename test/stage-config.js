@@ -33,6 +33,7 @@ for (const level of result.levels) {
   assert.ok(level.chapter >= 1, `stage ${level.stageId} needs chapter`);
   assert.ok(['normal', 'mechanic', 'boss', 'resource', 'challenge'].includes(level.type), `stage ${level.stageId} has unknown type`);
   assert.ok(level.enemyWallHp > 0, `stage ${level.stageId} enemy wall hp must be positive`);
+  assert.strictEqual(level.enemyWallHp, 10 + level.stageId, `stage ${level.stageId} wall hp must follow 10 + stageId`);
   assert.ok(level.enemyInitLevel >= 1, `stage ${level.stageId} enemy level must be positive`);
   assert.ok(level.enemyPlan && (Array.isArray(level.enemyPlan.opening) || Number.isFinite(Number(level.enemyPlan.count))), `stage ${level.stageId} needs enemyPlan`);
   assert.ok(level.reward > 0, `stage ${level.stageId} needs reward`);

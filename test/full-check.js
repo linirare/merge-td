@@ -15,7 +15,7 @@ function run(command, args, options = {}) {
 
 (async () => {
   console.log('\n[check:full] PVE real-combat simulation');
-  await run(process.execPath, ['test/stage-real-sim.js', '--full']);
+  await run(process.execPath, ['test/stage-real-sim.js', '--full', '--gate']);
   console.log('\n[check:full] Visual screenshots and console check');
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const port = server.address().port;

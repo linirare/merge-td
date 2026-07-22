@@ -20,6 +20,7 @@ function createSoldier(typeId, level, atkMul = 1, hpMul = 1) {
     level,
     id: Math.random().toString(36).slice(2),
     atk: Math.round(t.atk * mul * atkMul),
+    heal: Math.round((t.heal || 0) * mul * atkMul),
     hp,
     maxHp: hp,
     shield: 0,
@@ -33,7 +34,7 @@ function createSoldier(typeId, level, atkMul = 1, hpMul = 1) {
     skillTimer: 0,
     rolled: false,
     x: 0, y: 0,
-    rate: t.rate / 1.5,
+    rate: Number.isFinite(t.attackInterval) ? t.attackInterval : t.rate / 1.5,
     target: null,
     alive: true,
     atkTimer: 0,
@@ -157,12 +158,12 @@ function getUpgradeLv(meta, typeId, stat) {
 function getAtkMul(meta, typeId) {
   const s = typeof window !== 'undefined' ? window.shell : null;
   const lv = s?.fruitLv?.[typeId] || 1;
-  return heroMul(lv);
+  return typeof heroMulForType === 'function' ? heroMulForType(typeId, lv, 'atk') : heroMul(lv);
 }
 function getHpMul(meta, typeId) {
   const s = typeof window !== 'undefined' ? window.shell : null;
   const lv = s?.fruitLv?.[typeId] || 1;
-  return heroMul(lv);
+  return typeof heroMulForType === 'function' ? heroMulForType(typeId, lv, 'hp') : heroMul(lv);
 }
 function getWallBonus(meta) {
   return meta.wallLv * WALL_PER_LV;

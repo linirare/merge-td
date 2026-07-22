@@ -487,9 +487,15 @@
     const t = fruit(id);
     const col = t.color || '#F5C242';
     const artIndex = Math.max(0, Math.min(24, Number(t.artIndex) || 0));
-    const artX = (artIndex % 5) * 25;
-    const artY = Math.floor(artIndex / 5) * 25;
-    return `<span class="fdisc" role="img" aria-label="${escapeHtml(t.name)}" style="width:${size}px;height:${size}px;background-color:${col};background-image:url('art/generated/water-world-units-v3.png');background-size:500% 500%;background-position:${artX}% ${artY}%;background-repeat:no-repeat"></span>`;
+    // Match the calibrated battle crop. The source characters are not centred
+    // in equal fifths of the generated atlas, so the old 500% slice could show
+    // part of a neighbouring unit in roster and reward portraits as well.
+    const atlasX = [0.88, 24.26, 48.82, 73.08, 97.15];
+    const atlasY = [1.77, 24.75, 48.13, 71.71, 94.50];
+    const artX = atlasX[artIndex % 5];
+    const artY = atlasY[Math.floor(artIndex / 5)];
+    const atlasScale = (1254 / 236 * 100).toFixed(2);
+    return `<span class="fdisc" role="img" aria-label="${escapeHtml(t.name)}" style="width:${size}px;height:${size}px;background-color:${col};background-image:url('art/generated/water-world-units-v3.png');background-size:${atlasScale}% ${atlasScale}%;background-position:${artX}% ${artY}%;background-repeat:no-repeat"></span>`;
   }
   function roleZh(r) { return ROLE_ZH[r] || r || '单位'; }
   function skillZh(t) { return SKILL_ZH[t.skill] || '专属技能'; }
@@ -512,8 +518,9 @@
         <div class="bg"></div><div class="scrim"></div>
         ${hifiTopBarHtml()}
         <div class="hifi-scroll">
-          <div class="shead"><h2 class="display">海域领航员</h2><span class="line"></span><span class="r">上阵 1/1</span></div>
-          <div class="team" id="commanderTeam" style="gap:8px;margin-bottom:14px">
+          <section class="squad-section squad-commanders">
+          <div class="shead"><h2 class="display">海域领航员</h2><span class="line"></span><span class="r">选择 1 位</span></div>
+          <div class="team" id="commanderTeam">
             ${commanderIds.map((id, index) => {
               const def = commanderDefs[id];
               const lv = Math.max(1, Number(shell.commanderLv[id] || 1));
@@ -521,19 +528,24 @@
               const cost = 60 + lv * 45;
               const portraitSrc = 'art/generated/water-world-commanders-v3.png';
               const artPos = id === 'berry_general' ? '50%' : id === 'juice_sage' ? '100%' : '0%';
-              return `<div class="card ${selected ? 'on' : ''}" style="--rc:${selected ? '#F5C242' : '#6f806f'};flex:1;min-height:146px;padding:6px">
-                <span class="lv">Lv${lv}</span>
-                <div style="width:56px;height:62px;margin:0 auto 3px;border-radius:12px;overflow:hidden;border:2px solid ${selected ? '#FFE9A8' : '#63756e'};background:#254a46">
-                  <span role="img" aria-label="${escapeHtml(def.name)}" style="display:block;width:100%;height:100%;background-image:url('${portraitSrc}');background-repeat:no-repeat;background-size:300% 100%;background-position:${artPos} 50%"></span>
+              return `<article class="card commander-card ${selected ? 'on' : ''}" style="--rc:${selected ? '#ffca48' : '#7edcd5'}">
+                ${selected ? '<span class="commander-selected">领航中</span>' : ''}
+                <span class="lv">Lv.${lv}</span>
+                <div class="commander-portrait">
+                  <span role="img" aria-label="${escapeHtml(def.name)}" style="background-image:url('${portraitSrc}');background-position:${artPos} 50%"></span>
                 </div>
                 <span class="nm">${escapeHtml(def.name)}</span>
-                <small style="display:block;color:#F5C242;font-weight:900;font-size:9px">${escapeHtml(def.skill)}</small>
-                <button class="gbtn blk" data-commander-select="${id}" style="padding:4px 5px;margin-top:4px;font-size:9px;min-height:22px">${selected ? '已上阵' : '上阵'}</button>
-                <button class="gbtn" data-commander-upgrade="${id}" style="padding:4px 5px;margin-top:4px;font-size:9px;min-height:22px" ${lv >= 20 ? 'disabled' : ''}>${lv >= 20 ? '满级' : `升级 ${cost}🪙`}</button>
-              </div>`;
+                <small class="commander-skill">${escapeHtml(def.skill)}</small>
+                <div class="commander-actions">
+                  <button class="gbtn blk" data-commander-select="${id}">${selected ? '已上阵' : '上阵'}</button>
+                  ${lv >= 20 ? '<span class="commander-max">MAX</span>' : `<button class="gbtn commander-upgrade" data-commander-upgrade="${id}">升级 ${cost}🪙</button>`}
+                </div>
+              </article>`;
             }).join('')}
           </div>
-          <div class="shead"><h2 class="display">卡牌图鉴</h2><span class="line"></span><span class="r">上阵 ${d.length}/${DECK_SIZE}</span></div>
+          </section>
+          <section class="squad-section squad-deck-section">
+          <div class="shead"><h2 class="display">战斗编队</h2><span class="line"></span><span class="r">已上阵 ${d.length}/${DECK_SIZE}</span></div>
           <div class="team" id="squadDeckTeam">
             ${Array.from({ length: DECK_SIZE }, (_, i) => {
               const id = d[i];
@@ -542,26 +554,28 @@
                 const rc = RAR_COLOR[st.rarity] || '#8FE0A0';
                 const rk = RAR_KEY[st.rarity]||'T2';
                 const lv = initLv(id);
-                return `<button class="card" data-undeck="${id}" style="--rc:${rc};flex:1" title="点击下阵"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 34)}<span class="nm">${st.name}</span></button>`;
+                return `<button class="card deck-card" data-undeck="${id}" style="--rc:${rc}" title="点击下阵"><span class="deck-order">${i + 1}</span><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 46)}<span class="nm">${st.name}</span><span class="deck-remove" aria-hidden="true">×</span></button>`;
               }
-              return `<div class="slot"><svg class="icon plus2"><use href="#i-plus"/></svg></div>`;
+              return `<div class="slot deck-slot"><span class="deck-order">${i + 1}</span><svg class="icon plus2"><use href="#i-plus"/></svg><small>待上阵</small></div>`;
             }).join('')}
           </div>
-          <div class="gpanel" style="display:flex;align-items:center;justify-content:space-around;gap:10px;padding:16px 14px">
-            <div style="text-align:center"><div style="font-family:Fredoka;font-weight:700;font-size:24px;color:#F5C242">${unlockedCount}/${UNIT_POOL.length}</div><small style="font-size:11px;color:#C9B48A;font-weight:800">图鉴收集</small></div>
-            <div style="width:1px;height:34px;background:rgba(245,194,66,.3)"></div>
-            <div style="text-align:center"><div style="font-family:Fredoka;font-weight:700;font-size:24px;color:#FFCB3D">${typeof computePower === 'function' ? computePower() : 0}</div><small style="font-size:11px;color:#C9B48A;font-weight:800">总战力</small></div>
-            <div style="width:1px;height:34px;background:rgba(245,194,66,.3)"></div>
-            <div style="text-align:center"><div style="font-family:Fredoka;font-weight:700;font-size:24px;color:#8FE0A0">Lv.${highestLevel()}</div><small style="font-size:11px;color:#C9B48A;font-weight:800">指挥官</small></div>
+          <div id="hifiBondDisplay">
+            <div class="bond-title"><span>海域羁绊</span><small>同系伙伴共同出战可激活</small></div>
+            <div id="hifiBondList"></div>
           </div>
+          <div class="gpanel squad-stats">
+            <div><strong>${unlockedCount}/${UNIT_POOL.length}</strong><small>图鉴收集</small></div><i></i>
+            <div><strong>${typeof computePower === 'function' ? computePower() : 0}</strong><small>队伍战力</small></div><i></i>
+            <div><strong>Lv.${highestLevel()}</strong><small>海域进度</small></div>
+          </div>
+          </section>
+          <section class="squad-section squad-roster-section">
+          <div class="shead roster-head"><h2 class="display">伙伴图鉴</h2><span class="line"></span><span class="r">已解锁 ${unlockedCount}</span></div>
           <div class="ctabs">
             ${[['all', '全部'], ['shell', '甲壳兵'], ['spike', '枪刺兵'], ['shooter', '射手'], ['raider', '游骑兵']].map(([k, label]) => `<button class="ctab ${squadFilter === k ? 'on' : ''}" data-filter="${k}">${label}</button>`).join('')}
           </div>
           <div class="roster" id="hifiRoster"></div>
-          <div id="hifiBondDisplay" style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,.25);border-radius:10px;border:1px solid rgba(245,194,66,.2)">
-            <small style="color:#C9B48A;font-weight:700">海域羁绊</small>
-            <div id="hifiBondList" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
-          </div>
+          </section>
         </div>
       </div>
     `;
@@ -599,10 +613,10 @@
       const rk = RAR_KEY[t.rarity] || 'T2';
       const unlocked = isUnlocked(id);
       if (!unlocked) {
-        return `<button class="card lock" style="--rc:#444"><span class="rc" style="background:#555">?</span>${hifiDisc(id, 46)}<span class="nm" style="color:#666">???</span><span class="lk"><svg class="icon"><use href="#i-lock"/></svg><small>抽卡解锁</small></span></button>`;
+        return `<button class="card roster-card lock" style="--rc:#78919a"><span class="rc">?</span>${hifiDisc(id, 58)}<span class="nm">神秘伙伴</span><span class="lk"><svg class="icon"><use href="#i-lock"/></svg><small>祈愿解锁</small></span></button>`;
       }
       const lv = initLv(id);
-      return `<button class="card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 46)}<span class="nm">${t.name}</span><span class="pwr">${Math.round((t.atk + t.hp) * heroMul(lv))}</span></button>`;
+      return `<button class="card roster-card" data-detail="${id}" style="--rc:${rc}"><span class="rc">${rk}</span><span class="lv">Lv${lv}</span>${hifiDisc(id, 58)}<span class="nm">${t.name}</span><span class="role">${roleZh(t.role)}</span><span class="pwr">⚔ ${Math.round((t.atk + t.hp) * heroMul(lv))}</span></button>`;
     }).join('') || '<div style="grid-column:1/-1;text-align:center;color:#8a7a5a;font-weight:800;padding:24px">该职责暂无英雄</div>';
 
     root.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => { squadFilter = btn.dataset.filter; renderSquad(); }));
@@ -617,8 +631,8 @@
         return matchCount >= 2;
       });
       bondList.innerHTML = active.length
-        ? active.map(b => `<span style="background:rgba(245,194,66,.15);color:#F5C242;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px">${b.name}: ${b.desc}</span>`).join('')
-        : '<span style="color:#8a7a5a;font-size:11px">编队中2个以上同羁绊单位可激活</span>';
+        ? active.map(b => `<span class="bond-chip"><b>${b.name}</b>${b.desc}</span>`).join('')
+        : '<span class="bond-empty">编队中 2 个以上同羁绊伙伴可激活</span>';
     }
     root.querySelectorAll('[data-help]').forEach(btn => btn.addEventListener('click', () => { hidePanels(); document.getElementById('helpPanel')?.classList.remove('hide'); }));
     root.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.go)));
@@ -678,8 +692,6 @@
           t.armor != null ? t.armor : roleStats(t.role).armor}甲/×${
           t.siege != null ? t.siege : Number(roleStats(t.role).siege).toFixed(2)}攻城/移${
           t.move != null ? t.move : roleStats(t.role).move}</p></div>`
-        + `<div class="s"><svg class="icon" style="color:#C77BE8"><use href="#i-vs"/></svg>职责<b style="font-size:13px">${roleZh(t.role)}</b></div></div>`
-        + `<p class="srcnote" style="text-align:left;margin-top:6px">基础 攻${t.atk}/血${t.hp} × ${heroPct}% 英雄等级加成</p></div>`
         + `<div class="sec"><h4><svg class="icon"><use href="#i-flame"/></svg>专属技能 · ${skillZh(t)}</h4><div class="skillbox"><div class="nm">${skillZh(t)}</div><p>${t.desc || ''}</p></div></div>`;
     } else if (tab === 'grow') {
       const maxLv = typeof HERO_MAX !== 'undefined' ? HERO_MAX : 20;

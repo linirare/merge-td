@@ -43,11 +43,6 @@
     damage -= absorbed;
     const before = Math.max(0, Number(state[keys.hp]) || 0);
     state[keys.hp] = Math.max(0, before - damage);
-    if (!state[keys.used] && state[keys.max] > 0 && state[keys.hp] / state[keys.max] <= 0.30) {
-      state[keys.used] = true;
-      state[keys.shield] = Math.round(state[keys.max] * 0.10);
-      state[keys.until] = (state.time || 0) + 5;
-    }
     if (source && source.side === 'player') {
       state.enemyWallDamageDealt = (state.enemyWallDamageDealt || 0) + damage;
       if (typeof trackDamage === 'function') trackDamage(source, damage, true);
@@ -56,6 +51,7 @@
   }
 
   function freeRole(type) {
+    if (typeof combatRoleOfType === 'function') return combatRoleOfType(type);
     const role = TYPES[type]?.role || 'shell';
     if (role === 'shell') return 'tank';
     if (role === 'spike') return 'front';
@@ -65,8 +61,8 @@
 
   function formationBand(s) {
     const role = freeRole(s.type);
-    if (role === 'tank' || role === 'front') return 0;
-    if (role === 'raider' || role === 'rush' || role === 'siege') return 1;
+    if (role === 'lancer' || role === 'tank' || role === 'front') return 0;
+    if (role === 'cavalry' || role === 'raider' || role === 'rush' || role === 'siege') return 1;
     return 2;
   }
 
@@ -130,13 +126,16 @@
       // 朝前优先:敌方应该在兵的前进方向(玩家向下/敌方向上),否则降权
       const forward = s.side === 'player' ? e.y <= s.y : e.y >= s.y;
       const targetRank = e._formationPosition !== undefined && e._formationPosition !== null ? Math.floor(e._formationPosition / 5) : 1;
-      const rankBonus = Math.max(0, 2 - targetRank) * 80; // front=+160, mid=+80, back=+0
+      const rankBonus = Math.max(0, 2 - targetRank) * 45;
       let score = threatOf(s, e) - dist * 0.18 + (1 - Math.max(0, e.hp) / Math.max(1, e.maxHp)) * 35 + rankBonus;
       if (!forward && dist > 52) score -= 120; // 后方目标降权,避免后撤追敌
+      if (role === 'lancer') score += er === 'cavalry' ? 280 : er === 'archer' ? -45 : 0;
+      if (role === 'cavalry') score += er === 'archer' ? 300 : er === 'support' ? 220 : er === 'lancer' ? -70 : 0;
+      if (role === 'archer') score += er === 'lancer' ? 260 : er === 'cavalry' ? -45 : 0;
       if (role === 'tank' || role === 'front') score += barrierThreat(s, e) * 230 + (['raider'].includes(er) ? 80 : 0);
       if (role === 'front') score += controlled(e) ? -180 : 110; // 枪刺兵:优先打受控的敌人
       if (role === 'raider') score += ['ranged'].includes(er) ? 220 : 0;
-      if (role === 'ranged') score += dist <= combatRange(s) ? 75 : 0;
+      if (role === 'ranged' || role === 'archer') score += dist <= combatRange(s) ? 75 : 0;
       if (s.target === e.id) score += 120;
       // 深入敌阵时,后方目标额外降权
       const midY = fieldTop() + (fieldBottom() - fieldTop()) * 0.5;
@@ -180,19 +179,21 @@
     s.mode = 'fight';
     const anchor = Number.isFinite(s._formationAnchorX) ? s._formationAnchorX : s.x;
     const formationPull = clamp(anchor - target.x, -28, 28) * 0.5;
-    const offset = ((stableHash(`${s.id}|offset`) % 13) - 6) + formationPull;
+    const flank = freeRole(s.type) === 'cavalry' ? (s._cavalrySide || 1) * 54 : 0;
+    const offset = flank + ((stableHash(`${s.id}|offset`) % 13) - 6) + formationPull;
     moveVector(s, clamp(target.x + offset, 24, W - 24), target.y, 1);
   }
   function kiteFree(s, target) {
     s.mode = 'backline';
     const dx = s.x - target.x, dy = s.y - target.y, d = Math.max(1, Math.hypot(dx, dy));
     moveVector(s, clamp(s.x + dx / d * 70, 24, W - 24), clamp(s.y + dy / d * 70, fieldTop(), fieldBottom()), .82);
+    return true;
   }
   function advanceFree(s) {
     s.target = null; s.mode = 'march';
     const targetY = s.side === 'player' ? fieldTop() : fieldBottom();
     const targetX = Number.isFinite(s._formationAnchorX) ? s._formationAnchorX : freeSiegeX(s);
-    moveVector(s, targetX, targetY, freeRole(s.type) === 'raider' ? 1 : .86); // 游骑兵冲刺速度1.0,其他0.86
+    moveVector(s, targetX, targetY, freeRole(s.type) === 'cavalry' ? 1 : .86);
   }
 
   function nearestBlocker(s, enemies, maxDistance) {
@@ -210,15 +211,60 @@
       .sort((a,b) => a.hp / a.maxHp - b.hp / b.maxHp || String(a.id).localeCompare(String(b.id)))[0] || null;
   }
 
+  function primarySupportAlly(s) {
+    const allies = s.side === 'player' ? state.playerSoldiers : state.enemySoldiers;
+    return allies.filter(a => a !== s && isCombatant(a) && freeRole(a.type) !== 'support')
+      .sort((a,b) => (b.atk || 0) - (a.atk || 0) || String(a.id).localeCompare(String(b.id)))[0] || null;
+  }
+
+  function updateSupportAction(s) {
+    const cfg = TYPES[s.type] || {};
+    const dt = typeof dt_global === 'number' ? dt_global : 1 / 60;
+    const range = typeof combatRange === 'function' ? combatRange(s) : (cfg.attackRange || 110);
+    const ally = s.type === 'peach_medic' ? woundedAlly(s) : s.type === 'kiwi_wildcard' ? primarySupportAlly(s) : null;
+    if (!ally) return false;
+    if (Math.hypot(ally.x - s.x, ally.y - s.y) > range) {
+      s.mode = 'support';
+      moveVector(s, ally.x, ally.y + (s.side === 'player' ? 52 : -52), .8);
+      return true;
+    }
+    s.mode = 'support';
+    s.atkTimer -= dt;
+    if (s.atkTimer > 0) return true;
+    s.atkTimer = s.rate;
+    if (s.type === 'peach_medic') {
+      const amount = Math.max(1, s.heal || cfg.heal || 7);
+      ally.hp = Math.min(ally.maxHp, ally.hp + amount);
+      s.damageDone = (s.damageDone || 0) + amount;
+      s._starHealCount = (s._starHealCount || 0) + 1;
+      if (s._starHealCount % 3 === 0) {
+        const group = s.side === 'player' ? state.playerSoldiers : state.enemySoldiers;
+        const second = group.filter(a => a !== s && a !== ally && isCombatant(a) && a.hp < a.maxHp)
+          .sort((a,b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+        if (second) second.hp = Math.min(second.maxHp, second.hp + Math.max(1, Math.round(amount * 0.35)));
+      }
+      state.rings.push({ x:ally.x, y:ally.y, r:4, life:0.12, maxLife:0.12, color:'#8FE0A0' });
+    } else {
+      ally._fourDamageBuffPct = Math.max(ally._fourDamageBuffPct || 0, cfg.buffPct || 0.06);
+      ally._fourDamageBuffUntil = (state.time || 0) + 1.8;
+    }
+    return true;
+  }
+
   function updateSoldierFree(s, enemies) {
     if (!s.alive) return;
     if (typeof isDisabled === 'function' && isDisabled(s)) return;
     if (!isCombatant(s)) { moveOutOfCastle(s); return; }
     const role = freeRole(s.type);
-    const isSupport = TYPES[s.type]?.tags?.includes('support') || TYPES[s.type]?.tags?.includes('heal');
-    if (isSupport) {
-      const ally = woundedAlly(s);
-      if (ally && Math.hypot(ally.x - s.x, ally.y - s.y) > 52) { s.mode = 'support'; moveVector(s, ally.x, ally.y + (s.side === 'player' ? 42 : -42), .8); return; }
+    if (role === 'support' && updateSupportAction(s)) return;
+    if (role === 'cavalry') {
+      const now = state.time || 0;
+      if (s._nextCavalryShiftAt == null) s._nextCavalryShiftAt = now + 2.4;
+      if (now >= s._nextCavalryShiftAt) {
+        s._cavalrySide = -(s._cavalrySide || 1);
+        s._fourEmpoweredShots = Math.max(1, s._fourEmpoweredShots || 0);
+        s._nextCavalryShiftAt = now + 2.4;
+      }
     }
     const isSiege = (TYPES[s.type]?.siege || 0) > 0.5;
     // 回合制 FIGHT 阶段不攻墙，留在中线交战
@@ -259,7 +305,10 @@
     for (let i = 0; i < soldiers.length; i++) {
       const a = soldiers[i]; if (!isCombatant(a)) continue;
       a.x = clamp(a.x + push[i].x * 28 * dt, 24, W - 24);
-      if (!String(a.mode).startsWith('siege')) a.y = clamp(a.y + push[i].y * 20 * dt, fieldTop(), fieldBottom());
+      if (!String(a.mode).startsWith('siege')) {
+        const fighting = a.mode === 'fight' || a.mode === 'backline' || a.mode === 'support';
+        a.y = clamp(a.y + push[i].y * 20 * dt * (fighting ? 0.15 : 1), fieldTop(), fieldBottom());
+      }
     }
   }
 
@@ -305,12 +354,6 @@
     s.alive = false; s.hp = 0;
     const side = s.side === 'player' ? 'enemy' : 'player';
     damageReefBarrier(side, 1, s);
-    // 撞墙粒子
-    for (let k = 0; k < 6; k++) {
-      state.fx.push({ x: s.x + (Math.random() - 0.5) * 16, y: wall.attackY + (Math.random() - 0.5) * 12,
-        color: '#ffd24a', size: 3 + Math.random() * 3, life: 0.3 + Math.random() * 0.2, maxLife: 0.5,
-        vx: (Math.random() - 0.5) * 50, vy: (Math.random() - 0.5) * 40 });
-    }
   }
 
   function updateBattlePressure() {

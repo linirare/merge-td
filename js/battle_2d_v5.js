@@ -24,10 +24,26 @@
     });
   }
 
-  const BARRACK_RECTS = Array.from({ length: 25 }, (_, i) => ({
-    x: Math.round((i % 5) * 1254 / 5), y: Math.round(Math.floor(i / 5) * 1254 / 5), w: Math.ceil(1254 / 5), h: Math.ceil(1254 / 5),
+  // The generated atlases are visually arranged as 5x5 grids, but their
+  // subjects are pulled toward the centre of the sheet. Equal fifths crop a
+  // neighbour into late-row troops (most visibly the turtle) and leave edge
+  // orbs off-centre. Sample fixed safe squares around the measured art centres.
+  const atlasRects = (centresX, centresY, size) => Array.from({ length:25 }, (_, i) => ({
+    x: Math.round(centresX[i % 5] - size / 2),
+    y: Math.round(centresY[Math.floor(i / 5)] - size / 2),
+    w:size,
+    h:size,
   }));
-  const TROOP_RECTS = BARRACK_RECTS.map(r => ({ ...r }));
+  const BARRACK_RECTS = atlasRects(
+    [151, 388, 627, 866, 1099],
+    [152, 382, 620, 862, 1092],
+    226,
+  );
+  const TROOP_RECTS = atlasRects(
+    [127, 365, 615, 862, 1107],
+    [136, 370, 608, 848, 1080],
+    236,
+  );
   const COMMANDER_RECTS = Array.from({ length:3 }, (_, i) => ({ x:Math.round(i * 1654 / 3), y:0, w:Math.ceil(1654 / 3), h:951 }));
   const BOSS_RECTS = Array.from({ length:4 }, (_, i) => ({ x:Math.round(i * 2172 / 4), y:0, w:Math.ceil(2172 / 4), h:724 }));
   const COMMANDER_ART = {
@@ -41,7 +57,7 @@
   const COMMANDER_FRAMES = {
     // Independent side cards prevent commander art, the grid and the skill
     // control from competing for the same lower-left / upper-right corner.
-    enemy: { x:405, y:87, w:58, h:112 },
+    enemy: { x:405, y:0, w:58, h:112 },
     player: { x:18, y:0, w:58, h:112 },
   };
 
@@ -61,6 +77,7 @@
     if (fill) { ctx.fillStyle = fill; ctx.fill(); }
     if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
   }
+  window._battlePanel = panel;
 
   function imageReady(img) {
     return img && img.complete && img.naturalWidth > 0;
@@ -125,10 +142,12 @@
     if (!imageReady(img)) return false;
     const sourceW = img.naturalWidth;
     const sourceH = img.naturalHeight;
+    const enemyReefY = wallVisualY(true);
+    const playerReefY = LAYOUT.playerWallY;
     const slices = [
-      { sy:0, ey:510, dy:0, eyDest:276 },
-      { sy:510, ey:1315, dy:276, eyDest:645 },
-      { sy:1315, ey:sourceH, dy:645, eyDest:H },
+      { sy:0, ey:510, dy:0, eyDest:enemyReefY },
+      { sy:510, ey:1315, dy:enemyReefY, eyDest:playerReefY },
+      { sy:1315, ey:sourceH, dy:playerReefY, eyDest:H },
     ];
     for (const slice of slices) {
       ctx.drawImage(img, 0, slice.sy, sourceW, slice.ey - slice.sy,
@@ -154,7 +173,7 @@
   // Keep combat coordinates stable while giving the 24px visual reef enough
   // breathing room above the player grid.
   function wallVisualY(enemy) {
-    return (enemy ? LAYOUT.enemyWallY : LAYOUT.playerWallY) - (enemy ? 0 : 16);
+    return (enemy ? LAYOUT.enemyWallY : LAYOUT.playerWallY) - (enemy ? 22 : 16);
   }
   window.battleWallVisualYV5 = wallVisualY;
 
@@ -431,7 +450,7 @@
     const stateRef = enemy ? state.enemyCommander : state.commander;
     // Portraits are deliberately outside of the interactive grid.
     const frame = enemy
-      ? { ...COMMANDER_FRAMES.enemy }
+      ? { ...COMMANDER_FRAMES.enemy, y:by + 5 }
       : { ...COMMANDER_FRAMES.player, y:by + 5 };
     const art = COMMANDER_ART[stateRef.id] || COMMANDER_ART.orchard_lord;
     const cardColor = sideColor(enemy);
