@@ -94,7 +94,7 @@ function createState() {
     maxSoldierAtk: 0,
     maxSoldierType: '',
     battlePressure: { player:{power:0,count:0,siege:0,depth:0}, enemy:{power:0,count:0,siege:0,depth:0}, playerBarrierDanger:0, enemyBarrierDanger:0 },
-    tide: { phase:'calm', remaining:12, multiplier:1 },
+    tide: { phase:'calm', remaining:0, multiplier:1 },
     playerReefShield: 0,
     enemyReefShield: 0,
     playerReefShieldUsed: false,
@@ -122,6 +122,11 @@ function createState() {
     speed: 1,
     sp: 6,
     shake: 0,
+    roundPhase: 'idle',
+    roundTimer: 0,
+    breachList: [],
+    roundIndex: 0,
+    _roundSpawned: false,
   };
 }
 

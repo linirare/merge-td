@@ -25,10 +25,8 @@
     return s._freeSiegeX;
   }
 
-  function worldTideState(time) {
-    const t = ((Number(time) || 0) % 24 + 24) % 24;
-    const surge = t >= 12;
-    return { phase: surge ? 'surge' : 'calm', remaining: Math.ceil((surge ? 24 : 12) - t), multiplier: surge ? 1.08 : 1 };
+  function worldTideState() {
+    return { phase: 'calm', remaining: 0, multiplier: 1 };
   }
 
   function reefKeys(side) {
@@ -65,6 +63,35 @@
     return role; // raider→raider, wildcard→wildcard
   }
 
+  function soldierBaseRank(s) {
+    const role = freeRole(s.type);
+    if (role === 'tank') return 1;
+    if (role === 'front') return 2;
+    return 3;
+  }
+
+  function assignFormationRanks() {
+    state._formationSignatures = state._formationSignatures || {};
+    for (const side of ['player', 'enemy']) {
+      const soldiers = side === 'player' ? state.playerSoldiers : state.enemySoldiers;
+      const active = soldiers.filter(isCombatant);
+      const signature = active.map(s => `${s.id}:${freeRole(s.type)}`).join('|');
+      if (state._formationSignatures[side] === signature) continue;
+      state._formationSignatures[side] = signature;
+      const byLane = {};
+      for (const s of active) {
+        const lane = s.laneIndex ?? nearestLaneIndex(s.x);
+        if (!byLane[lane]) byLane[lane] = [];
+        byLane[lane].push(s);
+      }
+      for (const lane of Object.keys(byLane)) {
+        const squad = byLane[lane];
+        squad.sort((a, b) => soldierBaseRank(a) - soldierBaseRank(b));
+        squad.forEach((s, idx) => { s._formationPosition = idx; });
+      }
+    }
+  }
+
   function ownBarrierY(s) { return s.side === 'player' ? LAYOUT.playerWallY : LAYOUT.enemyWallY + LAYOUT.wallH; }
   function barrierThreat(s, e) {
     const y = ownBarrierY(s);
@@ -95,7 +122,9 @@
       const dist = Math.hypot(e.x - s.x, e.y - s.y);
       // 朝前优先:敌方应该在兵的前进方向(玩家向下/敌方向上),否则降权
       const forward = s.side === 'player' ? e.y <= s.y : e.y >= s.y;
-      let score = threatOf(s, e) - dist * 0.18 + (1 - Math.max(0, e.hp) / Math.max(1, e.maxHp)) * 35;
+      const targetRank = e._formationPosition !== undefined && e._formationPosition !== null ? Math.floor(e._formationPosition / 5) : 1;
+      const rankBonus = Math.max(0, 2 - targetRank) * 80; // front=+160, mid=+80, back=+0
+      let score = threatOf(s, e) - dist * 0.18 + (1 - Math.max(0, e.hp) / Math.max(1, e.maxHp)) * 35 + rankBonus;
       if (!forward && dist > 52) score -= 120; // 后方目标降权,避免后撤追敌
       if (role === 'tank' || role === 'front') score += barrierThreat(s, e) * 230 + (['raider'].includes(er) ? 80 : 0);
       if (role === 'front') score += controlled(e) ? -180 : 110; // 枪刺兵:优先打受控的敌人
@@ -122,6 +151,19 @@
     const base = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : (s.move || CHASE_SPEED);
     const step = Math.min(d, base * multiplier * tide * dt);
     s.x += dx / d * step; s.y += dy / d * step;
+    if (state.roundPhase === 'fight') {
+      const cy = fieldCenter();
+      const pos = s._formationPosition;
+      let offsetLow = 32, offsetHigh = 82; // default: mid zone
+      if (pos !== undefined && pos !== null) {
+        if (pos < 5) { offsetLow = 2; offsetHigh = 25; }       // front
+        else if (pos < 10) { offsetLow = 32; offsetHigh = 82; } // mid
+        else { offsetLow = 92; offsetHigh = 150; }              // back
+      }
+      const yLow = s.side === 'player' ? cy + offsetLow : cy - offsetHigh;
+      const yHigh = s.side === 'player' ? cy + offsetHigh : cy - offsetLow;
+      s.y = clamp(s.y, Math.min(yLow, yHigh), Math.max(yLow, yHigh));
+    }
     keepInsideBattlefield(s);
   }
 
@@ -167,6 +209,8 @@
       if (ally && Math.hypot(ally.x - s.x, ally.y - s.y) > 52) { s.mode = 'support'; moveVector(s, ally.x, ally.y + (s.side === 'player' ? 42 : -42), .8); return; }
     }
     const isSiege = (TYPES[s.type]?.siege || 0) > 0.5;
+    // 回合制 FIGHT 阶段不攻墙，留在中线交战
+    if (state.roundPhase === 'fight') { const t = findTargetFree(s, enemies); if (t) { s.target = t.id; attackTarget(s, t); return; } advanceFree(s); return; }
     if (reachedWall(s)) {
       const scanR = isSiege ? 52 : 150;
       const blockers = enemies.filter(e => isCombatant(e) && Math.hypot(e.x - s.x, e.y - s.y) <= scanR
@@ -198,7 +242,7 @@
   }
 
   function attackWallFree(s) {
-    if (!isCombatant(s)) return;
+    if (!isCombatant(s) || state.roundPhase === 'fight') return;
     const dt = typeof dt_global === 'number' ? dt_global : 1/60;
     const wall = wallDataFor(s), x = freeSiegeX(s);
     s.mode = 'siege'; s.siegeSlot = stableHash(s.id) % 12;
@@ -213,7 +257,7 @@
   }
 
   function rangedAttackWallFree(s) {
-    if (!isCombatant(s)) return;
+    if (!isCombatant(s) || state.roundPhase === 'fight') return;
     const dt = typeof dt_global === 'number' ? dt_global : 1/60;
     s.mode = 'siege';
     s.atkTimer -= dt * worldTideState(state.time).multiplier;
@@ -228,7 +272,7 @@
 
   // 兵撞墙:清完面前兵→到墙→扣1血→兵消失
   function ramWall(s) {
-    if (!isCombatant(s)) return;
+    if (!isCombatant(s) || state.roundPhase !== 'idle') return;
     const wall = wallDataFor(s);
     // 撞墙前检查:面前还有敌人就不能撞
     const ramFoes = (s.side === 'player' ? state.enemySoldiers : state.playerSoldiers) || [];
@@ -288,6 +332,7 @@
       sameLaneBlocker: (s, enemies) => nearestBlocker(s, enemies, 120),
       updateSoldier: updateSoldierFree,
       applySeparation: applySeparationFree,
+      preFightTick: assignFormationRanks,
     });
   }
   global.ramWall = ramWall;

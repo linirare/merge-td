@@ -40,5 +40,6 @@ for (const level of result.levels) {
   assert.ok(Array.isArray(level.unlockRules), `stage ${level.stageId} needs unlockRules`);
   // 去Boss:5/10/15/20关不再是boss,不强制有bossMechanic(combat-fixes-plan §1)
 }
+assert.strictEqual(result.levels.filter(level => level.isBoss).length, 0, 'boss stages are temporarily disabled');
 
 console.log('OK: TUNING stage definitions cover stages 1-20');

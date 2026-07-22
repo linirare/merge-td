@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node server/index.js",
-    "test": "npm run test:water-world && npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:pvp-sim",
+    "test": "npm run test:water-world && npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:pve-gate && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:pvp-sim",
     "test:water-world": "node test/water-world-free-combat.js",
     "pvp-server": "node server/pvp-server.js",
     "test:combat": "node test/combat-baseline.js --check",
@@ -22,9 +22,10 @@
     "test:merge-pity": "node test/merge-pity.js",
     "test:wall-reach": "node test/wall-reachability.js",
     "test:stage-real": "node test/stage-real-sim.js",
+    "test:pve-gate": "node test/stage-real-sim.js --check --gate --runs=3 --stages=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20 --strategies=no_action,standard",
     "visual": "node test/visual-check.mjs",
     "test:pvp-flip": "node test/pvp-client-flip.mjs",
-    "check": "npm run test:water-world && npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:progression && npm run test:pacing && npm run test:merge-pity && npm run test:wall-reach && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:ui-security && npm run test:pvp-sim",
+    "check": "npm run test:water-world && npm run test:combat && npm run test:stages && npm run test:stage-sim && npm run test:pve-gate && npm run test:progression && npm run test:pacing && npm run test:merge-pity && npm run test:wall-reach && npm run test:security && npm run test:pvp && npm run test:pvp-auth && npm run test:power-cap && npm run test:social-security && npm run test:ui-security && npm run test:pvp-sim",
     "check:full": "node test/full-check.js"
   },
   "dependencies": {

@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 <title>梦幻水世界</title>
 <link rel="stylesheet" href="fonts/fonts.css">
-<link rel="stylesheet" href="css/style.css?v=20260713r5">
-<link rel="stylesheet" href="css/hifi_shell.css?v=20260713r5">
+<link rel="stylesheet" href="css/style.css?v=20260722a3">
+<link rel="stylesheet" href="css/hifi_shell.css?v=20260722a3">
 </head>
 <body>
 <script>fetch('/art/icons.svg').then(r=>r.text()).then(svg=>{const d=document.createElement('div');d.innerHTML=svg;const e=d.querySelector('svg');if(e){e.style.position='absolute';document.body.prepend(e)}}).catch(()=>console.warn('icons.svg 加载失败'))</script>
@@ -66,63 +66,61 @@
     <div class="help-section"><h3>🎯 目标</h3><p>从25种海洋伙伴中选择最多5种上阵。消耗潮汐能召唤海灵珠，合成强化后自动派出伙伴，在开放海域自由交战并摧毁敌方珊瑚堡垒。</p></div>
     <div class="help-section"><h3>🖐️ 操作</h3><p><b>点空格</b>：消耗递增潮汐能，随机召唤编队海灵珠。</p><p><b>拖拽同种同星</b>：合成升级（上限Lv7）。</p><p><b>拟态章鱼</b>可作为万能材料，<b>镜像水母</b>可复制同星目标。</p><p><b>双击海灵珠</b>：消耗潮汐能立即派出伙伴。</p></div>
     <div class="help-section"><h3>⚔️ 自由索敌</h3><p>坦克拦截威胁，突击追击后排，远程保持距离，控制优先未受控目标，辅助跟随受伤友军，攻城伙伴在安全时直取护礁结界。</p></div>
-    <div class="help-section"><h3>🌊 潮汐能</h3><p>基础上限24，开局8，每5秒+1。每24秒一个潮汐周期；涌潮持续12秒，双方全场移动与攻击速度提高8%。</p></div>
+    <div class="help-section"><h3>🌊 潮汐能</h3><p>基础上限24，开局8，每5秒恢复1点；击破敌方伙伴也能获得额外补给。</p></div>
     <div class="help-section"><h3>⭐ Lv1→Lv7成长</h3><p>Lv1-3 数值成长 | Lv4 解锁专属技能 | Lv5 技能强化+金徽章 | Lv6-7 质变，额外机制。</p></div>
     <button id="btnHelpClose" class="btn-secondary">知道了</button>
   </div>
 </div>
 
-<script src="js/world_theme.js?v=20260720w2"></script>
-<script src="js/config.js?v=20260720w2"></script>
-<script src="js/layout_v56.js?v=20260713r5"></script>
-<script src="js/version_guard.js?v=20260713r5"></script>
-<script src="js/state.js?v=20260713r5"></script>
-<script src="js/hooks.js?v=20260713r5"></script>
-<script src="js/board.js?v=20260713r5"></script>
-<script src="js/combat.js?v=20260713r5"></script>
-<script src="js/ai.js?v=20260713r5"></script>
-<script src="js/render.js?v=20260713r9"></script>
-<script src="js/skin.js?v=20260713r5"></script>
-<script src="js/input.js?v=20260713r5"></script>
-<script src="js/audio.js?v=20260713r5"></script>
-<script src="js/ui.js?v=20260713r5"></script>
-<script src="js/main.js?v=20260713r5"></script>
-<script src="js/tutorial_balance.js?v=20260713r5"></script>
-<script src="js/troop_tier_mode.js?v=20260713r11"></script>
-<script src="js/fruit_deck_runtime.js?v=20260713r5"></script>
-<script src="js/fruit_mechanics.js?v=20260713r5"></script>
-<script src="js/juice.js?v=20260713r6"></script>
-<script src="js/combat_clarity.js?v=20260713r10"></script>
-<script src="js/balance_fix_v15.js?v=20260713r5"></script>
-<script src="js/economy_cd_fix.js?v=20260713r5"></script>
-<script src="js/opening_and_projectile_fix.js?v=20260713r5"></script>
-<script src="js/lane_block_fix.js?v=20260713r5"></script>
-<script src="js/juice_absorb_v16.js?v=20260713r5"></script>
-<script src="js/skill_system_v17.js?v=20260713r5"></script>
-<script src="js/skill_system_v70.js?v=20260713r5"></script>
-<script src="js/deck_ui.js?v=20260713r5"></script>
-<script src="js/deck_unlock_fix.js?v=20260713r5"></script>
-<script src="js/combat_pacing_v19.js?v=20260713r5"></script>
-<script src="js/status_engine_v61.js?v=20260713r5"></script>
-<script src="js/dynamic_difficulty_v64.js?v=20260713r5"></script>
-<script src="js/free_battle_v2.js?v=20260720w2"></script>
-<script src="js/boss_v63.js?v=20260713r5"></script>
-<script src="js/gameplay_readability_v20.js?v=20260713r5"></script>
-<script src="js/fruit_lab_unified_v21.js?v=20260713r5"></script>
-<script src="js/fruit_skin.js?v=20260713r6"></script>
-<script src="js/battle_skin.js?v=20260713r9"></script>
-<script src="js/hud_skin.js?v=20260713r5"></script>
-<script src="js/stickman_render_v61.js?v=20260713r9"></script>
-<script src="js/pvp.js?v=20260713r5"></script>
-<script src="js/product_shell.js?v=20260713r5"></script>
-<script src="js/account_client.js?v=20260713r5"></script>
-<script src="js/juice_economy.js?v=20260713r5"></script>
-<script src="js/economy_balls_v62.js?v=20260713r5"></script>
+<script src="js/world_theme.js?v=20260722a3"></script>
+<script src="js/config.js?v=20260722a3"></script>
+<script src="js/layout_v56.js?v=20260722a3"></script>
+<script src="js/version_guard.js?v=20260722a3"></script>
+<script src="js/state.js?v=20260722a3"></script>
+<script src="js/hooks.js?v=20260722a3"></script>
+<script src="js/board.js?v=20260722a3"></script>
+<script src="js/combat.js?v=20260722a3"></script>
+<script src="js/ai.js?v=20260722a3"></script>
+<script src="js/render.js?v=20260722a3"></script>
+<script src="js/skin.js?v=20260722a3"></script>
+<script src="js/input.js?v=20260722a3"></script>
+<script src="js/audio.js?v=20260722a3"></script>
+<script src="js/ui.js?v=20260722a3"></script>
+<script src="js/main.js?v=20260722a3"></script>
+<script src="js/tutorial_balance.js?v=20260722a3"></script>
+<script src="js/troop_tier_mode.js?v=20260722a3"></script>
+<script src="js/fruit_deck_runtime.js?v=20260722a3"></script>
+<script src="js/fruit_mechanics.js?v=20260722a3"></script>
+<script src="js/juice.js?v=20260722a3"></script>
+<script src="js/combat_clarity.js?v=20260722a3"></script>
+<script src="js/balance_fix_v15.js?v=20260722a3"></script>
+<script src="js/economy_cd_fix.js?v=20260722a3"></script>
+<script src="js/opening_and_projectile_fix.js?v=20260722a3"></script>
+<script src="js/lane_block_fix.js?v=20260722a3"></script>
+<script src="js/juice_absorb_v16.js?v=20260722a3"></script>
+<script src="js/skill_system_v17.js?v=20260722a3"></script>
+<script src="js/skill_system_v70.js?v=20260722a3"></script>
+<script src="js/deck_ui.js?v=20260722a3"></script>
+<script src="js/deck_unlock_fix.js?v=20260722a3"></script>
+<script src="js/combat_pacing_v19.js?v=20260722a3"></script>
+<script src="js/status_engine_v61.js?v=20260722a3"></script>
+<script src="js/dynamic_difficulty_v64.js?v=20260722a3"></script>
+<script src="js/gameplay_readability_v20.js?v=20260722a3"></script>
+<script src="js/fruit_lab_unified_v21.js?v=20260722a3"></script>
+<script src="js/fruit_skin.js?v=20260722a3"></script>
+<script src="js/battle_skin.js?v=20260722a3"></script>
+<script src="js/hud_skin.js?v=20260722a3"></script>
+<script src="js/stickman_render_v61.js?v=20260722a3"></script>
+<script src="js/pvp.js?v=20260722a3"></script>
+<script src="js/product_shell.js?v=20260722a3"></script>
+<script src="js/account_client.js?v=20260722a3"></script>
+<script src="js/juice_economy.js?v=20260722a3"></script>
+<script src="js/economy_balls_v62.js?v=20260722a3"></script>
 <script src="js/build_combo_v2.js?v=20260713r15"></script>
-<script src="js/experience_flow.js?v=20260713r5"></script>
-<script src="js/commander_system_v1.js?v=20260714r1"></script>
-<script src="js/free_battle_v2.js?v=20260720w2"></script>
-<script src="js/bond_system.js?v=20260720w3"></script>
-<script src="js/battle_2d_v5.js?v=20260714r1"></script>
+<script src="js/experience_flow.js?v=20260722a3"></script>
+<script src="js/commander_system_v1.js?v=20260722a3"></script>
+<script src="js/free_battle_v2.js?v=20260722a3"></script>
+<script src="js/bond_system.js?v=20260722a3"></script>
+<script src="js/battle_2d_v5.js?v=20260722a3"></script>
 </body>
 </html>

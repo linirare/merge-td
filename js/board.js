@@ -74,7 +74,7 @@ function initEnemyOpening(k, level) {
       placeBall(state.enemySlots, r, c, randomEnemyType(), enemyLevel);
       placed++;
     }
-    if (k % 5 === 0) {
+    if (state.levelConfig && state.levelConfig.isBoss) {
       const empties = emptySlots(state.enemySlots);
       if (empties.length) {
         const [r, c] = empties[0];
@@ -85,7 +85,7 @@ function initEnemyOpening(k, level) {
   }
   const enemyCount = k === 1 ? 3 : k <= 3 ? 4 : 5;
   initBalls(state.enemySlots, enemyCount, Math.max(1, level), true);
-  if (k % 5 === 0) {
+  if (state.levelConfig && state.levelConfig.isBoss) {
     const empties = emptySlots(state.enemySlots);
     if (empties.length) {
       const [r, c] = empties[0];
@@ -229,7 +229,7 @@ function initLevel(k) {
   state.maxSoldierAtk = 0;
   state.maxSoldierType = '';
   state.battlePressure = { player:{power:0,count:0,siege:0,depth:0}, enemy:{power:0,count:0,siege:0,depth:0}, playerBarrierDanger:0, enemyBarrierDanger:0 };
-  state.tide = { phase:'calm', remaining:12, multiplier:1 };
+  state.tide = { phase:'calm', remaining:0, multiplier:1 };
   state.playerReefShield = 0;
   state.enemyReefShield = 0;
   state.playerReefShieldUsed = false;
@@ -265,6 +265,11 @@ function initLevel(k) {
     size: 1.1 + Math.random() * 1.4,
     alpha: 0.018 + Math.random() * 0.028,
   }));
+  state.roundPhase = 'idle';
+  state.roundTimer = 0;
+  state.breachList = [];
+  state.roundIndex = 0;
+  state._roundSpawned = false;
   state.phase = 'playing';
   resetAI();
   // 关卡入口可能由多个壳层触发；立即同步，避免首帧出现黑底或旧导航。

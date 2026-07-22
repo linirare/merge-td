@@ -411,8 +411,8 @@
     const highest = highestLevel();
     const current = currentStage();
     const maxShow = Math.max(20, highest + 3);
-    const boss = current % 5 === 0;
     const info = stageInfo(current);
+    const boss = info.type === 'boss';
     const mechanic = bossMechanicText(info.bossMechanic);
     root.innerHTML = `
       <div class="hifi-screen campaign-bg">
@@ -441,8 +441,8 @@
     const map = root.querySelector('#campaignMap');
     for (let lv = 1; lv <= maxShow; lv++) {
       const open = lv <= highest;
-      const isBoss = lv % 5 === 0;
       const lvInfo = stageInfo(lv);
+      const isBoss = lvInfo.type === 'boss';
       const lvTag = isBoss ? (bossMechanicText(lvInfo.bossMechanic) || 'Boss') : stageTypeText(lvInfo.type);
       const btn = document.createElement('button');
       btn.className = `lvnode${lv === current ? ' current' : ''}${isBoss ? ' boss' : ''}${open ? '' : ' locked'}`;
@@ -1559,7 +1559,7 @@
       // 过关奖励金币(meta.gold,已有)+ 钻石(shell.gems,新增)
       if (win) {
         const k = state.currentLevel || 1;
-        const boss = k % 5 === 0;
+        const boss = stageInfo(k).type === 'boss';
         shell.gems = (shell.gems || 0) + (boss ? 5 : 1); // 普通关 +1, Boss 关 +5
         saveShell();
       }

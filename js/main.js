@@ -226,7 +226,7 @@ function update(dt) {
 
   updateAI(dt);
 
-  // 每个水果营按 CD 自动派兵。自动派兵免费；果汁只用于召唤和急派兵。
+  // 每个水果营按 CD 倒计时。回合制下只在回合开始出兵，FIGHT/BREACH 阶段只倒计时不出兵。
   const slotsArr = [
     { slots: state.playerSlots, side: 'player' },
     { slots: state.enemySlots, side: 'enemy' },
@@ -244,7 +244,7 @@ function update(dt) {
         if (ball.spawnTimer <= 0) {
           const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
           ball.spawnTimer += cd;
-          spawnSoldierFromBall(ball, r, c, grp.side);
+          // 回合制:出兵由 roundSpawnAll 统一管理
         }
       }
     }

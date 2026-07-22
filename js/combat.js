@@ -11,6 +11,7 @@ const FIELD_PAD = 12;
 
 /* ——— VFX 事件系统：战斗逻辑 emit → 渲染层消费 ——— */
 const _vfxListeners = [];
+let _preFightTick = null;
 function onVfx(fn) { _vfxListeners.push(fn); return fn; }
 function offVfx(fn) { const i = _vfxListeners.indexOf(fn); if (i >= 0) _vfxListeners.splice(i, 1); }
 function emitVfx(type, data) {
@@ -170,6 +171,7 @@ function sameLaneBlocker(s, enemies) {
 
 function fieldTop() { return LAYOUT.fieldY + FIELD_PAD; }
 function fieldBottom() { return LAYOUT.fieldY + LAYOUT.fieldH - FIELD_PAD; }
+function fieldCenter() { return (fieldTop() + fieldBottom()) / 2; }
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function laneSlotCount() { return typeof SIEGE_SLOTS_PER_LANE === 'number' ? SIEGE_SLOTS_PER_LANE : 3; }
 
@@ -395,6 +397,11 @@ function moveTowardEnemy(s, target) {
     }
   }
   if (Math.abs(s.x - s.laneX) > leash + 12) steerToLane(s, 0.12);
+  if (state.roundPhase === 'fight') {
+    const cy = fieldCenter();
+    if (s.side === 'player') s.y = Math.max(s.y, cy + 2);
+    else s.y = Math.min(s.y, cy - 2);
+  }
   keepInsideBattlefield(s);
 }
 
@@ -455,6 +462,11 @@ function advanceTowardWall(s) {
   s.mode = 'march';
   if (s.side === 'player') s.y -= sspeed * dt_global;
   else s.y += sspeed * dt_global;
+  if (state.roundPhase === 'fight') {
+    const cy = fieldCenter();
+    if (s.side === 'player') s.y = Math.max(s.y, cy + 2);
+    else s.y = Math.min(s.y, cy - 2);
+  }
 }
 
 function wallDataFor(s) {
@@ -1000,9 +1012,115 @@ function buildBattleReport(win) {
   };
 }
 
+/* ——— 回合制战场管理 ——— */
+
+function clearAllStatus(s) {
+  if (!s) return;
+  if (s.statusEffects) {
+    for (const key of Object.keys(s.statusEffects)) {
+      s.statusEffects[key].timer = 0;
+    }
+  }
+  s.stunTimer = 0;
+  s.slowTimer = 0;
+  s.slowMul = 1;
+}
+
+function roundSpawnAll() {
+  const groups = [
+    { slots: state.playerSlots, side: 'player' },
+    { slots: state.enemySlots, side: 'enemy' },
+  ];
+  for (const grp of groups) {
+    const soldiers = grp.side === 'player' ? state.playerSoldiers : state.enemySoldiers;
+    const alive = soldiers.filter(s => s.alive).length;
+    const remaining = MAX_SOLDIERS - alive;
+    if (remaining <= 0) continue;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const ball = grp.slots[r][c];
+        if (!ball) continue;
+        const cd = SPAWN_COOLDOWNS[ball.level] || SPAWN_COOLDOWNS[1];
+        // 回合制:每回合所有球都出兵,无视 spawnTimer
+        const spawnFn = typeof spawnSoldierFromBall === 'function' ? spawnSoldierFromBall : null;
+        if (spawnFn) spawnFn(ball, r, c, grp.side);
+        ball.spawnTimer = cd;
+      }
+    }
+  }
+}
+
+function startBreach(winnerSide) {
+  state.roundPhase = 'breach';
+  const winners = winnerSide === 'player' ? state.playerSoldiers : state.enemySoldiers;
+  state.breachList = winners.filter(isCombatant).map(s => s.id);
+  // 清除所有兵状态
+  for (const s of [...state.playerSoldiers, ...state.enemySoldiers]) {
+    if (s && s.alive) clearAllStatus(s);
+  }
+}
+
+function breachChargeMove(s) {
+  const wallY = s.side === 'player' ? fieldTop() : fieldBottom();
+  const dir = s.side === 'player' ? -1 : 1;
+  s.y += dir * SIEGE_SPEED * 2 * dt_global;
+  if ((s.side === 'player' && s.y <= wallY) || (s.side !== 'player' && s.y >= wallY)) {
+    damageReefBarrier(s.side === 'player' ? 'enemy' : 'player', 1, s);
+    state.attackFx.push({ x1: s.x - 8, y1: wallY, x2: s.x + 8, y2: wallY, life: 0.3, maxLife: 0.3 });
+    for (let k = 0; k < 6; k++) {
+      state.fx.push({ x: s.x + (Math.random() - 0.5) * 16, y: s.y + (Math.random() - 0.5) * 12,
+        color: '#ffd24a', size: 3 + Math.random() * 3, life: 0.3 + Math.random() * 0.2, maxLife: 0.5,
+        vx: (Math.random() - 0.5) * 50, vy: (Math.random() - 0.5) * 40 });
+    }
+    s.alive = false; s.hp = 0;
+  }
+}
+
+function tickBreach() {
+  const allSoldiers = [...state.playerSoldiers, ...state.enemySoldiers];
+  for (const s of allSoldiers) {
+    if (!s.alive) continue;
+    if (state.breachList.includes(s.id)) {
+      breachChargeMove(s);
+    }
+  }
+  state.playerSoldiers = state.playerSoldiers.filter(s => s.alive);
+  state.enemySoldiers = state.enemySoldiers.filter(s => s.alive);
+  const aliveIds = new Set([
+    ...state.playerSoldiers.map(s => s.id),
+    ...state.enemySoldiers.map(s => s.id),
+  ]);
+  state.breachList = state.breachList.filter(id => aliveIds.has(id));
+  if (state.breachList.length === 0) {
+    state.roundPhase = 'fight';
+    state.roundTimer = 0;
+    state._roundSpawned = false;
+  }
+}
+
 function updateCombat() {
   if (state.phase !== 'playing') return;
   _wrapVfxArrays();
+
+  // === 回合状态机调度 ===
+  if (state.roundPhase === 'idle') {
+    state.roundPhase = 'fight';
+    state.roundTimer = 0;
+    state._roundSpawned = false;
+  }
+  if (state.roundPhase === 'breach') {
+    tickBreach();
+    if (state.playerWallHp <= 0) { state.lastBattleReport = buildBattleReport(false); state.phase = 'lost'; onGameOver(false); }
+    else if (state.enemyWallHp <= 0) { state.lastBattleReport = buildBattleReport(true); state.phase = 'won'; onGameOver(true); }
+    return;
+  }
+
+  // === FIGHT 阶段：回合出兵 ===
+  if (!state._roundSpawned) {
+    state._roundSpawned = true;
+    state.roundIndex++;
+    if (typeof roundSpawnAll === 'function') roundSpawnAll();
+  }
 
   // 被动技能 tick(原 fruit_mech updateFruitPassiveSkills, skill_v17 包装)
   if (typeof updateFruitPassiveSkills === 'function') updateFruitPassiveSkills(dt_global);
@@ -1020,6 +1138,8 @@ function updateCombat() {
 
   state.playerSoldiers = state.playerSoldiers.filter(s => s.alive);
   state.enemySoldiers = state.enemySoldiers.filter(s => s.alive);
+  // preFightTick: 阵型排位刷新
+  if (typeof _preFightTick === 'function') _preFightTick();
   for (const s of state.playerSoldiers) updateSoldier(s, state.enemySoldiers);
   for (const s of state.enemySoldiers) updateSoldier(s, state.playerSoldiers);
   state.playerSoldiers = state.playerSoldiers.filter(s => s.alive);
@@ -1028,6 +1148,17 @@ function updateCombat() {
   applySeparation(state.playerSoldiers); applySeparation(state.enemySoldiers);
   updateProjectiles(); updateLaneStats(); updateLaneAlerts();
   if (state.shake > 0) state.shake = Math.max(0, state.shake - dt_global * 4);
+
+  // FIGHT 结束检测：一方全灭 → BREACH（最少战斗 3 秒，给兵出城时间）
+  state.roundTimer += dt_global;
+  if (state.roundTimer > 3.0) {
+    const _pAlive = state.playerSoldiers.filter(isCombatant).length;
+    const _eAlive = state.enemySoldiers.filter(isCombatant).length;
+    if (_pAlive === 0 || _eAlive === 0) {
+      startBreach(_pAlive > 0 ? 'player' : 'enemy');
+      return;
+    }
+  }
 
   // Boss tick(原 boss_v63)
   if (typeof bossTick === 'function') bossTick(dt_global || 0.016);
@@ -1058,4 +1189,5 @@ window.__useFreeBattleCombat = function __useFreeBattleCombat(api) {
   sameLaneBlocker = api.sameLaneBlocker;
   updateSoldier = api.updateSoldier;
   applySeparation = api.applySeparation;
+  if (api.preFightTick) _preFightTick = api.preFightTick;
 };

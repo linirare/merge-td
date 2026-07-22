@@ -62,7 +62,8 @@ function applyTutorialLevelTuning(k) {
   state.enemySp = Math.max(state.enemySp || 0, k === 1 ? 6 : k === 2 ? 8 : 10);
   state.playerWallMax = k === 1 ? 180 : k === 2 ? 160 : 150;
   state.playerWallHp = state.playerWallMax;
-  state.enemyWallMax = k === 1 ? 140 : k === 2 ? 180 : 220;
+  // 新手关沿用全局线性墙血，避免教程层把 24/26/28 又覆盖成旧版厚墙。
+  state.enemyWallMax = Math.max(1, Number(state.levelConfig.enemyWallHp) || (24 + (k - 1) * 2));
   state.enemyWallHp = state.enemyWallMax;
   state.levelConfig.enemySpawnInterval = k === 1 ? 14.0 : k === 2 ? 10.0 : 8.0;
   state.levelConfig.enemyWallHp = state.enemyWallMax;

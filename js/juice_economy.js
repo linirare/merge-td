@@ -37,7 +37,12 @@
   }
 
   const JUICE_PASSIVE_INTERVAL = juiceNumber('passiveInterval', 5.0);
-  const ENEMY_ACTION_INTERVAL = juiceNumber('enemyActionInterval', 4.0);
+  function enemyActionInterval() {
+    const stageInterval = Number(state && state.levelConfig && state.levelConfig.enemySpawnInterval);
+    return Number.isFinite(stageInterval) && stageInterval > 0
+      ? stageInterval
+      : juiceNumber('enemyActionInterval', 4.0);
+  }
 
   function actionCost() {
     if (!state) return 1;
@@ -280,8 +285,9 @@
       }
 
       state.enemySpCheckTimer = (state.enemySpCheckTimer || 0) + dt;
-      while (state.enemySpCheckTimer >= ENEMY_ACTION_INTERVAL) {
-        state.enemySpCheckTimer -= ENEMY_ACTION_INTERVAL;
+      const actionInterval = enemyActionInterval();
+      while (state.enemySpCheckTimer >= actionInterval) {
+        state.enemySpCheckTimer -= actionInterval;
         tryEnemyJuiceSummon();
       }
     }

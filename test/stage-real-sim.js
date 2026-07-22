@@ -47,7 +47,6 @@ const FILES = [
   'js/status_engine_v61.js',
   'js/dynamic_difficulty_v64.js',
   'js/free_battle_v2.js',
-  'js/boss_v63.js',
   'js/juice_economy.js',
   'js/economy_balls_v62.js',
   'js/commander_system_v1.js',
@@ -107,6 +106,7 @@ function argValue(name) {
 }
 
 const isFullRun = process.argv.includes('--full');
+const isGateRun = process.argv.includes('--gate');
 const verbose = process.argv.includes('--verbose');
 const simRunsPerStage = Math.max(1, Number(argValue('runs') || (isFullRun ? 3 : 1)) || 1);
 const simMaxSeconds = Math.max(30, Number(argValue('cap') || (isFullRun ? 165 : 135)) || 135);
@@ -240,7 +240,7 @@ const DRIVER = `
 
   function botPickType(strategy) {
     const k = state.currentLevel || 1;
-    const boss = k % 5 === 0;
+    const boss = !!(state.levelConfig && state.levelConfig.isBoss);
     const pattern = boss
       ? ['orange_cannon', 'watermelon_guard', 'grape_archer', 'pineapple_lancer', 'banana_raider']
       : ['watermelon_guard', 'grape_archer', 'orange_cannon', 'banana_raider', 'pineapple_lancer'];
@@ -411,7 +411,7 @@ const DRIVER = `
       rows.push({
         stage: k,
         type: def.type,
-        boss: k % 5 === 0 ? 1 : 0,
+        boss: def.type === 'boss' ? 1 : 0,
         strategy: strategy.id,
         runs: RUNS_PER_STAGE,
         winRate: Math.round((wins / RUNS_PER_STAGE) * 100),
@@ -489,14 +489,24 @@ for (const r of rows) {
   assert.ok(r.summonCount >= 0, 'summonCount should be non-negative');
   assert.ok(r.mergeCount >= 0, 'mergeCount should be non-negative');
 }
-if (requestedStrategies.includes('standard') && requestedStages.length === 20) {
-  assert.strictEqual(rows.filter(r => r.boss && r.strategy === 'standard').length, 4, 'four key stages in 1-20');
-}
-// 注意:当前 bot 策略简单,0% 胜率不表示模拟有问题(需改进 bot 策略后方可用于胜率评估)
 const standardRows = rows.filter(r => r.strategy === 'standard');
+assert.ok(standardRows.length > 0, 'standard strategy records present');
 const anyWin = standardRows.some(r => r.winRate > 0);
-if (!anyWin) {
-  console.warn('\nWARNING: standard 策略全部关卡胜率为 0 — bot 无法通关,但模拟结构正确');
+assert.ok(anyWin, 'PVE gate: standard strategy must be able to clear at least one requested stage');
+const playableStageRatio = standardRows.filter(r => r.winRate > 0).length / standardRows.length;
+if (standardRows.length >= 5) {
+  assert.ok(playableStageRatio >= 0.60, `PVE gate: standard strategy only clears ${Math.round(playableStageRatio * 100)}% of requested stages`);
+  if (isGateRun && simRunsPerStage >= 3) {
+    const blockedStages = standardRows.filter(r => r.winRate === 0).map(r => r.stage);
+    assert.strictEqual(blockedStages.length, 0, `PVE gate: zero-win stages detected: ${blockedStages.join(',')}`);
+  }
 }
-assert.ok(rows.filter(r => r.strategy === 'no_action').length > 0, 'no_action records present');
-console.log('\nOK: real-combat sim ran requested stages and strategies (structure valid)');
+const firstStage = standardRows.find(r => r.stage === 1);
+if (firstStage) assert.ok(firstStage.winRate > 0, 'PVE gate: stage 1 must be clearable by standard strategy');
+if (requestedStrategies.includes('no_action')) {
+  assert.ok(rows.filter(r => r.strategy === 'no_action').length > 0, 'no_action records present');
+}
+if (typeof tuning.bossesEnabled === 'boolean' && !tuning.bossesEnabled) {
+  assert.strictEqual(rows.filter(r => r.boss).length, 0, 'bosses are disabled for the current PVE season');
+}
+console.log(`\nOK: real-combat PVE gate passed (${Math.round(playableStageRatio * 100)}% requested stages clearable)`);

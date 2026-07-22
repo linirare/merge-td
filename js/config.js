@@ -347,6 +347,7 @@ const TUNING = {
     bossTargetSeconds: [40, 90],
     standardWinRate: [0.80, 0.95],
     bossWinRate: [0.65, 0.85],
+    bossesEnabled: false,
   },
   pvp: {
     actionRateLimitPerSecond: 15,
@@ -359,27 +360,64 @@ const TUNING = {
     resource: 'resource',
     challenge: 'challenge',
   },
-  bossMechanics: { 5:'pearl_shield', 10:'eel_blades', 15:'abyss_lure', 20:'ancient_summon' },
+  bossMechanics: {},
   stages: (function generateStages() {
     const s = [];
-    const bossMech = { 5:'pearl_shield', 10:'eel_blades', 15:'abyss_lure', 20:'ancient_summon' };
     const unlockAt = { 2: 'coconut_guard', 3: 'peach_medic', 4: 'blueberry_sniper', 6: 'pumpkin_roller', 8: 'kiwi_wildcard', 11: 'strawberry_knight', 14: 'avocado_brawler', 16: 'ferment_grape', 18: 'chill_juice' };
     const types = ['normal','mechanic','resource','challenge'];
+    const planByType = {
+      normal: [
+        ['watermelon_guard','grape_archer','banana_raider'],
+        ['watermelon_guard','grape_archer','banana_raider'],
+        ['watermelon_guard','grape_archer','banana_raider'],
+        ['watermelon_guard','mango_arbalest','banana_raider'],
+      ],
+      mechanic: [
+        ['pineapple_lancer','pear_frost','grape_archer'],
+        ['dragonfruit_warrior','melon_shaman','banana_raider'],
+        ['pineapple_lancer','cherry_bomber','pear_frost'],
+        ['dragonfruit_warrior','melon_shaman','olive_assassin'],
+      ],
+      resource: [
+        ['watermelon_guard','orange_cannon','grape_archer'],
+        ['watermelon_guard','orange_cannon','grape_archer'],
+        ['strawberry_knight','orange_cannon','pear_frost'],
+        ['avocado_brawler','orange_cannon','cherry_bomber'],
+      ],
+      challenge: [
+        ['banana_raider','blueberry_sniper','pineapple_lancer'],
+        ['olive_assassin','dragonfruit_warrior','mango_arbalest'],
+        ['banana_raider','cherry_bomber','strawberry_knight'],
+        ['olive_assassin','blueberry_sniper','avocado_brawler'],
+      ],
+    };
+    const hintByType = {
+      normal: '稳住前排，观察敌方主力后再决定合成方向。',
+      mechanic: '控制与突击单位较多，优先保护后排输出。',
+      resource: '敌方攻城压力更高，保留潮汐能及时补充防线。',
+      challenge: '敌方阵容进攻性更强，尽早形成二星核心。',
+    };
     for (let id = 1; id <= 20; id++) {
       const ch = Math.floor((id - 1) / 5) + 1;
-      const isBoss = id % 5 === 0;
       const tIdx = (id - 1) % 4;
+      const type = types[tIdx];
+      const opening = planByType[type][ch - 1].slice();
       s.push({
         stageId: id, chapter: ch,
-        type: isBoss ? 'boss' : types[tIdx],
+        type,
         enemyLevel: +(1 + (id - 1) * 0.12).toFixed(2),
-        enemyWallHp: Math.round(140 + (id - 1) * 26),
-        enemySpawnInterval: +(6.4 - id * 0.10).toFixed(2),
-        bossMechanic: bossMech[id] || '',
-        reward: { gold: 18 + id * 8 + (isBoss ? 24 : 0) },
-        tutorialHint: '',
+        // 回合胜方按幸存单位破墙：1 关 24 HP，之后每关线性 +2。
+        enemyWallHp: 24 + (id - 1) * 2,
+        enemySpawnInterval: +(6.8 - id * 0.10).toFixed(2),
+        bossMechanic: '',
+        reward: { gold: 18 + id * 8 },
+        tutorialHint: hintByType[type],
         unlockRules: unlockAt[id] ? [unlockAt[id]] : [],
-        enemyPlan: null,
+        enemyPlan: {
+          opening,
+          initialCount: Math.min(3, 1 + Math.floor((id - 1) / 6)),
+          count: Math.min(5, 3 + Math.floor((id - 1) / 5)),
+        },
       });
     }
     return s;
@@ -391,16 +429,17 @@ function getStageDefinition(k) {
   const stageId = Math.max(1, Math.floor(Number(k) || 1));
   const direct = TUNING.stages.find(stage => stage.stageId === stageId);
   if (direct) return direct;
-  const boss = false; // 去Boss:程序化生成>20 关不再产生 boss 类型(combat-fixes-plan §1)
   const chapter = Math.floor((stageId - 1) / 5) + 1;
-  const bossCycle = ['shield', 'summon', 'charge', 'heal', 'siege'];
   return {
     stageId,
     chapter,
     type: TUNING.stageTypes.normal,
-    enemyPlan: { count: boss ? 5 : Math.min(5, 3 + Math.floor(stageId / 4)) },
-    bossMechanic: boss ? bossCycle[(stageId / 5 - 1) % bossCycle.length] : '',
-    reward: { gold: TUNING.rewards.baseGold + stageId * TUNING.rewards.goldPerStage + (boss ? TUNING.rewards.bossGoldBonus : 0) },
+    enemyLevel: +(1 + (stageId - 1) * 0.12).toFixed(2),
+    enemyWallHp: 24 + (stageId - 1) * 2,
+    enemySpawnInterval: Math.max(4.2, +(6.8 - stageId * 0.10).toFixed(2)),
+    enemyPlan: { opening: ['watermelon_guard','grape_archer','banana_raider'], initialCount: 3, count: 5 },
+    bossMechanic: '',
+    reward: { gold: TUNING.rewards.baseGold + stageId * TUNING.rewards.goldPerStage },
     tutorialHint: '',
     unlockRules: [],
   };
@@ -427,11 +466,9 @@ function roleOf(type) { return TYPES[type]?.role || ''; }
 function generateLevel(k) {
   const stageId = Math.max(1, Math.floor(Number(k) || 1));
   const def = getStageDefinition(stageId);
-  const isBossStage = def.type === TUNING.stageTypes.boss; // 去Boss:移除%5整除检测(现有定义无boss→恒false,不再加厚墙)
+  const isBossStage = !!TUNING.pve.bossesEnabled && def.type === TUNING.stageTypes.boss;
   const tunedEnemyLv = Number.isFinite(def.enemyLevel) ? def.enemyLevel : 1 + (stageId - 1) * 0.19 + (isBossStage ? 0.18 : 0);
-  const tunedWallBase = isBossStage ? 82 : 56;
-  const tunedWallGrow = isBossStage ? 1.15 : 1.10;
-  const fallbackWall = Math.round(tunedWallBase * Math.pow(tunedWallGrow, stageId - 1));
+  const fallbackWall = 24 + (stageId - 1) * 2;
   return {
     id: stageId,
     stageId,
@@ -442,7 +479,7 @@ function generateLevel(k) {
     enemyWallHp: Math.max(24, Math.round(def.enemyWallHp || fallbackWall)),
     enemySpawnInterval: Number.isFinite(def.enemySpawnInterval) ? def.enemySpawnInterval : Math.max(4.25, 6.2 - stageId * 0.13),
     enemyPlan: def.enemyPlan || null,
-    bossMechanic: def.bossMechanic || TUNING.bossMechanics[stageId] || '',
+    bossMechanic: isBossStage ? (def.bossMechanic || TUNING.bossMechanics[stageId] || '') : '',
     reward: stageReward(stageId),
     rewardInfo: def.reward || { gold: stageReward(stageId) },
     tutorialHint: def.tutorialHint || '',

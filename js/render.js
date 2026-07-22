@@ -261,13 +261,29 @@ function drawField() {
     ctx.stroke();
   }
 
-  // 中线
-  ctx.strokeStyle = 'rgba(255,200,100,0.15)';
-  ctx.setLineDash([6, 6]);
+  // 中线（按回合阶段改变样式）
+  const cy = fy + fh / 2;
+  const roundPh = state && state.roundPhase;
+  if (roundPh === 'fight') {
+    ctx.strokeStyle = 'rgba(255,200,100,0.55)';
+    ctx.setLineDash([]);
+    ctx.shadowColor = '#ffd24a';
+    ctx.shadowBlur = 6;
+  } else if (roundPh === 'breach') {
+    ctx.strokeStyle = 'rgba(255,80,60,0.7)';
+    ctx.setLineDash([8, 6]);
+    ctx.shadowColor = '#ff3a2a';
+    ctx.shadowBlur = 10;
+  } else {
+    ctx.strokeStyle = 'rgba(255,200,100,0.15)';
+    ctx.setLineDash([6, 6]);
+  }
+  ctx.lineWidth = roundPh === 'fight' ? 2.5 : 1.5;
   ctx.beginPath();
-  ctx.moveTo(20, fy + fh / 2);
-  ctx.lineTo(W - 20, fy + fh / 2);
+  ctx.moveTo(20, cy);
+  ctx.lineTo(W - 20, cy);
   ctx.stroke();
+  ctx.shadowBlur = 0;
   ctx.setLineDash([]);
 }
 

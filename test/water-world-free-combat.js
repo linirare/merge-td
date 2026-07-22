@@ -73,8 +73,8 @@ assert.strictEqual(r.spawnA, r.spawnB, '棋盘列不得影响战场出生横坐�
 assert.strictEqual(r.target(), 'back', '游骑兵优先切后排(射手)');
 assert.strictEqual(r.tideCalm.phase, 'calm');
 assert.strictEqual(r.tideCalm.multiplier, 1);
-assert.strictEqual(r.tideSurge.phase, 'surge');
-assert.strictEqual(r.tideSurge.multiplier, 1.08);
+assert.strictEqual(r.tideSurge.phase, 'calm');
+assert.strictEqual(r.tideSurge.multiplier, 1);
 const shield = r.shield();
 assert.strictEqual(shield.shieldAfterFirst, 100);
 assert.strictEqual(shield.used, true);

@@ -353,12 +353,6 @@
     ctx.moveTo(54, LAYOUT.fieldY + LAYOUT.fieldH / 2);
     ctx.lineTo(W - 54, LAYOUT.fieldY + LAYOUT.fieldH / 2);
     ctx.stroke();
-    const tide = typeof worldTideState === 'function' ? worldTideState(state.time) : { phase:'calm', remaining:12 };
-    panel(W / 2 - 51, LAYOUT.fieldY + 8, 102, 22, 11, tide.phase === 'surge' ? 'rgba(27,141,196,.82)' : 'rgba(22,79,112,.76)', 'rgba(204,249,255,.8)', 1);
-    ctx.fillStyle = '#e8fcff';
-    ctx.font = '800 10px "Microsoft YaHei",sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(`${tide.phase === 'surge' ? '涌潮 +8%' : '平潮'} · ${tide.remaining}s`, W / 2, LAYOUT.fieldY + 19);
     ctx.restore();
   };
 
