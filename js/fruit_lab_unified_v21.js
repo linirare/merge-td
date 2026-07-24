@@ -40,7 +40,7 @@ function labRoleLabelV21(role) {
   return ({ shell:'前排', shooter:'远程', raider:'突击', spike:'枪线', wildcard:'全能' })[role] || role;
 }
 function labSkillStateV21(id) {
-  return ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'].includes(id) ? '技能已实装' : '技能待接入';
+  return ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer'].includes(id) ? '技能已实装' : '技能待接入';
 }
 function labStatPreviewV21(t) {
   const atk1 = Math.round(t.atk * LEVEL_MUL[1]);

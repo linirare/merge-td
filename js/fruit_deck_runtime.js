@@ -14,7 +14,7 @@
   if (typeof pushOverflow === 'function' && !pushOverflow._deckRuntimePatched) {
     const oldPushOverflow = pushOverflow;
     pushOverflow = function deckAwarePushOverflow(queue, type, level = 1) {
-      return oldPushOverflow(queue, normalizeTypeId(type || randomType(activeDeck())), level);
+      return oldPushOverflow(queue, normalizeTypeId(type || (typeof drawPlayerType === 'function' ? drawPlayerType() : randomType(activeDeck()))), level);
     };
     pushOverflow._deckRuntimePatched = true;
   }

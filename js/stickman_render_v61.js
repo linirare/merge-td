@@ -512,6 +512,16 @@ function drawStatusFXV61(ctx, g, se, headR, time) {
     ctx.fill();
 
     // 单位是微缩棋子，不再使用霓虹战斗环。
+    // 阵营光环：绿色=我方，红色=敌方
+    ctx.fillStyle = isEnemy ? 'rgba(255,70,92,0.20)' : 'rgba(34,197,94,0.20)';
+    ctx.beginPath();
+    ctx.arc(vis.x, vis.y, r + 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = isEnemy ? 'rgba(255,70,92,0.50)' : 'rgba(34,197,94,0.50)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 单位是微缩棋子，不再使用霓虹战斗环。
     ctx.fillStyle = sideDark;
     ctx.strokeStyle = (s.hitFlash || 0) > 0.02 ? '#F1E8D5' : side;
     ctx.lineWidth = (s.hitFlash || 0) > 0.02 ? 2.6 : 1.7;

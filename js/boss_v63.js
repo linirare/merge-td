@@ -15,10 +15,10 @@
   const BOSS_LEVEL_UNIT = 8; // 仅用于渲染放大;数值单独覆盖
 
   const BOSS_DEFS = {
-    5:  [{ kind: 'melon_king', base: 'coconut_guard', name: '巨蛤', hp: 600, atk: 16, artIndex:0 }],
+    5:  [{ kind: 'melon_king', base: 'watermelon_guard', name: '巨蛤', hp: 600, atk: 16, artIndex:0 }],
     10: [{ kind: 'durian_cannon', base: 'banana_raider', name: '海鳗', hp: 520, atk: 22, artIndex:1 }],
     15: [{ kind: 'twin_shell', base: 'blueberry_sniper', name: '深海鮟鱇', hp: 700, atk: 24, artIndex:2 }],
-    20: [{ kind: 'fruit_king', base: 'pumpkin_roller', name: '远古章鱼', hp: 900, atk: 26, artIndex:3 }],
+    20: [{ kind: 'fruit_king', base: 'grape_archer', name: '远古章鱼', hp: 900, atk: 26, artIndex:3 }],
   };
 
   function bossDefsFor(k) {

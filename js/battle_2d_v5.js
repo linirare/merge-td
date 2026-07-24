@@ -13,11 +13,11 @@
     bosses: new Image(),
   };
 
-  ART.background.src = 'art/generated/water-world-battlefield-v4.png';
-  ART.barracks.src = 'art/generated/water-world-orbs-v3.png';
-  ART.troops.src = 'art/generated/water-world-units-v3.png';
-  ART.commanders.src = 'art/generated/water-world-commanders-v3.png';
-  ART.bosses.src = 'art/generated/water-world-bosses-v3.png';
+  ART.background.src = 'art/generated/water-world-battlefield-v4.png?v=1';
+  ART.barracks.src = 'art/generated/water-world-orbs-v3.png?v=1';
+  ART.troops.src = 'art/generated/water-world-units-v3.png?v=1';
+  ART.commanders.src = 'art/generated/water-world-commanders-v3.png?v=1';
+  ART.bosses.src = 'art/generated/water-world-bosses-v3.png?v=1';
   for (const img of Object.values(ART)) {
     img.onload = () => requestAnimationFrame(() => {
       try { if (typeof draw === 'function') draw(); } catch (_) {}
@@ -579,6 +579,14 @@
     ctx.beginPath();
     ctx.ellipse(x, renderCenterY + 2, width * .36, 5, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    // 阵营光圈：绿色=我方，红色=敌方
+    ctx.fillStyle = enemy ? 'rgba(255,70,92,0.15)' : 'rgba(34,197,94,0.15)';
+    ctx.beginPath(); ctx.arc(x, renderCenterY + 6, width * 0.55, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = enemy ? 'rgba(255,70,92,0.35)' : 'rgba(34,197,94,0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
     if (s._boss) drawAtlas(ART.bosses, BOSS_RECTS, s._bossArtIndex || 0, x - width * .72, y - height * .24, width * 1.44, height * 1.38, 0, 1);
     else drawAtlas(ART.troops, TROOP_RECTS, roleIndex(s.type), x - width / 2, y, width, height, 0, 1);
 

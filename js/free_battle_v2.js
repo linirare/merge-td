@@ -129,9 +129,9 @@
       const rankBonus = Math.max(0, 2 - targetRank) * 45;
       let score = threatOf(s, e) - dist * 0.18 + (1 - Math.max(0, e.hp) / Math.max(1, e.maxHp)) * 35 + rankBonus;
       if (!forward && dist > 52) score -= 120; // 后方目标降权,避免后撤追敌
-      if (role === 'lancer') score += er === 'cavalry' ? 280 : er === 'archer' ? -45 : 0;
-      if (role === 'cavalry') score += er === 'archer' ? 300 : er === 'support' ? 220 : er === 'lancer' ? -70 : 0;
-      if (role === 'archer') score += er === 'lancer' ? 260 : er === 'cavalry' ? -45 : 0;
+      if (role === 'lancer') score += er === 'cavalry' ? 45 : er === 'archer' ? -20 : 0;
+      if (role === 'cavalry') score += er === 'archer' ? 45 : er === 'support' ? 25 : er === 'lancer' ? -20 : 0;
+      if (role === 'archer') score += er === 'lancer' ? 45 : er === 'cavalry' ? -20 : 0;
       if (role === 'tank' || role === 'front') score += barrierThreat(s, e) * 230 + (['raider'].includes(er) ? 80 : 0);
       if (role === 'front') score += controlled(e) ? -180 : 110; // 枪刺兵:优先打受控的敌人
       if (role === 'raider') score += ['ranged'].includes(er) ? 220 : 0;
@@ -157,12 +157,13 @@
     const base = typeof fruitMoveSpeed === 'function' ? fruitMoveSpeed(s, CHASE_SPEED) : (s.move || CHASE_SPEED);
     const step = Math.min(d, base * multiplier * tide * dt);
     s.x += dx / d * step; s.y += dy / d * step;
-    // Formation bands are staging anchors, not invisible walls. Once a unit
-    // has a target it may cross bands (notably raiders diving the backline).
-    if (state.roundPhase === 'fight' && s.mode !== 'fight') {
+    // 前方有敌兵(含棋盘/待命)时钳制在阵型zone内,清完自动放行撞墙
+    const enemiesAhead = (s.side === 'player' ? state.enemySoldiers : state.playerSoldiers)
+      .filter(e => e && e.alive && (s.side === 'player' ? e.y < s.y : e.y > s.y));
+    if (enemiesAhead.length > 0 && !(TYPES[s.type]?.attackMode === 'melee' && s.mode === 'fight')) {
       const cy = fieldCenter();
       const band = Number.isFinite(s._formationBand) ? s._formationBand : formationBand(s);
-      const zones = [[8, 30], [42, 78], [88, 128]];
+      const zones = [[5, 50], [55, 105], [112, 160]];
       const zone = zones[band] || zones[1];
       const depthOffset = Number(s._formationDepthOffset) || 0;
       const offsetLow = zone[0] + depthOffset;
@@ -185,8 +186,11 @@
   }
   function kiteFree(s, target) {
     s.mode = 'backline';
+    const prevY = s.y;
     const dx = s.x - target.x, dy = s.y - target.y, d = Math.max(1, Math.hypot(dx, dy));
     moveVector(s, clamp(s.x + dx / d * 70, 24, W - 24), clamp(s.y + dy / d * 70, fieldTop(), fieldBottom()), .82);
+    // 后撤被边界阻挡（Y 几乎没有变化）→ 放行攻击
+    if (Math.abs(s.y - prevY) < 0.5) return false;
     return true;
   }
   function advanceFree(s) {

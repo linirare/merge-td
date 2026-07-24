@@ -23,10 +23,8 @@ function patchLevelPacingV19() {
 
     // Stage data is now authoritative. Do not secretly discount wall HP or slow
     // the opponent here; those late multipliers made stage strength non-obvious.
-    state.enemyWallMax = Math.max(24, Math.round(state.enemyWallMax));
+    state.enemyWallMax = Math.max(80, Math.round(state.enemyWallMax));
     state.enemyWallHp = Math.min(state.enemyWallHp, state.enemyWallMax);
-    state.playerWallMax = Math.max(32, Math.round(state.playerWallMax));
-    state.playerWallHp = Math.min(state.playerWallHp, state.playerWallMax);
 
     state.enemyBallTimer = Math.min(state.enemyBallTimer || 0, -0.6);
     // Round combat owns reinforcement timing. A legacy clear-line pause must

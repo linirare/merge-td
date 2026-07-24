@@ -31,7 +31,7 @@ function summonFruitAt(r, c) {
   }
   state.sp -= SUMMON_COST;
   state.summonCount = (state.summonCount || 0) + 1;
-  const type = randomType(activeDeck());
+  const type = typeof drawPlayerType === 'function' ? drawPlayerType() : randomType(activeDeck());
   state.playerSlots[r][c] = createBall(type, 1);
   state.playerSlots[r][c].spawnTimer = Math.max(state.playerSlots[r][c].spawnTimer, 2.2);
   const t = TYPES[type];

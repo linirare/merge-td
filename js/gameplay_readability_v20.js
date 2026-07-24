@@ -93,7 +93,7 @@ function roleLabelV20(role) {
   return ({ shell:'前排', shooter:'远程', raider:'突击', spike:'枪线', wildcard:'全能' })[role] || role;
 }
 function skillStateLabelV20(id) {
-  return ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'].includes(id) ? '已实装' : '待接入';
+  return ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer'].includes(id) ? '已实装' : '待接入';
 }
 function statPreviewV20(t) {
   const atk1 = Math.round(t.atk * LEVEL_MUL[1]);
@@ -103,7 +103,7 @@ function statPreviewV20(t) {
   return { atk1, hp1, atk7, hp7 };
 }
 function levelPathV20(id) {
-  const implemented = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'].includes(id);
+  const implemented = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer'].includes(id);
   return `
     <div class="lvpath-v20">
       <span>1 数值</span><span>2 数值</span><span>3 体型</span>

@@ -14,20 +14,18 @@
 })();
 
 const SKILL_SYSTEM_BUILD = 'skill-system-v17-default-five';
-const SKILL_IDS_V17 = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'];
+const SKILL_IDS_V17 = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer'];
 const SKILL_NAME_V17 = {
   watermelon_guard: '果盾壁垒',
   grape_archer: '葡萄连射',
   banana_raider: '香蕉突进',
   pineapple_lancer: '拒马枪阵',
-  orange_cannon: '重炮破城',
 };
 const SKILL_COLOR_V17 = {
   watermelon_guard: '#53e77b',
   grape_archer: '#b076ff',
   banana_raider: '#ffd24a',
   pineapple_lancer: '#ffb547',
-  orange_cannon: '#ff9a35',
 };
 
 function skillRankV17(level) {

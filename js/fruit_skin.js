@@ -174,9 +174,9 @@ function fruitBoardLvScale(level) {
 
 function fruitBoardSkillColor(type) {
   return ({
-    watermelon_guard:'#53e77b', grape_archer:'#b076ff', banana_raider:'#ffd24a', pineapple_lancer:'#ffb547', orange_cannon:'#ff9a35',
-    coconut_guard:'#9be7ff', peach_medic:'#ff9fbd', pear_frost:'#8fe9ff', blueberry_sniper:'#829cff', lemon_assassin:'#ffe45a',
-    pumpkin_roller:'#ff9a35', kiwi_wildcard:'#8dff91', passion_copy:'#d08cff'
+    watermelon_guard:'#53e77b', grape_archer:'#b076ff', banana_raider:'#ffd24a',
+    pineapple_lancer:'#ffb547', peach_medic:'#ff9fbd', blueberry_sniper:'#829cff',
+    lemon_assassin:'#ffe45a', kiwi_wildcard:'#8dff91',
   })[type] || '#ffd54f';
 }
 

@@ -74,10 +74,10 @@ function createState() {
     enemySlots:  Array.from({ length: ROWS }, () => Array(COLS).fill(null)),
     overflowQueue: [],
     enemyOverflow: 0,
-    playerWallHp: BASE_WALL_HP,
-    playerWallMax: BASE_WALL_HP,
-    enemyWallHp: BASE_WALL_HP,
-    enemyWallMax: BASE_WALL_HP,
+    playerWallHp: 80,
+    playerWallMax: 80,
+    enemyWallHp: 60,
+    enemyWallMax: 60,
     playerSoldiers: [],
     enemySoldiers: [],
     ballTimer: 0,
@@ -165,11 +165,8 @@ function getHpMul(meta, typeId) {
   const lv = s?.fruitLv?.[typeId] || 1;
   return typeof heroMulForType === 'function' ? heroMulForType(typeId, lv, 'hp') : heroMul(lv);
 }
-function getWallBonus(meta) {
-  return meta.wallLv * WALL_PER_LV;
-}
 function getSpStart(meta) {
-  return 6 + Math.floor((meta.spLv || 0) / 2);
+  return 10 + (meta.spLv || 0);
 }
 function getSpMax(meta) {
   return SP_MAX + (meta.spLv || 0);

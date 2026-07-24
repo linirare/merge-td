@@ -141,7 +141,7 @@ function combatRange(s) {
 
 function combatIsBackline(s) {
   const t = TYPES[s.type] || {};
-  return !!t.combatV1 || s.type === 'bow' || t.role === 'shooter' || t.role === 'wildcard';
+  return t.attackMode === 'projectile' || t.attackMode === 'support' || s.type === 'bow' || t.role === 'shooter' || t.role === 'wildcard';
 }
 
 /* 同路/邻路阻塞清理(原 lane_block_fix.js,已合并) */
@@ -171,7 +171,7 @@ function sameLaneBlocker(s, enemies) {
     const roleMul = typeof roleCounterMultiplier === 'function' ? roleCounterMultiplier(s.type, e.type) : 1;
     let score = dy + xGap * 0.35 + laneDiff * 42;
     if (forward) score -= 24; else if (dy > 70) score += 36;
-    if (roleMul >= 1.32) score -= 70; else if (roleMul >= 1.15) score -= 32;
+    if (roleMul >= 1.28) score -= 70; else if (roleMul >= 1.15) score -= 32;
     if (TYPES[s.type]?.tags?.includes('rush') && TYPES[e.type]?.tags?.some(t => ['back','support','siege','control'].includes(t))) score -= 55;
     if (score < bestScore) { bestScore = score; best = e; }
   }
@@ -369,9 +369,9 @@ function findTarget(s, enemies) {
     if (!sameLane) score += wallThreat ? 16 : 58;
     if (!forward && dist > 52 && !wallThreat) score += 180;
     if (wallThreat) score -= 200;
-    if (roleMul >= 1.32) score -= 86;
-    else if (roleMul >= 1.15) score -= 40;
-    else if (roleMul <= 0.9) score += 36;
+    if (roleMul >= 1.28) score -= 86;
+    else if (roleMul >= 1.10) score -= 40;
+    else if (roleMul <= 0.85) score += 36;
     if (s.target && e.id === s.target) score -= 36;
     const sr = (TYPES[s.type] || {}).role;
     if (sr === 'raider' && ['shooter'].includes((TYPES[e.type] || {}).role)) score -= 70;
@@ -725,13 +725,13 @@ function attackTarget(s, target) {
   const typeCfg = TYPES[s.type] || {};
   const range = typeof fruitRange === 'function' ? fruitRange(s) : 24;
   const isBack = typeof fruitIsBackline === 'function' ? fruitIsBackline(s) : (TYPES[s.type]?.role === 'shooter');
-  const usesDistanceBand = !!typeCfg.combatV1 && Number.isFinite(typeCfg.preferredDistance);
-  const melee = !usesDistanceBand && ['shell','spike','raider'].includes(typeCfg.role);
+  const usesDistanceBand = typeCfg.attackMode === 'projectile' || typeCfg.attackMode === 'support';
+  const melee = typeCfg.attackMode === 'melee';
 
-  // 近战 stance:距离 >30 先移近,目标在身后时只前进不后退
+  // 近战 stance:超出攻击范围先移近,目标在身后时只前进不后退
   if (melee) {
     const d = Math.hypot(s.x - target.x, s.y - target.y);
-    if (d > 30) {
+    if (d > range) {
       if (!isForwardOf(s, target)) { advanceTowardWall(s); return; }
       moveTowardEnemy(s, target); return;
     }

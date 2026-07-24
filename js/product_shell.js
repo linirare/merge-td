@@ -162,7 +162,7 @@
 
   function fruitDisplay(id, fallback = '') {
     const key = normalizeTypeId(id);
-    const mapped = ['watermelon_guard', 'banana_raider', 'grape_archer', 'strawberry_knight', 'orange_cannon'];
+    const mapped = ['watermelon_guard', 'banana_raider', 'grape_archer'];
     if (mapped.includes(key) || fallback) return fruitUnitSprite(key, fallback);
     return `<span class="td-emoji-unit">${fruitIcon(key)}</span>`;
   }
@@ -373,7 +373,7 @@
 
         <div class="logo"><h1 class="display">梦幻水世界</h1><div class="rib">海灵合成 · 自由海战</div></div>
         <button class="home-expedition" data-go="battle" aria-label="查看${chapter}第${lv}关远征队">
-          <img class="expedition-art" src="art/generated/water-world-home-expedition-v1.png" alt="" aria-hidden="true">
+          <img class="expedition-art" src="art/generated/water-world-home-expedition-v1.png?v=1" alt="" aria-hidden="true">
           <span class="expedition-board">
             <span class="expedition-kicker">远征队已就绪</span>
             <strong>${chapter} · 第${lv}关</strong>
@@ -495,7 +495,7 @@
     const artX = atlasX[artIndex % 5];
     const artY = atlasY[Math.floor(artIndex / 5)];
     const atlasScale = (1254 / 236 * 100).toFixed(2);
-    return `<span class="fdisc" role="img" aria-label="${escapeHtml(t.name)}" style="width:${size}px;height:${size}px;background-color:${col};background-image:url('art/generated/water-world-units-v3.png');background-size:${atlasScale}% ${atlasScale}%;background-position:${artX}% ${artY}%;background-repeat:no-repeat"></span>`;
+    return `<span class="fdisc" role="img" aria-label="${escapeHtml(t.name)}" style="width:${size}px;height:${size}px;background-color:${col};background-image:url('art/generated/water-world-units-v3.png?v=1');background-size:${atlasScale}% ${atlasScale}%;background-position:${artX}% ${artY}%;background-repeat:no-repeat"></span>`;
   }
   function roleZh(r) { return ROLE_ZH[r] || r || '单位'; }
   function skillZh(t) { return SKILL_ZH[t.skill] || '专属技能'; }
@@ -526,7 +526,7 @@
               const lv = Math.max(1, Number(shell.commanderLv[id] || 1));
               const selected = shell.commanderId === id;
               const cost = 60 + lv * 45;
-              const portraitSrc = 'art/generated/water-world-commanders-v3.png';
+              const portraitSrc = 'art/generated/water-world-commanders-v3.png?v=1';
               const artPos = id === 'berry_general' ? '50%' : id === 'juice_sage' ? '100%' : '0%';
               return `<article class="card commander-card ${selected ? 'on' : ''}" style="--rc:${selected ? '#ffca48' : '#7edcd5'}">
                 ${selected ? '<span class="commander-selected">领航中</span>' : ''}
@@ -777,7 +777,7 @@
         <div class="hifi-scroll">
           <div class="shead"><h2 class="display">海螺集市</h2><span class="line"></span></div>
           <div class="banner pool-banner basic-pool-banner">
-            <img src="art/generated/water-world-basic-pool-banner-v1.png" alt="深海祈愿基础卡池">
+            <img src="art/generated/water-world-basic-pool-banner-v1.png?v=1" alt="深海祈愿基础卡池">
             <div class="cap"><h3>深海祈愿 · 基础卡池</h3><div class="rar">
               ${GACHA_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
             </div></div>
@@ -788,7 +788,7 @@
           </div>
           <div class="shead" style="margin-top:20px"><h2 class="display">精英海市</h2><span class="line"></span></div>
           <div class="banner pool-banner elite-pool-banner">
-            <img src="art/generated/water-world-elite-pool-banner-v1.png" alt="深渊祈愿精英卡池">
+            <img src="art/generated/water-world-elite-pool-banner-v1.png?v=1" alt="深渊祈愿精英卡池">
             <div class="cap"><h3>深渊祈愿 · 精英卡池</h3><div class="rar">
               ${T0T2_TIERS.map(t => `<span class="rchip" style="background:${t.color}">${t.key} ${t.weight}%</span>`).join('')}
             </div></div>

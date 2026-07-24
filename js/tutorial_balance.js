@@ -9,7 +9,7 @@
   patchTutorialSpawnCap();
 })();
 
-const TUTORIAL_DECK = ['watermelon_guard','grape_archer','orange_cannon','peach_medic','kiwi_wildcard'];
+const TUTORIAL_DECK = ['watermelon_guard','grape_archer','blueberry_sniper','peach_medic','kiwi_wildcard'];
 
 function tutorialClearSlots(slots) {
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) slots[r][c] = null;
@@ -26,11 +26,11 @@ function tutorialResetPlayerOpening(k) {
   tutorialSetBall(state.playerSlots, 1, 2, 'grape_archer', 1);
   tutorialSetBall(state.playerSlots, 2, 1, 'watermelon_guard', 1);
   tutorialSetBall(state.playerSlots, 2, 2, 'peach_medic', 1);
-  tutorialSetBall(state.playerSlots, 0, 2, 'orange_cannon', 1);
+  tutorialSetBall(state.playerSlots, 0, 2, 'blueberry_sniper', 1);
   tutorialSetBall(state.playerSlots, 0, 3, 'kiwi_wildcard', 1);
 
   if (k >= 2) tutorialSetBall(state.playerSlots, 2, 3, 'watermelon_guard', 1);
-  if (k >= 3) tutorialSetBall(state.playerSlots, 0, 1, 'pear_frost', 1);
+  if (k >= 3) tutorialSetBall(state.playerSlots, 0, 1, 'lemon_assassin', 1);
 }
 
 function tutorialResetEnemyOpening(k) {
@@ -51,7 +51,7 @@ function tutorialResetEnemyOpening(k) {
     tutorialSetBall(state.enemySlots, 1, 1, 'banana_raider', 1);
     tutorialSetBall(state.enemySlots, 1, 2, 'pineapple_lancer', 1);
     tutorialSetBall(state.enemySlots, 1, 3, 'grape_archer', 1);
-    tutorialSetBall(state.enemySlots, 0, 2, 'coconut_guard', 1);
+    tutorialSetBall(state.enemySlots, 0, 2, 'pineapple_lancer', 1);
   }
 }
 
@@ -60,10 +60,9 @@ function applyTutorialLevelTuning(k) {
 
   state.sp = Math.max(state.sp, k === 1 ? 16 : k === 2 ? 14 : 12);
   state.enemySp = Math.max(state.enemySp || 0, k === 1 ? 6 : k === 2 ? 8 : 10);
-  state.playerWallMax = k === 1 ? 180 : k === 2 ? 160 : 150;
+  state.playerWallMax = k === 1 ? 300 : k === 2 ? 260 : 220;
   state.playerWallHp = state.playerWallMax;
-  // 新手关沿用全局线性墙血，避免教程层把 24/26/28 又覆盖成旧版厚墙。
-  state.enemyWallMax = Math.max(1, Number(state.levelConfig.enemyWallHp) || (24 + (k - 1) * 2));
+  state.enemyWallMax = k === 1 ? 60 : k === 2 ? 70 : 80;
   state.enemyWallHp = state.enemyWallMax;
   state.levelConfig.enemySpawnInterval = k === 1 ? 14.0 : k === 2 ? 10.0 : 8.0;
   state.levelConfig.enemyWallHp = state.enemyWallMax;
@@ -78,7 +77,7 @@ function applyTutorialLevelTuning(k) {
   // 初始战场玩家和敌方都不再预置水果营,双方用果汁自行召唤
 
   const msg = k === 1
-    ? '教学1：点空格召唤葡萄，看西瓜顶线、蜜桃回血、橙子拆墙'
+    ? '教学1：点空格召唤葡萄，看西瓜顶线、蜜桃回血、蓝莓射墙'
     : k === 2
       ? '教学2：敌人开始补兵，召西瓜+葡萄稳住中线'
       : '教学3：加入控制/克制，观察哪一路在接战';

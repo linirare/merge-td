@@ -20,10 +20,10 @@ for (let i = 1; i < stages.length; i++) {
   assert.ok(prev.enemySpawnInterval / cur.enemySpawnInterval <= 1.08, `stage ${cur.stageId} spawn jump should stay <=8%`);
 }
 
-assert.strictEqual(spMax, 24, 'base juice cap should be 24');
+assert.strictEqual(spMax, 40, 'base juice cap should be 40');
 assert.strictEqual(juice.passiveInterval, 5, 'passive juice cadence should be readable');
 assert.strictEqual(juice.wallPityGain, 2, 'wall pity should help without flooding the economy');
 assert.deepStrictEqual(Array.from(pve.normalTargetSeconds), [35, 75], 'normal target duration');
 assert.deepStrictEqual(Array.from(pve.bossTargetSeconds), [40, 90], 'boss target duration');
 
-console.log('OK: pacing curve is monotonic; juice cap 24; target match 35-90s');
+console.log('OK: pacing curve is monotonic; juice cap 40; target match 35-90s');

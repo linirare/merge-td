@@ -1,0 +1,15 @@
+{
+  "date": "2026-07-24T03:51:02.773Z",
+  "mode": "sim",
+  "stage": 3,
+  "runs": 30,
+  "wins": 30,
+  "losses": 0,
+  "winrate": 1,
+  "avgWinChance": 1,
+  "timedOut": 0,
+  "threshold": {
+    "minWinrate": 0.5,
+    "passed": true
+  }
+}

@@ -31,7 +31,7 @@ app.use('/api/auth/', authLimiter);
 app.use('/api/', apiLimiter);
 app.use('/css', express.static(path.join(PUBLIC_ROOT, 'css'), FRONTEND_STATIC));
 app.use('/js', express.static(path.join(PUBLIC_ROOT, 'js'), FRONTEND_STATIC));
-app.use('/art', express.static(path.join(PUBLIC_ROOT, 'art'), FRONTEND_STATIC));
+app.use('/art', express.static(path.join(PUBLIC_ROOT, 'art'), { dotfiles: 'deny', index: false, maxAge: '7d' }));
 app.use('/fonts', express.static(path.join(PUBLIC_ROOT, 'fonts'), { dotfiles: 'deny', index: false, maxAge: '7d' }));
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'index.html')));
 app.get('/admin.html', (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'admin.html')));
@@ -196,6 +196,21 @@ mountSocial(app);
 // 管理后台页面:仅管理员可打开(URL?token=JWT,浏览器无法带 Authorization 头加载页面)
 // 管理后台页面(HTML 静态直出,登录由页面内 JS 调 /api/admin/login 完成)
 app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'admin.html')));
+
+// GitHub auto-deploy webhook
+app.post('/webhook/deploy', (req, res) => {
+  const secret = 'merge-td-deploy-secret-2024';
+  const sig = req.headers['x-hub-signature-256'] || '';
+  const hmac = require('crypto').createHmac('sha256', secret).update(JSON.stringify(req.body)).digest('hex');
+  if (sig !== `sha256=${hmac}` && req.query.token !== secret) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  res.json({ ok: true, message: 'deploy triggered' });
+  require('child_process').exec('cd /root/merge-td-gpt && bash deploy.sh 2>&1 | tee -a /tmp/deploy.log', (err, stdout, stderr) => {
+    if (err) console.error('Deploy failed:', err.message);
+    else console.log('Deploy ok:', stdout.slice(-200));
+  });
+});
 
 // Ladder promotion logic
 app.post('/api/ladder/report', authMiddleware, (req, res) => {

@@ -23,7 +23,7 @@ function fruitRange(s) {
 }
 function fruitIsBackline(s) {
   const t = TYPES[s.type] || {};
-  return !!t.combatV1 || t.role === 'shooter' || t.role === 'wildcard';
+  return t.attackMode === 'projectile' || t.attackMode === 'support';
 }
 function fruitMoveSpeed(s, base) {
   const t = TYPES[s.type] || {};
@@ -38,6 +38,11 @@ function applyFruitDamage(target, raw, source) {
     if ((target._fourDamageReductionUntil || 0) > now) {
       dmg = Math.max(1, Math.round(dmg * (1 - (target._fourDamageReductionPct || 0))));
     }
+    // 职业护甲:远程射手自带 25% 护甲穿透
+    const targetArmor = Math.max(0, target.armor || 0);
+    const attackMode = TYPES[source.type]?.attackMode;
+    const effectiveArmor = attackMode === 'projectile' ? targetArmor * 0.75 : targetArmor;
+    dmg = Math.max(1, Math.round(dmg * (1 - effectiveArmor / (effectiveArmor + 50))));
     if (target.shield > 0) {
       const used = Math.min(target.shield, dmg);
       target.shield -= used;

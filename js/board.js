@@ -31,6 +31,15 @@ function randomType(pool = null) {
   const list = pool || activeDeck();
   return list[Math.floor(Math.random() * list.length)] || DEFAULT_DECK[0];
 }
+// 五英雄牌组包：每抽完一轮后重新洗牌，保证各英雄出场率均衡
+let _playerBag = [];
+function refillPlayerBag() {
+  _playerBag = shuffleSlots([...activeDeck()]);
+}
+function drawPlayerType() {
+  if (_playerBag.length === 0) refillPlayerBag();
+  return _playerBag.pop() || DEFAULT_DECK[0];
+}
 function randomEnemyType() {
   return ENEMY_POOL[Math.floor(Math.random() * ENEMY_POOL.length)] || 'watermelon_guard';
 }
@@ -211,10 +220,10 @@ function initLevel(k) {
 
   initBuildEnemyOpening(k, eLevel);
 
-  state.playerWallHp = lv.enemyWallHp + getWallBonus(meta);
-  state.playerWallMax = state.playerWallHp;
-  state.enemyWallHp = lv.enemyWallHp;
-  state.enemyWallMax = lv.enemyWallHp;
+  state.playerWallMax = getPlayerWallMax(k, meta);
+  state.playerWallHp = state.playerWallMax;
+  state.enemyWallMax = getEnemyWallMax(k);
+  state.enemyWallHp = state.enemyWallMax;
   state.playerSoldiers = [];
   state.enemySoldiers = [];
   state.overflowQueue = [];

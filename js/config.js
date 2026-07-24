@@ -1,5 +1,5 @@
 /* ============================================================
-   水果突击 · Fruit Assault —— 配置常量 / 13水果球卡组制
+   水果突击 · Fruit Assault —— 配置常量 / 8海洋伙伴卡组制
    ============================================================ */
 
 const W = 480, H = 920;
@@ -45,55 +45,33 @@ const LAYOUT = {
   bottomY:     TOP_H + BOARD_H + 6 + 20 + 8 + FIELD_H + 8 + 20 + 40 + BOARD_H + 8,
 };
 
-/* ——— 13 个水果球：局内只从5个上阵水果中随机召唤 ——— */
+/* ——— 8 个海洋伙伴：compatV1 职责三角体系 ——— */
 const TYPES = {
   /* ——— T0 (epic/传说) ——— */
-  olive_assassin:   { id:'olive_assassin',   name:'橄榄刺客', icon:'🫒', color:'#8a9a5b', rarity:'epic',   role:'raider',  range:'melee', atk:22, hp:24, rate:0.96,  tags:['rush','stealth'], desc:'Lv4+ 出场3s隐身，首击暴击×2.5。', skill:'stealth' },
-  lemon_assassin:   { id:'lemon_assassin',   name:'虾刀客', icon:'🍋', color:'#ffe76a', rarity:'epic', role:'raider', combatRole:'cavalry', combatV1:true, range:'mid', attackRange:82, preferredDistance:68, retreatDistance:56, atk:17, hp:54, atkGrowth:0.029, hpGrowth:0.021, attackInterval:1.45, rate:2.175, move:114, tags:['rush','cavalry'], desc:'中程压缩水刃，优先攻击弓兵并收割低血目标。', skill:'mantis_cross' },
-  cherry_bomber:    { id:'cherry_bomber',    name:'樱桃炸弹', icon:'🍒', color:'#d44155', rarity:'epic',   role:'shooter', range:'far',   atk:18, hp:28, rate:1.55,  siege:0.88,  tags:['back','aoe'], desc:'Lv4+ 每5次攻击投掷范围炸弹。', skill:'aoe' },
-  kiwi_wildcard:    { id:'kiwi_wildcard',    name:'拟态章鱼', icon:'🥝', color:'#8bd34e', rarity:'epic', role:'wildcard', combatRole:'support', combatV1:true, range:'support', attackRange:110, preferredDistance:72, retreatDistance:58, atk:1, hp:46, atkGrowth:0.022, hpGrowth:0.025, attackInterval:1.70, rate:2.55, move:74, buffPct:0.06, tags:['merge','wildcard','support'], desc:'万能合成辅助；保留上场时为主力提供拟态增益。', skill:'mimic_echo' },
-  passion_copy:     { id:'passion_copy',     name:'百香果复制', icon:'🟣', color:'#b85cff', rarity:'epic',   role:'wildcard',range:'support', atk:0,  hp:20, rate:1.80,  siege:0.20,  tags:['merge','copy'], desc:'拖到同星目标上复制成目标水果。合成辅助，不派兵。', skill:'copy' },
+  lemon_assassin:   { id:'lemon_assassin',   name:'虾刀客', icon:'🍋', color:'#ffe76a', rarity:'epic', role:'raider', combatRole:'cavalry', combatV1:true, attackMode:'melee', range:'mid', attackRange:82, preferredDistance:68, retreatDistance:56, atk:55, hp:130, atkGrowth:0.029, hpGrowth:0.021, attackInterval:1.45, rate:2.175, move:114, tags:['rush','cavalry'], desc:'中程压缩水刃，优先攻击弓兵并收割低血目标。', skill:'mantis_cross' },
+  kiwi_wildcard:    { id:'kiwi_wildcard',    name:'拟态章鱼', icon:'🥝', color:'#8bd34e', rarity:'epic', role:'wildcard', combatRole:'support', combatV1:true, attackMode:'support', range:'support', attackRange:110, preferredDistance:72, retreatDistance:58, atk:1, hp:120, atkGrowth:0.022, hpGrowth:0.025, attackInterval:1.70, rate:2.55, move:74, buffPct:0.06, tags:['merge','wildcard','support'], desc:'万能合成辅助；保留上场时为主力提供拟态增益。', skill:'mimic_echo' },
 
   /* ——— T1 (rare/稀有) ——— */
-  dragonfruit_warrior:{id:'dragonfruit_warrior',name:'火龙果战士',icon:'🐉',color:'#ff3b6e',rarity:'rare', role:'spike',   range:'mid',   atk:16, hp:44, rate:1.10,  siege:0.90,  tags:['front','burn'], desc:'Lv4+ 攻击附带点燃(3伤害/s,2s)。', skill:'burn' },
-  blueberry_sniper: { id:'blueberry_sniper', name:'射水狙手', icon:'🫐', color:'#4d7dff', rarity:'rare', role:'shooter', combatRole:'archer', combatV1:true, range:'long', attackRange:165, preferredDistance:132, retreatDistance:112, atk:16, hp:50, atkGrowth:0.028, hpGrowth:0.022, attackInterval:1.50, rate:2.25, move:70, tags:['back','archer'], desc:'超远程单发水针，优先压制枪兵。', skill:'piercing_tide' },
-  banana_raider:    { id:'banana_raider',    name:'旗鱼骑手', icon:'🍌', color:'#ffd447', rarity:'rare', role:'raider', combatRole:'cavalry', combatV1:true, range:'mid', attackRange:92, preferredDistance:74, retreatDistance:60, atk:14, hp:62, atkGrowth:0.026, hpGrowth:0.024, attackInterval:1.15, rate:1.725, move:122, tags:['rush','cavalry'], desc:'中程侧翼掠射，优先弓兵和辅助。', skill:'tidal_skirmish' },
-  pineapple_lancer: { id:'pineapple_lancer', name:'角鲸枪兵', icon:'🍍', color:'#ffb337', rarity:'rare', role:'spike', combatRole:'lancer', combatV1:true, range:'mid', attackRange:112, preferredDistance:92, retreatDistance:76, atk:12, hp:72, atkGrowth:0.025, hpGrowth:0.026, attackInterval:1.15, rate:1.725, move:82, tags:['front','lancer'], desc:'中前排枪波，优先拦截骑兵。', skill:'narwhal_line' },
-  orange_cannon:    { id:'orange_cannon',    name:'橙子炮手', icon:'🍊', color:'#ff9838', rarity:'rare',   role:'shooter', range:'far',   atk:12, hp:40, rate:1.65,  siege:2.45,  tags:['siege','range'], desc:'攻城核心,对城墙x1.3。拆果堡极强,打兵偏弱,怕突击。', skill:'siege' },
-  strawberry_knight:{ id:'strawberry_knight',name:'草莓骑士', icon:'🍓', color:'#ff4d5a', rarity:'rare',   role:'shell',   range:'melee', atk:11, hp:74, rate:1.40,  siege:0.85, tags:['tank','charge'], desc:'Lv4+ 首次接战冲锋60px+击退。', skill:'charge' },
-  pumpkin_roller:   { id:'pumpkin_roller',   name:'南瓜滚轮', icon:'🎃', color:'#ff7d35', rarity:'rare',   role:'raider',  range:'melee', atk:10, hp:36, rate:1.20,  siege:1.55,  tags:['siege','death'], desc:'死亡时爆炸(ATKx2范围伤害+眩晕)。适合制造攻城突破点。', skill:'death_roll' },
-  mango_arbalest:   { id:'mango_arbalest',   name:'芒果弩手', icon:'🥭', color:'#ffbd43', rarity:'rare',   role:'shooter', range:'long',  atk:11, hp:30, rate:0.55,  siege:0.92,  tags:['back','rapid'], desc:'攻速0.55s，全游戏最快。', skill:'rapid' },
-  grape_archer:     { id:'grape_archer',     name:'乌贼射手', icon:'🍇', color:'#9b5cff', rarity:'rare', role:'shooter', combatRole:'archer', combatV1:true, range:'far', attackRange:140, preferredDistance:108, retreatDistance:90, atk:10, hp:58, atkGrowth:0.024, hpGrowth:0.026, attackInterval:0.90, rate:1.35, move:74, tags:['back','archer'], desc:'快速墨弹连射，持续锁定同一目标逐步增伤。', skill:'ink_fan' },
-  pear_frost:       { id:'pear_frost',       name:'冰梨术士', icon:'🍐', color:'#9be7ff', rarity:'rare',   role:'shooter', range:'far',   atk:7,  hp:31, rate:1.35,  siege:0.70,  tags:['control','slow'], desc:'攻击附带减速30%1.5s,Lv6减速升级为冰冻。', skill:'slow' },
+  blueberry_sniper: { id:'blueberry_sniper', name:'射水狙手', icon:'🫐', color:'#4d7dff', rarity:'rare', role:'shooter', combatRole:'archer', combatV1:true, attackMode:'projectile', range:'long', attackRange:165, preferredDistance:132, retreatDistance:112, atk:50, hp:110, atkGrowth:0.028, hpGrowth:0.022, attackInterval:1.50, rate:2.25, move:70, tags:['back','archer'], desc:'超远程单发水针，优先压制枪兵。', skill:'piercing_tide' },
+  banana_raider:    { id:'banana_raider',    name:'旗鱼骑手', icon:'🍌', color:'#ffd447', rarity:'rare', role:'raider', combatRole:'cavalry', combatV1:true, attackMode:'melee', range:'mid', attackRange:92, preferredDistance:74, retreatDistance:60, atk:45, hp:170, atkGrowth:0.026, hpGrowth:0.024, attackInterval:1.15, rate:1.725, move:122, tags:['rush','cavalry'], desc:'中程侧翼掠射，优先弓兵和辅助。', skill:'tidal_skirmish' },
+  pineapple_lancer: { id:'pineapple_lancer', name:'角鲸枪兵', icon:'🍍', color:'#ffb337', rarity:'rare', role:'spike', combatRole:'lancer', combatV1:true, attackMode:'melee', range:'mid', attackRange:112, preferredDistance:92, retreatDistance:76, atk:40, hp:200, atkGrowth:0.025, hpGrowth:0.026, attackInterval:1.15, rate:1.725, move:82, tags:['front','lancer'], desc:'中前排枪波，优先拦截骑兵。', skill:'narwhal_line' },
+  grape_archer:     { id:'grape_archer',     name:'乌贼射手', icon:'🍇', color:'#9b5cff', rarity:'rare', role:'shooter', combatRole:'archer', combatV1:true, attackMode:'projectile', range:'far', attackRange:140, preferredDistance:108, retreatDistance:90, atk:35, hp:140, atkGrowth:0.024, hpGrowth:0.026, attackInterval:0.90, rate:1.35, move:74, tags:['back','archer'], desc:'快速墨弹连射，持续锁定同一目标逐步增伤。', skill:'ink_fan' },
 
   /* ——— T2 (normal/普通) ——— */
-  watermelon_guard: { id:'watermelon_guard', name:'龟甲枪卫', icon:'🍉', color:'#34c96b', rarity:'normal', role:'shell', combatRole:'lancer', combatV1:true, range:'mid', attackRange:98, preferredDistance:84, retreatDistance:70, atk:9, hp:76, atkGrowth:0.022, hpGrowth:0.029, attackInterval:1.05, rate:1.575, move:72, tags:['front','lancer','shield'], desc:'稳定枪线防守，每四次攻击获得薄护盾。', skill:'shell_guard' },
-  coconut_guard:    { id:'coconut_guard',    name:'椰子守卫', icon:'🥥', color:'#9f7a4c', rarity:'normal', role:'shell',   range:'melee', atk:8,  hp:88, rate:1.62,  siege:0.65, tags:['tank','shield'], desc:'硬坦。第一次接战获得35临时护盾，适合抗爆发。', skill:'first_shield' },
-  avocado_brawler:  { id:'avocado_brawler',  name:'牛油果力士', icon:'🥑', color:'#8fa64a', rarity:'normal', role:'shell',   range:'melee', atk:9,  hp:96, rate:1.65,  siege:0.70, tags:['tank','immune'], desc:'Lv4+ 受击30%概率免疫伤害。', skill:'immune' },
-  melon_shaman:     { id:'melon_shaman',     name:'哈密瓜萨满', icon:'🍈', color:'#c8e670', rarity:'normal', role:'shooter', range:'far',   atk:7,  hp:29, rate:1.40,  siege:0.65,  tags:['control','weaken'], desc:'攻击概率减敌ATK×0.85,2s。', skill:'weaken' },
-  peach_medic:      { id:'peach_medic',      name:'海星医者', icon:'🍑', color:'#ff9fbd', rarity:'normal', role:'wildcard', combatRole:'support', combatV1:true, range:'support', attackRange:120, preferredDistance:76, retreatDistance:60, atk:1, heal:7, hp:54, atkGrowth:0.027, hpGrowth:0.025, attackInterval:1.45, rate:2.175, move:68, tags:['support','heal'], desc:'治疗最低生命友军；无治疗目标时发射1点弱水泡。', skill:'star_recovery' },
-  mint_supply:      { id:'mint_supply',      name:'薄荷补给球', icon:'🌿', color:'#7ed6a0', rarity:'normal', role:'shell',  range:'support',atk:3,  hp:28, rate:1.55,  siege:0.12,  tags:['econ','sp_regen'], desc:'在场时自然回复提速→4s, Lv4→3.5s, Lv7→3s。', skill:'sp_regen' },
-  shock_lemon:      { id:'shock_lemon',      name:'电击柠檬球', icon:'⚡', color:'#ffe76a', rarity:'normal', role:'spike',  range:'support',atk:5,  hp:24, rate:1.45,  siege:0.10,  tags:['econ','kill_sp'], desc:'击杀敌方额外+SP: Lv1+1, Lv4+2, Lv7+3+攻速。', skill:'kill_sp' },
-  honey_save:       { id:'honey_save',       name:'蜂蜜储蓄球', icon:'🍯', color:'#f5b642', rarity:'normal', role:'shell', range:'support',atk:4,  hp:30, rate:1.50,  siege:0.10,  tags:['econ','sp_refund'], desc:'操作后返还SP: Lv1+1, Lv4+2, Lv7+3(8s CD)。', skill:'sp_refund' },
-  ferment_grape:    { id:'ferment_grape',    name:'发酵葡萄球', icon:'🍷', color:'#b86bce', rarity:'normal', role:'shell', range:'support',atk:0,  hp:22, rate:1.35,  siege:0.05,  tags:['econ','sp_bank'], desc:'每15s产1SP,死亡吐出累计值(上限15), Lv4 12s, Lv7+额外5。', skill:'sp_bank' },
-  chill_juice:      { id:'chill_juice',      name:'冰镇果汁球', icon:'🧊', color:'#9be7ff', rarity:'normal', role:'shell', range:'support',atk:3,  hp:26, rate:1.50,  siege:0.05,  tags:['econ','sp_discount'], desc:'每20s下一次操作消耗减半, Lv4 15s, Lv7 免费。', skill:'sp_discount' },
+  watermelon_guard: { id:'watermelon_guard', name:'龟甲枪卫', icon:'🍉', color:'#34c96b', rarity:'normal', role:'shell', combatRole:'lancer', combatV1:true, attackMode:'melee', range:'mid', attackRange:98, preferredDistance:84, retreatDistance:70, atk:30, hp:250, atkGrowth:0.022, hpGrowth:0.029, attackInterval:1.05, rate:1.575, move:72, tags:['front','lancer','shield'], desc:'稳定枪线防守，每四次攻击获得薄护盾。', skill:'shell_guard' },
+  peach_medic:      { id:'peach_medic',      name:'海星医者', icon:'🍑', color:'#ff9fbd', rarity:'normal', role:'wildcard', combatRole:'support', combatV1:true, attackMode:'support', range:'support', attackRange:120, preferredDistance:76, retreatDistance:60, atk:1, heal:20, hp:150, atkGrowth:0.027, hpGrowth:0.025, attackInterval:1.45, rate:2.175, move:68, tags:['support','heal'], desc:'治疗最低生命友军；无治疗目标时发射1点弱水泡。', skill:'star_recovery' },
 };
 
 /* ——— 技能效果分类：6 类，用于 VFX 调度 ——— */
 const SKILL_TYPE_MAP = {
   /* self-buff: 自身增益（盾/冲锋/免疫） */
-  watermelon_guard:'self-buff', coconut_guard:'self-buff', avocado_brawler:'self-buff', strawberry_knight:'self-buff',
+  watermelon_guard:'self-buff',
   /* single-projectile: 单体弹道 / 近战攻击附带效果 */
-  grape_archer:'single-projectile', orange_cannon:'single-projectile', blueberry_sniper:'single-projectile',
-  mango_arbalest:'single-projectile', pear_frost:'single-projectile', banana_raider:'single-projectile',
-  lemon_assassin:'single-projectile', olive_assassin:'single-projectile', pineapple_lancer:'single-projectile',
-  dragonfruit_warrior:'single-projectile', melon_shaman:'single-projectile',
-  /* line-aoe: 范围伤害 */
-  cherry_bomber:'line-aoe', pumpkin_roller:'line-aoe',
+  grape_archer:'single-projectile', blueberry_sniper:'single-projectile',
+  banana_raider:'single-projectile', lemon_assassin:'single-projectile',
+  pineapple_lancer:'single-projectile',
   /* special: 治疗 / SP 经济 / 合成辅助 */
-  peach_medic:'special', mint_supply:'special', shock_lemon:'special',
-  honey_save:'special', ferment_grape:'special', chill_juice:'special',
-  kiwi_wildcard:'special', passion_copy:'special',
+  peach_medic:'special', kiwi_wildcard:'special',
 };
 const SKILL_VFX = {
   'self-buff':         { ringColor:'#53e77b', ringRadius:8,  sparkCount:5,  label:'强化' },
@@ -106,7 +84,7 @@ if (typeof applyWorldThemeToTypes === 'function') applyWorldThemeToTypes(TYPES);
 
 const ALL_TYPE_IDS = Object.keys(TYPES);
 const UNIT_POOL = ['blueberry_sniper','grape_archer','pineapple_lancer','watermelon_guard','banana_raider','lemon_assassin','peach_medic','kiwi_wildcard'];
-const OLD_DEFAULT_DECK = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','orange_cannon'];
+const OLD_DEFAULT_DECK = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','peach_medic'];
 const DEFAULT_DECK = ['watermelon_guard','grape_archer','banana_raider','pineapple_lancer','peach_medic'];
 const STARTER_BUILD_DECK = DEFAULT_DECK.slice();
 const DECK_SIZE = 5;
@@ -165,13 +143,11 @@ function shouldForceNewDefaultDeck(deck) {
   const sig = deckSignature(deck);
   return !sig
     || sig === OLD_DEFAULT_DECK.join('|')
-    || sig === ['grape_archer','banana_raider','pineapple_lancer','watermelon_guard'].join('|')
-    || sig === ['watermelon_guard','grape_archer','orange_cannon','peach_medic','kiwi_wildcard'].join('|');
+    || sig === ['grape_archer','banana_raider','pineapple_lancer','watermelon_guard'].join('|');
 }
 function shouldAutoStarterBuildDeck(deck, unlocked) {
   const sig = deckSignature(deck);
-  return Array.isArray(unlocked)
-    && unlocked.includes('mint_supply')
+  return Array.isArray(unlocked) && unlocked.includes('blueberry_sniper')
     && (sig === DEFAULT_DECK.join('|') || sig === OLD_DEFAULT_DECK.join('|'));
 }
 function normalizeDeck(deck) {
@@ -316,13 +292,18 @@ function computePower() {
     // 未拥有(无碎片记录)不计入
     if (!meta?.shardsTotal?.[id]) continue;
     const lv = s?.fruitLv?.[id] || 1;
-    sum += Math.round((TYPES[id].atk + TYPES[id].hp) * heroMul(lv));
+    sum += Math.round(TYPES[id].atk * heroMulForType(id, lv, 'atk') + TYPES[id].hp * heroMulForType(id, lv, 'hp'));
   }
   return sum;
 }
 // PvE wall durability is stage-linear and symmetric. The player receives only
 // the explicit meta wall bonus; combat stats never modify breach damage.
-const BASE_WALL_HP = 11;
+function getPlayerWallMax(stageId, meta) {
+  return 80 + stageId * 25 + (meta.wallLv || 0) * 15;
+}
+function getEnemyWallMax(stageId) {
+  return 60 + stageId * 20;
+}
 const PVP_WALL_HP = 720;
 const SIEGE_SLOTS_PER_LANE = 3;
 const BALL_SPAWN_INTERVAL = 4.4;
@@ -330,8 +311,8 @@ const SOLDIER_SPAWN_INTERVAL = 5;
 const SPAWN_COOLDOWNS = [0, 7.00, 6.00, 5.00, 4.20, 3.40, 2.70, 2.20];
 const OVERFLOW_MAX = 10;
 const MAX_SOLDIERS = 8;
-const SP_MAX = 24;
-const SP_PASSIVE = 5.0;
+const SP_MAX = 40;
+const SP_PASSIVE = 3.0;
 
 const TUNING = {
   juice: {
@@ -339,7 +320,7 @@ const TUNING = {
     enemyStart: 8,
     passiveInterval: 5.0,
     enemyActionInterval: 4.0,
-    actionCostCurve: [1, 1, 2, 2, 3, 3, 4, 4, 5, 6],
+    actionCostCurve: [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6],
     urgentCost: 1,
     maxActionCost: 12,
     wallPitySteps: 4,

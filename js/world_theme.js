@@ -3,38 +3,19 @@
   'use strict';
 
   const units = {
-    olive_assassin: ['章鱼刺客', '🐙', 'blue-ring-octopus-assassin'],
     lemon_assassin: ['虾刀客', '🦐', 'mantis-shrimp-blade'],
-    cherry_bomber: ['河豚炮手', '🐡', 'puffer-bomber'],
     kiwi_wildcard: ['拟态章鱼', '🐙', 'mimic-octopus'],
-    passion_copy: ['镜像水母', '🪼', 'mirror-jellyfish'],
-    dragonfruit_warrior: ['火珊瑚兵', '🪸', 'fire-coral-warrior'],
     blueberry_sniper: ['射水狙手', '🐟', 'archerfish-sniper'],
     banana_raider: ['旗鱼骑手', '🐟', 'swordfish-raider'],
     pineapple_lancer: ['角鲸枪兵', '🐋', 'narwhal-lancer'],
-    orange_cannon: ['手枪炮手', '🦐', 'pistol-shrimp-cannon'],
-    strawberry_knight: ['红蟹甲兵', '🦀', 'red-crab-knight'],
-    pumpkin_roller: ['海胆滚兵', '🦔', 'urchin-roller'],
-    mango_arbalest: ['海马弩手', '🐴', 'seahorse-arbalest'],
     grape_archer: ['乌贼射手', '🦑', 'squid-ink-archer'],
-    pear_frost: ['冰水母法', '🪼', 'ice-jellyfish'],
     watermelon_guard: ['龟甲盾兵', '🐢', 'sea-turtle-guard'],
-    coconut_guard: ['蟹壳守卫', '🦀', 'hermit-crab-guard'],
-    avocado_brawler: ['海牛力士', '🦭', 'manatee-brawler'],
-    melon_shaman: ['月水母法', '🪼', 'moon-jelly-shaman'],
     peach_medic: ['海星医者', '⭐', 'starfish-medic'],
-    mint_supply: ['清虾补给', '🦐', 'cleaner-shrimp-supply'],
-    shock_lemon: ['电鳗蓄能', '⚡', 'electric-eel-charger'],
-    honey_save: ['珍珠贝储', '🦪', 'pearl-clam-battery'],
-    ferment_grape: ['泡珊瑚储', '🪸', 'bubble-coral-battery'],
-    chill_juice: ['冰蛤减耗', '🦪', 'glacier-clam-discount'],
   };
 
   const descriptions = {
     kiwi_wildcard: '同星万能合成伙伴，不进入战场。',
-    passion_copy: '复制同星海灵珠身份，不进入战场。',
     peach_medic: '优先跟随并治疗生命比例最低的友军。',
-    orange_cannon: '专业攻城单位，通路安全时直取护礁结界。',
   };
 
   const mappedUnits = Object.fromEntries(Object.entries(units).map(([id, value], index) => [id, {
